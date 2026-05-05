@@ -28,11 +28,13 @@ WORKDIR /app
 RUN npm install -g pnpm
 
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/backend/dist ./dist
+COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
 COPY --from=builder /app/packages/backend/node_modules ./packages/backend/node_modules
-COPY --from=builder /app/packages/backend/prisma ./prisma
+COPY --from=builder /app/packages/backend/prisma ./packages/backend/prisma
 COPY --from=builder /app/packages/shared ./packages/shared
 
 EXPOSE 3001
+
+WORKDIR /app/packages/backend
 
 CMD ["node", "dist/backend/src/main.js"]

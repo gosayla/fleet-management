@@ -32,4 +32,4 @@ EXPOSE 3000
 
 WORKDIR /app/packages/web
 
-CMD ["pnpm", "start"]
+CMD ["node", "/app/node_modules/next/dist/bin/next", "start", "-p", "3000"]
