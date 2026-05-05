@@ -1,0 +1,29 @@
+{
+  "name": "fleet-management",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:backend": "pnpm --filter @fleet/backend dev",
+    "dev:web": "pnpm --filter @fleet/web dev",
+    "build:backend": "pnpm --filter @fleet/backend build",
+    "build:web": "pnpm --filter @fleet/web build",
+    "db:generate": "pnpm --filter @fleet/backend db:generate",
+    "db:migrate": "pnpm --filter @fleet/backend db:migrate",
+    "db:studio": "pnpm --filter @fleet/backend db:studio",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "argon2",
+      "prisma",
+      "protobufjs"
+    ]
+  }
+}

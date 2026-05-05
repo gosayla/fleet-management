@@ -1,0 +1,37 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy workspace files
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY packages/shared ./packages/shared
+COPY packages/backend ./packages/backend
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Generate Prisma client
+RUN pnpm --filter @fleet/backend db:generate
+
+# Build
+RUN pnpm --filter @fleet/backend build
+
+# ── Runtime ────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+RUN npm install -g pnpm
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/backend/dist ./dist
+COPY --from=builder /app/packages/backend/node_modules ./packages/backend/node_modules
+COPY --from=builder /app/packages/backend/prisma ./prisma
+COPY --from=builder /app/packages/shared ./packages/shared
+
+EXPOSE 3001
+
+CMD ["node", "dist/main"]

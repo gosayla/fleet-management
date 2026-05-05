@@ -1,0 +1,83 @@
+services:
+  # ── PostgreSQL ────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: fleet_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fleet_db
+      POSTGRES_USER: fleet_user
+      POSTGRES_PASSWORD: fleet_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fleet_user -d fleet_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ─────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: fleet_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend (NestJS) ──────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    container_name: fleet_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://fleet_user:fleet_pass@postgres:5432/fleet_db?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production_use_a_long_secret}
+      JWT_EXPIRES_IN: 7d
+      TAMM_MOCK: ${TAMM_MOCK:-true}
+      TAMM_BASE_URL: ${TAMM_BASE_URL:-https://tamm.api.elm.sa}
+      TAMM_IDP_URL: ${TAMM_IDP_URL:-https://idp.elm.sa}
+      TAMM_IDP_REALM: ${TAMM_IDP_REALM:-Tamm}
+      TAMM_MOI_NUMBER: ${TAMM_MOI_NUMBER:-}
+      TAMM_CLIENT_ID: ${TAMM_CLIENT_ID:-}
+      TAMM_CLIENT_SECRET: ${TAMM_CLIENT_SECRET:-}
+      NAQL_MOCK: ${NAQL_MOCK:-true}
+    ports:
+      - "3001:3001"
+    volumes:
+      - backend_uploads:/app/uploads
+
+  # ── Web (Next.js) ─────────────────────────────────────────────────────────────
+  web:
+    build:
+      context: ./packages/web
+      dockerfile: Dockerfile
+    container_name: fleet_web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:3001/api/v1
+      NEXT_PUBLIC_SOCKET_URL: http://backend:3001
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  backend_uploads:

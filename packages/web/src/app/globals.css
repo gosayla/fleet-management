@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #1e40af;
+  --primary-foreground: #ffffff;
+  --sidebar-width: 240px;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}
+
+.fleet-date-picker {
+  --rdp-accent-color: #2563eb;
+  --rdp-background-color: #eff6ff;
+  margin: 0;
+}
+
+.fleet-date-picker .rdp-month {
+  width: 18.5rem;
+}
+
+.fleet-date-picker .rdp-caption {
+  padding: 0.25rem 0.25rem 0.6rem;
+}
+
+.fleet-date-picker .rdp-caption_label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.fleet-date-picker .rdp-nav_button {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  width: 2rem;
+  height: 2rem;
+  color: #475569;
+}
+
+.fleet-date-picker .rdp-nav_button:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.fleet-date-picker .rdp-weekdays {
+  margin-bottom: 0.2rem;
+}
+
+.fleet-date-picker .rdp-weekday {
+  width: 2.45rem;
+  height: 2rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.fleet-date-picker .rdp-day {
+  width: 2.45rem;
+  height: 2.2rem;
+  border-radius: 0.75rem;
+  font-size: 0.84rem;
+  color: #0f172a;
+}
+
+.fleet-date-picker .rdp-day:hover {
+  background: #eef2ff;
+}
+
+.fleet-date-picker .rdp-day_today {
+  border: 1px solid #93c5fd;
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.fleet-date-picker .rdp-day_selected,
+.fleet-date-picker .rdp-day_selected:focus-visible,
+.fleet-date-picker .rdp-day_selected:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  border: 0;
+}
+
+.fleet-date-picker .rdp-day_outside {
+  color: #cbd5e1;
+}

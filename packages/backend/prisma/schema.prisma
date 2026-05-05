@@ -1,0 +1,430 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  FLEET_MANAGER
+  DISPATCHER
+  DRIVER
+  VIEWER
+}
+
+enum VehicleStatus {
+  ACTIVE
+  MAINTENANCE
+  INACTIVE
+  RETIRED
+}
+
+enum VehicleType {
+  SEDAN
+  SUV
+  TRUCK
+  VAN
+  BUS
+  MOTORCYCLE
+  HEAVY_EQUIPMENT
+}
+
+enum DriverStatus {
+  ACTIVE
+  OFF_DUTY
+  ON_LEAVE
+  SUSPENDED
+  TERMINATED
+}
+
+enum TripStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TripType {
+  ONE_TIME
+  DAILY
+  MONTHLY_CONTRACT
+}
+
+enum MaintenanceType {
+  SCHEDULED
+  UNSCHEDULED
+  EMERGENCY
+}
+
+enum MaintenanceStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum DocumentType {
+  VEHICLE_REGISTRATION
+  VEHICLE_INSURANCE
+  PERIODIC_INSPECTION
+  DRIVER_LICENSE
+  TRANSPORT_PERMIT
+  OWNERSHIP_DEED
+  OPERATION_CARD
+}
+
+enum PermitStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum NotificationType {
+  MAINTENANCE_DUE
+  DOCUMENT_EXPIRING
+  VIOLATION_ISSUED
+  TRIP_STARTED
+  TRIP_COMPLETED
+  DRIVER_ASSIGNED
+  FUEL_LOW
+}
+
+enum BloodType {
+  A_POS
+  A_NEG
+  B_POS
+  B_NEG
+  AB_POS
+  AB_NEG
+  O_POS
+  O_NEG
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Company {
+  id                   String   @id @default(uuid())
+  name                 String
+  crNumber             String   @unique // Commercial Registration number
+  tammSubscriptionId   String?
+  naqlCompanyCode      String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  users     User[]
+  vehicles  Vehicle[]
+  drivers   Driver[]
+  trips     Trip[]
+  documents FleetDocument[]
+  permits   NaqlPermit[]
+
+  @@map("companies")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  companyId String
+  email     String   @unique
+  password  String
+  fullName  String
+  phone     String
+  role      UserRole @default(FLEET_MANAGER)
+  fcmToken  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company       Company        @relation(fields: [companyId], references: [id])
+  notifications Notification[]
+
+  @@index([companyId])
+  @@map("users")
+}
+
+model Vehicle {
+  id               String        @id @default(uuid())
+  companyId        String
+  plateNumber      String
+  make             String
+  model            String
+  year             Int
+  color            String
+  type             VehicleType
+  status           VehicleStatus @default(ACTIVE)
+  vin              String        @unique
+  odometer         Float         @default(0) // km
+  fuelCapacity     Float         @default(0) // liters
+  assignedDriverId String?       @unique
+  tammVehicleId    String?       // Tamm platform reference
+  lastLocationLat  Float?
+  lastLocationLng  Float?
+  lastLocationAt   DateTime?
+  // Tamm import fields
+  plateType        String?       // Public Transport / Private Transport / Private Car
+  sequenceNumber   String?       // Tamm sequence number
+  bodyType         String?       // 4 Wheels / 3 Wheels / نقل أكثر من 3.5 طن
+  ownershipDate    String?       // Hijri date from Tamm e.g. 1447-06-07
+  licenseExpiryDate    String?
+  licenseIssuanceDate  String?
+  inspectionExpiryDate String?
+  mvpiStatus       String?       // Valid / Expired / Not Exist
+  insuranceStatus  String?       // Valid / Not Exist
+  insuranceExpiryDate String?    // Latest policy end date (YYYY-MM-DD)
+  operationCardNumber String?
+  operationCardIssueDate String?
+  operationCardExpiryDate String?
+  operationCardRenewDate String?
+  operationCardFileUrl String?
+  restrictionStatus String?      // Unrestricted / etc.
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  company          Company           @relation(fields: [companyId], references: [id])
+  assignedDriver   Driver?           @relation("AssignedVehicle", fields: [assignedDriverId], references: [id])
+  trips            Trip[]
+  maintenanceLogs  MaintenanceLog[]
+  fuelLogs         FuelLog[]
+  documents        FleetDocument[]
+  violations       TammViolation[]
+
+  @@unique([companyId, plateNumber])
+  @@index([companyId])
+  @@map("vehicles")
+}
+
+model Driver {
+  id               String       @id @default(uuid())
+  companyId        String
+  userId           String?      @unique
+  fullName         String
+  phone            String
+  email            String?
+  nationalId       String
+  licenseNumber    String
+  licenseExpiry    DateTime
+  bloodType        BloodType?
+  status           DriverStatus @default(ACTIVE)
+  assignedVehicleId String?     @unique
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  company         Company         @relation(fields: [companyId], references: [id])
+  assignedVehicle Vehicle?        @relation("AssignedVehicle")
+  trips           Trip[]
+  fuelLogs        FuelLog[]
+  documents       FleetDocument[]
+
+  @@unique([companyId, nationalId])
+  @@index([companyId])
+  @@map("drivers")
+}
+
+model Trip {
+  id                 String     @id @default(uuid())
+  companyId          String
+  vehicleId          String
+  driverId           String
+  status             TripStatus @default(SCHEDULED)
+  tripType           TripType   @default(ONE_TIME)
+  origin             String
+  destination        String
+  originLat          Float?
+  originLng          Float?
+  destinationLat     Float?
+  destinationLng     Float?
+  scheduledStart     DateTime
+  scheduledEnd       DateTime
+  actualStart        DateTime?
+  actualEnd          DateTime?
+  distanceKm         Float?
+  notes              String?
+  naqlPermitId       String?
+  // Contract / recurring fields
+  clientName         String?    // passenger or client name
+  contractNumber     String?    // contract reference number
+  contractStart      DateTime?  // billing period start
+  contractEnd        DateTime?  // billing period end
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  company  Company @relation(fields: [companyId], references: [id])
+  vehicle  Vehicle @relation(fields: [vehicleId], references: [id])
+  driver   Driver  @relation(fields: [driverId], references: [id])
+  permit   NaqlPermit? @relation(fields: [naqlPermitId], references: [id])
+
+  @@index([companyId])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@map("trips")
+}
+
+model MaintenanceLog {
+  id                String            @id @default(uuid())
+  companyId         String
+  vehicleId         String
+  type              MaintenanceType
+  status            MaintenanceStatus @default(PENDING)
+  description       String
+  scheduledDate     DateTime
+  completedDate     DateTime?
+  costSar           Float?
+  odometerAtService Float?
+  nextServiceKm     Float?
+  nextServiceDate   DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@index([vehicleId])
+  @@index([companyId])
+  @@map("maintenance_logs")
+}
+
+model FuelLog {
+  id        String   @id @default(uuid())
+  companyId String
+  vehicleId String
+  driverId  String?
+  liters    Float
+  costSar   Float
+  odometer  Float
+  station   String?
+  filledAt  DateTime
+  createdAt DateTime @default(now())
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+  driver  Driver? @relation(fields: [driverId], references: [id])
+
+  @@index([vehicleId])
+  @@index([companyId])
+  @@map("fuel_logs")
+}
+
+model FleetDocument {
+  id               String       @id @default(uuid())
+  companyId        String
+  vehicleId        String?
+  driverId         String?
+  type             DocumentType
+  fileUrl          String
+  issueDate        DateTime
+  expiryDate       DateTime
+  issuingAuthority String?
+  referenceNumber  String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  company Company  @relation(fields: [companyId], references: [id])
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
+  driver  Driver?  @relation(fields: [driverId], references: [id])
+
+  @@index([companyId])
+  @@index([expiryDate])
+  @@map("fleet_documents")
+}
+
+// ─── Tamm Integration ─────────────────────────────────────────────────────────
+
+model TammViolation {
+  id          String   @id @default(uuid())
+  companyId   String
+  vehicleId   String
+  violationId String   @unique // Tamm reference
+  plateNumber String
+  description String
+  amount      Float
+  issuedAt    DateTime
+  location    String?
+  isPaid      Boolean  @default(false)
+  syncedAt    DateTime @default(now())
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@index([vehicleId])
+  @@index([companyId])
+  @@map("tamm_violations")
+}
+
+model TammSyncLog {
+  id          String   @id @default(uuid())
+  companyId   String
+  syncType    String   // 'vehicles' | 'violations' | 'documents'
+  status      String   // 'success' | 'failed'
+  recordCount Int      @default(0)
+  error       String?
+  syncedAt    DateTime @default(now())
+
+  @@index([companyId])
+  @@map("tamm_sync_logs")
+}
+
+model TammActualDriverSession {
+  id              String   @id @default(uuid())
+  companyId       String
+  vehicleId       String?
+  driverId        String?
+  conversationId  String   @unique
+  action          String   // 'addition' | 'removal'
+  status          String   // 'verified' | 'identity_verified' | 'completed'
+  referenceNumber String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@map("tamm_actual_driver_sessions")
+}
+
+// ─── Naql Integration ─────────────────────────────────────────────────────────
+
+model NaqlPermit {
+  id              String       @id @default(uuid())
+  companyId       String
+  naqlPermitId    String       @unique // Naql platform reference
+  vehiclePlate    String
+  driverNationalId String
+  origin          String
+  destination     String
+  cargoType       String
+  cargoWeightKg   Float
+  status          PermitStatus @default(PENDING)
+  issuedAt        DateTime
+  validFrom       DateTime
+  validTo         DateTime
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+  trips   Trip[]
+
+  @@index([companyId])
+  @@map("naql_permits")
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String
+  title       String
+  body        String
+  type        NotificationType
+  referenceId String?
+  isRead      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("notifications")
+}
