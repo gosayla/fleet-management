@@ -25,8 +25,8 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Prisma query engine requires libssl 1.1
-RUN apk add --no-cache openssl1.1-compat
+# Prisma query engine requires openssl
+RUN apk add --no-cache openssl
 
 RUN npm install -g pnpm
 
