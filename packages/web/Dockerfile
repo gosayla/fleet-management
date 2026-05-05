@@ -24,6 +24,7 @@ ENV NODE_ENV=production
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared ./packages/shared
 COPY --from=builder /app/packages/web/package.json ./packages/web/package.json
+COPY --from=builder /app/packages/web/node_modules ./packages/web/node_modules
 COPY --from=builder /app/packages/web/next.config.mjs ./packages/web/next.config.mjs
 COPY --from=builder /app/packages/web/.next ./packages/web/.next
 COPY --from=builder /app/packages/web/public ./packages/web/public
@@ -32,4 +33,4 @@ EXPOSE 3000
 
 WORKDIR /app/packages/web
 
-CMD ["node", "/app/node_modules/next/dist/bin/next", "start", "-p", "3000"]
+CMD ["pnpm", "start"]
