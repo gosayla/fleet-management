@@ -3,7 +3,7 @@ const nextConfig = {
   transpilePackages: ['@fleet/shared'],
   images: { remotePatterns: [] },
   async rewrites() {
-    const backendUrl = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3001';
+    const backendUrl = process.env.BACKEND_INTERNAL_URL || 'http://backend:3001';
     return [
       {
         source: '/api/v1/:path*',
