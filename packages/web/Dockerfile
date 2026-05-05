@@ -17,12 +17,19 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+RUN npm install -g pnpm
+
 ENV NODE_ENV=production
 
-COPY --from=builder /app/packages/web/.next/standalone ./
-COPY --from=builder /app/packages/web/.next/static ./.next/static
-COPY --from=builder /app/packages/web/public ./public
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/packages/web/package.json ./packages/web/package.json
+COPY --from=builder /app/packages/web/next.config.mjs ./packages/web/next.config.mjs
+COPY --from=builder /app/packages/web/.next ./packages/web/.next
+COPY --from=builder /app/packages/web/public ./packages/web/public
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+WORKDIR /app/packages/web
+
+CMD ["pnpm", "start"]
