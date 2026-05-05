@@ -161,6 +161,7 @@ export interface Vehicle {
   operationCardIssueDate?: string;
   operationCardExpiryDate?: string;
   operationCardRenewDate?: string;
+  operationCardFileUrl?: string;
   lastLocation?: GeoPoint;
   lastLocationAt?: Date;
   createdAt: Date;
@@ -181,6 +182,9 @@ export interface CreateVehicleDto {
   operationCardIssueDate?: string;
   operationCardExpiryDate?: string;
   operationCardRenewDate?: string;
+  operationCardFileUrl?: string;
+  licenseExpiryDate?: string;
+  insuranceExpiryDate?: string;
 }
 
 export interface UpdateVehicleDto extends Partial<CreateVehicleDto> {

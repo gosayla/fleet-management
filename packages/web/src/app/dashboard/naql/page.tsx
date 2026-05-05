@@ -44,7 +44,7 @@ export default function NaqlPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: typeof emptyForm & { cargoWeight: number }) =>
+    mutationFn: (payload: Omit<typeof emptyForm, 'cargoWeight'> & { cargoWeight: number }) =>
       api.post('/naql/permits', payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['naql-permits'] });

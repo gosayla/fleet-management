@@ -151,21 +151,23 @@ export default function EditDriverPage() {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const parsedLicenseExpiry = new Date(licenseExpiry ?? '');
+
+    if (!licenseExpiry || Number.isNaN(parsedLicenseExpiry.getTime())) {
+      return;
+    }
+
     const payload: UpdateDriverDto = {
       fullName: String(fd.get('fullName') ?? '').trim(),
       phone: String(fd.get('phone') ?? '').trim(),
       email: String(fd.get('email') ?? '').trim() || undefined,
       nationalId: String(fd.get('nationalId') ?? '').trim(),
       licenseNumber: String(fd.get('licenseNumber') ?? '').trim(),
-      licenseExpiry: new Date(licenseExpiry ?? ''),
+      licenseExpiry: parsedLicenseExpiry,
       status: String(fd.get('status') ?? DriverStatus.ACTIVE) as DriverStatus,
       bloodType: bloodType || undefined,
       assignedVehicleId,
     };
-
-    if (!licenseExpiry || Number.isNaN(payload.licenseExpiry.getTime())) {
-      return;
-    }
 
     updateMutation.mutate(payload);
   }

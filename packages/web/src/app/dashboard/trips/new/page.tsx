@@ -7,8 +7,10 @@ import { ArrowLeft, ArrowRight, Route } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '@/lib/api';
 import { useLocale } from '@/providers/locale-provider';
-import { CreateTripDto, Driver, TripType, Vehicle } from '@fleet/shared';
+import type { CreateTripDto, Driver, Vehicle } from '@fleet/shared';
 import { DatePicker } from '@/components/ui/date-picker';
+
+type TripType = NonNullable<CreateTripDto['tripType']>;
 
 const TRIP_TYPE_LABELS: Record<TripType, { en: string; ar: string }> = {
   ONE_TIME: { en: 'One-Time', ar: 'رحلة واحدة' },
@@ -51,7 +53,7 @@ export default function NewTripPage() {
   const tc = t.common;
   const ArrowBack = isRTL ? ArrowRight : ArrowLeft;
 
-  const [tripType, setTripType] = useState<TripType>('ONE_TIME');
+  const [tripType, setTripType] = useState<TripType>('ONE_TIME' as TripType);
   const [scheduledStartDate, setScheduledStartDate] = useState<string | undefined>(undefined);
   const [scheduledEndDate, setScheduledEndDate] = useState<string | undefined>(undefined);
   const [contractStartDate, setContractStartDate] = useState<string | undefined>(undefined);

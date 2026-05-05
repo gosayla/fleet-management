@@ -4,7 +4,7 @@ import type { AxiosError } from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Shield, AlertTriangle, RefreshCw, Car, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { formatCurrencySar, formatDate, formatNumber } from '@/lib/i18n';
+import { formatCurrencySar, formatDate, formatNumber, type Locale } from '@/lib/i18n';
 import { useLocale } from '@/providers/locale-provider';
 
 interface FleetVehicle {
@@ -52,7 +52,7 @@ interface SyncErrorResponse {
   failures?: SyncFailure[];
 }
 
-function expiryBadge(dateStr?: string, locale?: string) {
+function expiryBadge(dateStr?: string, locale?: Locale) {
   if (!dateStr) return <span className="text-gray-300 text-xs">—</span>;
   const date = new Date(dateStr);
   const now = new Date();

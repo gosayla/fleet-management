@@ -27,6 +27,7 @@ export const messages = {
       rowsPerPage: 'صفوف في الصفحة',
       prev: 'السابق',
       next: 'التالي',
+      optional: 'اختياري',
     },
     login: {
       title: 'إدارة الأسطول',
@@ -369,6 +370,7 @@ export const messages = {
       rowsPerPage: 'Rows per page',
       prev: 'Previous',
       next: 'Next',
+      optional: 'optional',
     },
     login: {
       title: 'Fleet Management',
