@@ -20,7 +20,7 @@ const USER_SELECT = {
 } as const;
 
 /** Roles a given requester role is allowed to see and manage */
-const MANAGEABLE_ROLES: Partial<Record<UserRole, readonly UserRole[]>> = {
+const MANAGEABLE_ROLES: Partial<Record<UserRole, UserRole[]>> = {
   SUPER_ADMIN:    ['FLEET_MANAGER', 'DISPATCHER', 'DRIVER', 'VIEWER'],
   FLEET_MANAGER:  ['FLEET_MANAGER', 'DISPATCHER', 'DRIVER', 'VIEWER'],
   DISPATCHER:     ['DISPATCHER', 'DRIVER', 'VIEWER'],
@@ -28,7 +28,7 @@ const MANAGEABLE_ROLES: Partial<Record<UserRole, readonly UserRole[]>> = {
   VIEWER:         ['VIEWER'],
 };
 
-function getManageableRoles(requesterRole: string): readonly UserRole[] {
+function getManageableRoles(requesterRole: string): UserRole[] {
   return MANAGEABLE_ROLES[requesterRole as UserRole] ?? [];
 }
 
