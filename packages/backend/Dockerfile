@@ -35,4 +35,4 @@ COPY --from=builder /app/packages/shared ./packages/shared
 
 EXPOSE 3001
 
-CMD ["node", "dist/main"]
+CMD ["node", "dist/backend/src/main.js"]
