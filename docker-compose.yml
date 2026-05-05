@@ -58,6 +58,7 @@ services:
       TAMM_CLIENT_ID: ${TAMM_CLIENT_ID:-}
       TAMM_CLIENT_SECRET: ${TAMM_CLIENT_SECRET:-}
       NAQL_MOCK: ${NAQL_MOCK:-true}
+      APP_URL: ${APP_URL:-http://localhost:3000}
     ports:
       - "3001:3001"
     volumes:
@@ -68,13 +69,16 @@ services:
     build:
       context: .
       dockerfile: packages/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:3001}
     container_name: fleet_web
     restart: unless-stopped
     depends_on:
       - backend
     environment:
-      NEXT_PUBLIC_API_URL: http://backend:3001/api/v1
-      NEXT_PUBLIC_SOCKET_URL: http://backend:3001
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:3001}
     ports:
       - "${WEB_PORT:-3002}:3000"
 

@@ -4,6 +4,12 @@ WORKDIR /app
 
 RUN npm install -g pnpm
 
+# Build-time public env vars (baked into Next.js bundle)
+ARG NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+ARG NEXT_PUBLIC_SOCKET_URL=http://localhost:3001
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
+
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY tsconfig.base.json ./
 COPY packages/shared ./packages/shared
