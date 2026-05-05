@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './users.dto';
@@ -19,7 +20,7 @@ const USER_SELECT = {
 } as const;
 
 /** Roles a given requester role is allowed to see and manage */
-const MANAGEABLE_ROLES: Record<string, string[]> = {
+const MANAGEABLE_ROLES: Partial<Record<UserRole, readonly UserRole[]>> = {
   SUPER_ADMIN:    ['FLEET_MANAGER', 'DISPATCHER', 'DRIVER', 'VIEWER'],
   FLEET_MANAGER:  ['FLEET_MANAGER', 'DISPATCHER', 'DRIVER', 'VIEWER'],
   DISPATCHER:     ['DISPATCHER', 'DRIVER', 'VIEWER'],
@@ -27,8 +28,8 @@ const MANAGEABLE_ROLES: Record<string, string[]> = {
   VIEWER:         ['VIEWER'],
 };
 
-function getManageableRoles(requesterRole: string): string[] {
-  return MANAGEABLE_ROLES[requesterRole] ?? [];
+function getManageableRoles(requesterRole: string): readonly UserRole[] {
+  return MANAGEABLE_ROLES[requesterRole as UserRole] ?? [];
 }
 
 @Injectable()
@@ -46,7 +47,7 @@ export class UsersService {
 
   async create(companyId: string, dto: CreateUserDto, requesterRole: string) {
     const allowed = getManageableRoles(requesterRole);
-    if (!allowed.includes(dto.role)) {
+    if (!allowed.includes(dto.role as UserRole)) {
       throw new ForbiddenException('لا تملك صلاحية إنشاء مستخدم بهذا الدور');
     }
 
@@ -76,7 +77,7 @@ export class UsersService {
       throw new ForbiddenException('لا تملك صلاحية تعديل هذا المستخدم');
     }
     // If the update changes the role, the new role must also be manageable
-    if (dto.role && !allowed.includes(dto.role)) {
+    if (dto.role && !allowed.includes(dto.role as UserRole)) {
       throw new ForbiddenException('لا تملك صلاحية تعيين هذا الدور');
     }
 
