@@ -7,10 +7,25 @@ function trimTrailingSlash(value: string): string {
   return value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
+function normalizePath(path: string): string {
+  return path.startsWith('/') ? path : `/${path}`;
+}
+
+export function resolveApiAssetUrls(path: string): string[] {
+  if (/^https?:\/\//i.test(path)) return [path];
+
+  const normalizedPath = normalizePath(path);
+  const apiBase = trimTrailingSlash(API_BASE);
+  const apiOrigin = trimTrailingSlash(API_BASE.replace(/\/api\/v1\/?$/, ''));
+
+  return Array.from(new Set([
+    `${apiBase}${normalizedPath}`,
+    `${apiOrigin}${normalizedPath}`,
+  ]));
+}
+
 export function resolveApiUrl(path: string): string {
-  if (/^https?:\/\//i.test(path)) return path;
-  const base = trimTrailingSlash(API_BASE.replace(/\/api\/v1\/?$/, ''));
-  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+  return resolveApiAssetUrls(path)[0];
 }
 
 async function getToken(): Promise<string | null> {

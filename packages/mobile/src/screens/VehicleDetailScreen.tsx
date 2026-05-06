@@ -11,7 +11,7 @@ import {
   Linking,
   Alert,
 } from 'react-native';
-import {api, resolveApiUrl} from '../lib/api';
+import {api, resolveApiAssetUrls} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {Locale} from '../lib/i18n';
@@ -347,9 +347,22 @@ function DocRow({label, value, last}: {label: string; value: string; last?: bool
 const DOC_ICONS: Record<string, string> = {
   VEHICLE_REGISTRATION: 'card-account-details-outline',
   VEHICLE_INSURANCE:    'shield-check-outline',
+  PERIODIC_INSPECTION:  'clipboard-check-outline',
   DRIVER_LICENSE:       'card-account-details-outline',
+  TRANSPORT_PERMIT:     'truck-delivery-outline',
+  OWNERSHIP_DEED:       'file-certificate-outline',
   OPERATION_CARD:       'file-document-outline',
   DEFAULT:              'file-outline',
+};
+
+const DOC_LABELS: Record<string, {ar: string; en: string}> = {
+  VEHICLE_REGISTRATION: {ar: 'تسجيل مركبة', en: 'Vehicle Registration'},
+  VEHICLE_INSURANCE: {ar: 'تأمين مركبة', en: 'Vehicle Insurance'},
+  PERIODIC_INSPECTION: {ar: 'فحص دوري', en: 'Periodic Inspection'},
+  DRIVER_LICENSE: {ar: 'رخصة قيادة', en: 'Driver License'},
+  TRANSPORT_PERMIT: {ar: 'تصريح نقل', en: 'Transport Permit'},
+  OWNERSHIP_DEED: {ar: 'صك ملكية', en: 'Ownership Deed'},
+  OPERATION_CARD: {ar: 'بطاقة تشغيل', en: 'Operation Card'},
 };
 
 function DocFileRow({
@@ -366,15 +379,17 @@ function DocFileRow({
     : '—';
   const isExpired = doc.expiryDate && new Date(doc.expiryDate) < new Date();
   const icon = DOC_ICONS[doc.type] ?? DOC_ICONS.DEFAULT;
-  const typeName = doc.type.replace(/_/g, ' ');
+  const typeName = DOC_LABELS[doc.type]?.[isAr ? 'ar' : 'en'] ?? doc.type.replace(/_/g, ' ');
 
   async function handleOpen() {
     const url = doc.fileUrl;
     if (!url) return;
-    const resolvedUrl = encodeURI(resolveApiUrl(url));
+    const candidates = resolveApiAssetUrls(url).map((candidate) => encodeURI(candidate));
     try {
+      const resolvedUrl = await findReachableDocumentUrl(candidates);
       await Linking.openURL(resolvedUrl);
     } catch {
+      const resolvedUrl = candidates[0];
       const isPdf = /\.pdf($|\?)/i.test(resolvedUrl);
       if (isPdf) {
         try {
@@ -411,6 +426,21 @@ function DocFileRow({
       </View>
     </TouchableOpacity>
   );
+}
+
+async function findReachableDocumentUrl(candidates: string[]): Promise<string> {
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(candidate, {method: 'HEAD'});
+      if (response.ok || response.status === 405) {
+        return candidate;
+      }
+    } catch {
+      // Try the next URL candidate.
+    }
+  }
+
+  return candidates[0];
 }
 
 // ── Styles ──────────────────────────────────────────────────────────────────
