@@ -1,11 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {API_URL} from './env';
 
-function getEnv(name: string): string | undefined {
-  return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[name];
-}
-
-const API_BASE =
-  getEnv('API_URL') ?? 'http://10.0.2.2:3001/api/v1'; // 10.0.2.2 = host from Android emulator
+const API_BASE = API_URL;
 
 async function getToken(): Promise<string | null> {
   return AsyncStorage.getItem('accessToken');

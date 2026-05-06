@@ -2,6 +2,7 @@ import React, {createContext, useContext, useState, useEffect, ReactNode} from '
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {api} from '../lib/api';
 import {AuthTokenPayload} from '@fleet/shared';
+import {initNotifications} from '../lib/notifications';
 
 interface AuthContextType {
   user: AuthTokenPayload | null;
@@ -32,6 +33,12 @@ export function AuthProvider({children}: {children: ReactNode}) {
     await AsyncStorage.setItem('accessToken', res.accessToken);
     await AsyncStorage.setItem('user', JSON.stringify(res.user));
     setUser(res.user);
+    // Register FCM token with backend (best-effort)
+    initNotifications().then(fcmToken => {
+      if (fcmToken) {
+        api.post('/notifications/register', {token: fcmToken}).catch(() => {});
+      }
+    });
   }
 
   async function logout() {

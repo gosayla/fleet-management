@@ -6,13 +6,17 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
+import MapView, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
 import {useAuth} from '../context/AuthContext';
 import {startBroadcastingLocation, stopBroadcasting} from '../lib/socket';
 import {api} from '../lib/api';
 import {Trip} from '@fleet/shared';
 import {Locale, t} from '../lib/i18n';
+
+const {height} = Dimensions.get('window');
 
 interface Props {
   trip: Trip;
@@ -27,6 +31,7 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
   const isRTL = locale === 'ar';
   const [tracking, setTracking] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{lat: number; lng: number} | null>(null);
+  const [routeCoords, setRouteCoords] = useState<{latitude: number; longitude: number}[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const watchId = useRef<number | null>(null);
   const broadcastRef = useRef<((u: any) => void) | null>(null);
@@ -57,6 +62,10 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
       pos => {
         const location = {lat: pos.coords.latitude, lng: pos.coords.longitude};
         setCurrentLocation(location);
+        setRouteCoords(prev => [
+          ...prev,
+          {latitude: pos.coords.latitude, longitude: pos.coords.longitude},
+        ]);
         broadcast({
           location,
           speed: pos.coords.speed ?? undefined,
@@ -109,16 +118,45 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBar, isRTL && styles.topBarRtl]}>
-        <TouchableOpacity style={styles.langBtn} onPress={onToggleLocale}>
-          <Text style={styles.langText}>{i18n.languageLabel}</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Map */}
+      <MapView
+        provider={PROVIDER_GOOGLE}
+        style={styles.map}
+        region={
+          currentLocation
+            ? {
+                latitude: currentLocation.lat,
+                longitude: currentLocation.lng,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              }
+            : {latitude: 24.7136, longitude: 46.6753, latitudeDelta: 1, longitudeDelta: 1}
+        }
+        showsUserLocation
+        showsMyLocationButton>
+        {routeCoords.length > 1 && (
+          <Polyline coordinates={routeCoords} strokeColor="#2563eb" strokeWidth={4} />
+        )}
+        {currentLocation && (
+          <Marker
+            coordinate={{latitude: currentLocation.lat, longitude: currentLocation.lng}}
+            title={i18n.vehicle}
+            description={trip.vehicleId}
+          />
+        )}
+      </MapView>
 
-      <View style={styles.card}>
-        <Text style={[styles.route, isRTL && styles.rtlText]}>
-          {trip.origin} → {trip.destination}
-        </Text>
+      {/* Info card */}
+      <View style={styles.bottomSheet}>
+        <View style={[styles.topBar, isRTL && styles.topBarRtl]}>
+          <Text style={[styles.route, isRTL && styles.rtlText]}>
+            {trip.origin} → {trip.destination}
+          </Text>
+          <TouchableOpacity style={styles.langBtn} onPress={onToggleLocale}>
+            <Text style={styles.langText}>{i18n.languageLabel}</Text>
+          </TouchableOpacity>
+        </View>
+
         <Text style={[styles.vehicle, isRTL && styles.rtlText]}>{i18n.vehicle}: {trip.vehicleId}</Text>
 
         {tracking && (
@@ -128,30 +166,41 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
           </View>
         )}
 
-        {currentLocation && (
-          <Text style={styles.coords}>
-            {currentLocation.lat.toFixed(5)}, {currentLocation.lng.toFixed(5)}
-          </Text>
+        {!tracking ? (
+          <TouchableOpacity style={styles.startBtn} onPress={startTracking}>
+            <Text style={styles.btnText}>{i18n.startTrip}</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.completeBtn} onPress={completeTrip}>
+            <Text style={styles.btnText}>{i18n.completeTrip}</Text>
+          </TouchableOpacity>
         )}
       </View>
-
-      {!tracking ? (
-        <TouchableOpacity style={styles.startBtn} onPress={startTracking}>
-          <Text style={styles.btnText}>{i18n.startTrip}</Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity style={styles.completeBtn} onPress={completeTrip}>
-          <Text style={styles.btnText}>{i18n.completeTrip}</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#f9fafb', padding: 16, gap: 16},
-  topBar: {alignItems: 'flex-end'},
-  topBarRtl: {alignItems: 'flex-start'},
+  container: {flex: 1, backgroundColor: '#f9fafb'},
+  map: {width: '100%', height: height * 0.55},
+  bottomSheet: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  topBarRtl: {flexDirection: 'row-reverse'},
   langBtn: {
     borderWidth: 1,
     borderColor: '#d1d5db',
@@ -160,17 +209,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   langText: {color: '#374151', fontSize: 12, fontWeight: '600'},
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    gap: 8,
-  },
-  route: {fontSize: 18, fontWeight: '700', color: '#111827'},
+  route: {fontSize: 17, fontWeight: '700', color: '#111827', flex: 1, marginRight: 8},
   vehicle: {fontSize: 14, color: '#6b7280'},
   rtlText: {textAlign: 'right'},
   trackingBadge: {
@@ -181,21 +220,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    marginTop: 8,
   },
   trackingText: {color: '#fff', fontWeight: '600', fontSize: 14},
-  coords: {fontSize: 12, color: '#9ca3af', fontFamily: 'monospace'},
   startBtn: {
     backgroundColor: '#2563eb',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
+    marginTop: 4,
   },
   completeBtn: {
     backgroundColor: '#16a34a',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
+    marginTop: 4,
   },
   btnText: {color: '#fff', fontWeight: '700', fontSize: 16},
+});
 });

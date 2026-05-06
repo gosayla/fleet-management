@@ -23,6 +23,12 @@ const messages = {
     cancel: 'إلغاء',
     complete: 'إنهاء',
     languageLabel: 'English',
+    notifications: 'الإشعارات',
+    noNotifications: 'لا توجد إشعارات',
+    profile: 'الملف الشخصي',
+    logout: 'تسجيل الخروج',
+    logoutTitle: 'تسجيل الخروج',
+    logoutConfirm: 'هل تريد تسجيل الخروج؟',
   },
   en: {
     appName: 'FleetSA',
@@ -46,6 +52,12 @@ const messages = {
     cancel: 'Cancel',
     complete: 'Complete',
     languageLabel: 'العربية',
+    notifications: 'Notifications',
+    noNotifications: 'No notifications',
+    profile: 'Profile',
+    logout: 'Log Out',
+    logoutTitle: 'Log Out',
+    logoutConfirm: 'Are you sure you want to log out?',
   },
 } as const;
 

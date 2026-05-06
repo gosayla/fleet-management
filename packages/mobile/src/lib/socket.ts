@@ -1,12 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VehicleLocationUpdate } from '@fleet/shared';
-
-function getEnv(name: string): string | undefined {
-  return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[name];
-}
-
-const SOCKET_URL = getEnv('SOCKET_URL') ?? 'http://10.0.2.2:3001';
+import {SOCKET_URL} from './env';
 
 let socket: Socket | null = null;
 
