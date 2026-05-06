@@ -38,7 +38,7 @@ export class DocumentsController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) throw new BadRequestException('File is required');
-    return { fileUrl: `/documents/${file.filename}` };
+    return { fileUrl: `/documents/files/${file.filename}` };
   }
 
   @Post()

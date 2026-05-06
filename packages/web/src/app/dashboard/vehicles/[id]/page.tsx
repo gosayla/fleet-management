@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, resolveDocumentFileUrl } from '@/lib/api';
 import { useLocale } from '@/providers/locale-provider';
 import { formatDate, formatEnumLabel, formatCurrencySar, formatNumber } from '@/lib/i18n';
 import { DocumentType, Vehicle } from '@fleet/shared';
@@ -290,7 +290,7 @@ export default function VehicleDashboardPage() {
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           {doc.fileUrl && (
                             <a
-                              href={doc.fileUrl.startsWith('/') ? `http://localhost:3001${doc.fileUrl}` : doc.fileUrl}
+                              href={resolveDocumentFileUrl(doc.fileUrl)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-gray-400 hover:text-blue-600"

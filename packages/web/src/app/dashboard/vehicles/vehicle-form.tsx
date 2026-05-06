@@ -6,6 +6,7 @@ import { useLocale } from '@/providers/locale-provider';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DatePicker } from '@/components/ui/date-picker';
 import { ExternalLink } from 'lucide-react';
+import { resolveDocumentFileUrl } from '@/lib/api';
 
 export type VehicleFormValues = {
   plateNumber: string;
@@ -178,7 +179,7 @@ export function VehicleForm({
             {initialValues.operationCardFileUrl && !opCardFile && (
               <div className="mb-1 flex items-center gap-2">
                 <a
-                  href={initialValues.operationCardFileUrl.startsWith('/') ? `http://localhost:3001${initialValues.operationCardFileUrl}` : initialValues.operationCardFileUrl}
+                  href={resolveDocumentFileUrl(initialValues.operationCardFileUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { DocumentType } from '@fleet/shared';
 import { useLocale } from '@/providers/locale-provider';
-import { api } from '@/lib/api';
+import { api, resolveDocumentFileUrl } from '@/lib/api';
 import { formatDate, formatEnumLabel, formatNumber } from '@/lib/i18n';
 import { Pagination } from '@/components/ui/pagination';
 
@@ -308,7 +308,7 @@ export default function DocumentsPage() {
                             {tc.delete}
                           </button>
                           <a
-                            href={row.fileUrl}
+                            href={resolveDocumentFileUrl(row.fileUrl)}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"

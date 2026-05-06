@@ -5,6 +5,7 @@ import { ExternalLink } from 'lucide-react';
 import { DocumentType } from '@fleet/shared';
 import { useLocale } from '@/providers/locale-provider';
 import { formatEnumLabel } from '@/lib/i18n';
+import { resolveDocumentFileUrl } from '@/lib/api';
 import { DatePicker } from '@/components/ui/date-picker';
 
 export type DocumentFormValues = {
@@ -217,7 +218,7 @@ export function DocumentForm({
           {currentFileUrl && !selectedFile && (
             <div className="mb-1 flex items-center gap-2">
               <a
-                href={currentFileUrl}
+                href={resolveDocumentFileUrl(currentFileUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
