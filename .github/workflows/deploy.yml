@@ -17,8 +17,10 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set -e
             cd /opt/fleet-management
             git pull origin main --no-rebase
             docker compose --env-file .env up --build -d
-            docker compose exec -T backend npx prisma migrate deploy
-            echo "Deployment complete at $(date)"
+            docker exec fleet_backend npx prisma migrate deploy
+            echo "==> Deployment complete at $(date -u)"
+            docker compose --env-file .env ps

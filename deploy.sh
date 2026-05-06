@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # deploy.sh — run this on the server to deploy / update the fleet management app
+# Usage: bash deploy.sh [--full]
+#   --full  force a full no-cache rebuild of all images (use after Dockerfile changes)
 set -euo pipefail
 
 REPO_DIR="/opt/fleet-management"
 REPO_URL="https://github.com/gosayla/fleet-management.git"
 
-echo "==> Fleet Management Deployment"
+echo "==> Fleet Management Deployment ($(date -u '+%Y-%m-%d %H:%M:%S UTC'))"
 
 # ── 1. Clone or pull ──────────────────────────────────────────────────────────
 if [ -d "$REPO_DIR/.git" ]; then
@@ -27,16 +29,19 @@ if [ ! -f "$REPO_DIR/.env" ]; then
 fi
 
 # ── 3. Build & start containers ───────────────────────────────────────────────
-echo "--> Building and starting containers..."
-docker compose --env-file .env up --build -d
+if [[ "${1:-}" == "--full" ]]; then
+  echo "--> Full no-cache rebuild (--full flag set)..."
+  docker compose --env-file .env build --no-cache
+  docker compose --env-file .env up -d
+else
+  echo "--> Building changed images and starting containers..."
+  docker compose --env-file .env up --build -d
+fi
 
 # ── 4. Run DB migrations ──────────────────────────────────────────────────────
 echo "--> Running database migrations..."
-docker compose exec backend npx prisma migrate deploy
+docker exec fleet_backend npx prisma migrate deploy
 
 echo ""
-echo "✓ Deployment complete!"
-echo "  Web:     http://localhost:3000"
-echo "  Backend: http://localhost:3001"
-echo ""
-echo "Configure CloudPanel to reverse-proxy your domain to port 3000."
+echo "==> Deployment complete!"
+docker compose --env-file .env ps
