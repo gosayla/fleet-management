@@ -11,7 +11,7 @@ export function resolveDocumentFileUrl(fileUrl: string): string {
   if (/^https?:\/\//i.test(fileUrl)) return fileUrl;
 
   const normalized = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
-  const legacy = normalized.match(/^\/documents\/(.+)$/i);
+  const legacy = normalized.match(/^\/documents\/(?!files\/)(.+)$/i);
   const targetPath = legacy ? `/documents/files/${legacy[1]}` : normalized;
   return `${trimTrailingSlash(API_BASE)}${targetPath}`;
 }

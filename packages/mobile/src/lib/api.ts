@@ -17,7 +17,9 @@ export function resolveApiAssetUrls(path: string): string[] {
   const normalizedPath = normalizePath(path);
   const apiBase = trimTrailingSlash(API_BASE);
   const apiOrigin = trimTrailingSlash(API_BASE.replace(/\/api\/v1\/?$/, ''));
-  const publicDocumentPath = normalizedPath.startsWith('/documents/')
+  const publicDocumentPath = normalizedPath.startsWith('/documents/files/')
+    ? normalizedPath
+    : normalizedPath.startsWith('/documents/')
     ? `/documents/files/${normalizedPath.slice('/documents/'.length)}`
     : normalizedPath;
 
