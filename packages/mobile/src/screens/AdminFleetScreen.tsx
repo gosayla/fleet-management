@@ -22,6 +22,7 @@ interface Props {
   locale: Locale;
   onToggleLocale: () => void;
   onSelectVehicle: (id: string) => void;
+  onSelectDriver?: (id: string) => void;
   onAddVehicle?: () => void;
   onAddDriver?: () => void;
 }
@@ -31,7 +32,7 @@ type Segment = 'drivers' | 'vehicles';
 const STATUS_BAR_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 const PAGE_SIZE = 20;
 
-export function AdminFleetScreen({locale, onToggleLocale, onSelectVehicle, onAddVehicle, onAddDriver}: Props) {
+export function AdminFleetScreen({locale, onToggleLocale, onSelectVehicle, onSelectDriver, onAddVehicle, onAddDriver}: Props) {
   const isAr = locale === 'ar';
   const [segment, setSegment] = useState<Segment>('vehicles');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -217,7 +218,7 @@ export function AdminFleetScreen({locale, onToggleLocale, onSelectVehicle, onAdd
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />}
-            renderItem={({item}) => <DriverCard driver={item} locale={locale} />}
+            renderItem={({item}) => <DriverCard driver={item} locale={locale} onPress={() => onSelectDriver?.(item.id)} />}
             ListEmptyComponent={
               <View style={styles.empty}>
                 <AppIcon name="account-group-outline" size={48} color={Colors.border} />

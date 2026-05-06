@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -42,8 +42,20 @@ const BLOOD_TYPE_LABELS: Record<BloodType, string> = {
 
 type BloodType = (typeof BLOOD_TYPES)[number];
 
+const DRIVER_STATUSES = ['ACTIVE', 'OFF_DUTY', 'ON_LEAVE', 'SUSPENDED', 'TERMINATED'] as const;
+type DriverStatus = (typeof DRIVER_STATUSES)[number];
+
+const STATUS_LABELS: Record<DriverStatus, {en: string; ar: string}> = {
+  ACTIVE:     {en: 'Active',      ar: 'نشط'},
+  OFF_DUTY:   {en: 'Off Duty',    ar: 'خارج الخدمة'},
+  ON_LEAVE:   {en: 'On Leave',    ar: 'إجازة'},
+  SUSPENDED:  {en: 'Suspended',   ar: 'موقوف'},
+  TERMINATED: {en: 'Terminated',  ar: 'منتهي'},
+};
+
 interface Props {
   locale: Locale;
+  driverId?: string;   // present → edit mode
   onBack: () => void;
   onSuccess: () => void;
 }
@@ -56,6 +68,7 @@ interface FormState {
   licenseNumber: string;
   licenseExpiry: string;
   bloodType: '' | BloodType;
+  status: DriverStatus;
 }
 
 const EMPTY: FormState = {
@@ -66,13 +79,39 @@ const EMPTY: FormState = {
   licenseNumber: '',
   licenseExpiry: '',
   bloodType: '',
+  status: 'ACTIVE',
 };
 
-export function DriverFormScreen({locale, onBack, onSuccess}: Props) {
+export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
   const isAr = locale === 'ar';
+  const isEdit = !!driverId;
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [loadingDriver, setLoadingDriver] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (!driverId) return;
+    api.get<any>(`/drivers/${driverId}`)
+      .then(d => {
+        const expiry = d.licenseExpiry
+          ? new Date(d.licenseExpiry).toISOString().slice(0, 10)
+          : '';
+        setForm({
+          fullName: d.fullName ?? '',
+          phone: d.phone ?? '',
+          email: d.email ?? '',
+          nationalId: d.nationalId ?? '',
+          licenseNumber: d.licenseNumber ?? '',
+          licenseExpiry: expiry,
+          bloodType: (d.bloodType as BloodType | null) ?? '',
+          status: (d.status as DriverStatus) ?? 'ACTIVE',
+        });
+      })
+      .catch(() => setError(isAr ? 'تعذر تحميل بيانات السائق' : 'Failed to load driver'))
+      .finally(() => setLoadingDriver(false));
+  }, [driverId]);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm(prev => ({...prev, [key]: value}));
@@ -104,33 +143,23 @@ export function DriverFormScreen({locale, onBack, onSuccess}: Props) {
 
     setSubmitting(true);
     try {
-      const basePayload = {
+      const basePayload: Record<string, any> = {
         fullName: form.fullName.trim(),
         phone: form.phone.trim(),
         nationalId: form.nationalId.trim(),
         licenseNumber: form.licenseNumber.trim(),
-        ...(form.email.trim() && {email: form.email.trim()}),
-        ...(form.bloodType && {bloodType: form.bloodType}),
+        licenseExpiry: parsedExpiry.toISOString(),
+        ...(form.email.trim() ? {email: form.email.trim()} : {}),
+        ...(form.bloodType ? {bloodType: form.bloodType} : {}),
       };
 
-      // Primary payload matches current web app and local backend DTO.
-      try {
-        await api.post('/drivers', {
+      if (isEdit) {
+        await api.patch(`/drivers/${driverId}`, {
           ...basePayload,
-          licenseExpiry: parsedExpiry.toISOString(),
+          status: form.status,
         });
-      } catch (firstErr: any) {
-        const firstMsg = JSON.stringify(firstErr?.response?.data?.message ?? firstErr?.message ?? '');
-
-        // Compatibility fallback for environments that use licenseExpiryDate instead.
-        if (firstMsg.includes('licenseExpiry')) {
-          await api.post('/drivers', {
-            ...basePayload,
-            licenseExpiryDate: form.licenseExpiry.trim(),
-          });
-        } else {
-          throw firstErr;
-        }
+      } else {
+        await api.post('/drivers', basePayload);
       }
 
       onSuccess();
@@ -140,6 +169,15 @@ export function DriverFormScreen({locale, onBack, onSuccess}: Props) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (loadingDriver) {
+    return (
+      <View style={styles.loaderWrap}>
+        <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
   }
 
   return (
@@ -152,7 +190,9 @@ export function DriverFormScreen({locale, onBack, onSuccess}: Props) {
           <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.8}>
             <AppIcon name="close" size={21} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isAr ? 'إضافة سائق' : 'Add Driver'}</Text>
+          <Text style={styles.headerTitle}>
+            {isEdit ? (isAr ? 'تعديل السائق' : 'Edit Driver') : (isAr ? 'إضافة سائق' : 'Add Driver')}
+          </Text>
           <TouchableOpacity style={[styles.saveBtn, submitting && {opacity: 0.6}]} onPress={handleSubmit} disabled={submitting} activeOpacity={0.8}>
             {submitting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveText}>{isAr ? 'حفظ' : 'Save'}</Text>}
           </TouchableOpacity>
@@ -206,6 +246,32 @@ export function DriverFormScreen({locale, onBack, onSuccess}: Props) {
               </TouchableOpacity>
             ))}
           </ScrollView>
+
+          {isEdit && (
+            <>
+              <Text style={styles.section}>{isAr ? 'الحالة' : 'Status'}</Text>
+              <View style={styles.card}>
+                {DRIVER_STATUSES.map((s, idx) => {
+                  const isFirst = idx === 0;
+                  const isActive = form.status === s;
+                  return (
+                    <React.Fragment key={s}>
+                      {!isFirst && <Divider />}
+                      <TouchableOpacity
+                        style={styles.statusRow}
+                        onPress={() => set('status', s)}
+                        activeOpacity={0.7}>
+                        <Text style={[styles.statusLabel, isActive && {color: Colors.primary, fontWeight: '700' as const}]}>
+                          {STATUS_LABELS[s][isAr ? 'ar' : 'en']}
+                        </Text>
+                        {isActive && <AppIcon name="check-circle" size={20} color={Colors.primary} />}
+                      </TouchableOpacity>
+                    </React.Fragment>
+                  );
+                })}
+              </View>
+            </>
+          )}
 
           <View style={{height: 40}} />
         </ScrollView>
@@ -325,4 +391,14 @@ const styles = StyleSheet.create({
   pillActive: {borderColor: Colors.primary, backgroundColor: Colors.primary},
   pillText: {fontSize: 13, color: Colors.textMuted, fontWeight: '600' as const},
   pillTextActive: {color: '#fff'},
+
+  loaderWrap: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.bg},
+
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+  },
+  statusLabel: {fontSize: 15, color: Colors.textPrimary, fontWeight: '500' as const},
 });

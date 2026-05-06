@@ -22,6 +22,11 @@ export class CreateTripDto {
   @IsNotEmpty()
   driverId: string;
 
+  @ApiPropertyOptional({ example: 'Airport Transfer #12' })
+  @IsString()
+  @IsOptional()
+  name?: string;
+
   @ApiPropertyOptional({ enum: TripType, default: TripType.ONE_TIME })
   @IsEnum(TripType)
   @IsOptional()

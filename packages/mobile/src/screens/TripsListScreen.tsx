@@ -6,17 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  StatusBar,
 } from 'react-native';
 import {api} from '../lib/api';
 import {Trip} from '@fleet/shared';
-import {formatDateTime, Locale, t, tripStatusLabel} from '../lib/i18n';
-
-const statusColors: Record<string, string> = {
-  SCHEDULED: '#6366f1',
-  IN_PROGRESS: '#16a34a',
-  COMPLETED: '#6b7280',
-  CANCELLED: '#ef4444',
-};
+import {Locale, t} from '../lib/i18n';
+import {Colors, Spacing, Typography} from '../lib/theme';
+import {ScreenHeader} from '../components/ui/ScreenHeader';
+import {TripCard} from '../components/ui/cards/TripCard';
 
 interface Props {
   onSelectTrip: (trip: Trip) => void;
@@ -26,7 +23,6 @@ interface Props {
 
 export function TripsListScreen({onSelectTrip, locale, onToggleLocale}: Props) {
   const i18n = t(locale);
-  const isRTL = locale === 'ar';
   const [trips, setTrips] = useState<Trip[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -46,45 +42,45 @@ export function TripsListScreen({onSelectTrip, locale, onToggleLocale}: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={[styles.heading, isRTL && styles.headingRtl]}>{i18n.myTrips}</Text>
-        <TouchableOpacity style={styles.langBtn} onPress={onToggleLocale}>
-          <Text style={styles.langText}>{i18n.languageLabel}</Text>
-        </TouchableOpacity>
-      </View>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+      <ScreenHeader
+        locale={locale}
+        title={i18n.myTrips}
+        subtitle={`${trips.length} ${locale === 'ar' ? 'رحلة' : 'trips'}`}
+        languageLabel={i18n.languageLabel}
+        onToggleLocale={onToggleLocale}
+      />
+
       <FlatList
         data={trips}
-        keyExtractor={t => t.id}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={load} />
-        }
+        keyExtractor={item => item.id}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} tintColor={Colors.primary} />}
         contentContainerStyle={styles.list}
-        renderItem={({item: trip}) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => onSelectTrip(trip)}
-            disabled={trip.status === 'COMPLETED' || trip.status === 'CANCELLED'}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.route}>
-                {trip.origin} → {trip.destination}
-              </Text>
-              <View
-                style={[
-                  styles.badge,
-                  {backgroundColor: statusColors[trip.status] + '22'},
-                ]}>
-                <Text style={[styles.badgeText, {color: statusColors[trip.status]}]}>
-                  {tripStatusLabel(trip.status, locale)}
-                </Text>
-              </View>
+        showsVerticalScrollIndicator={false}
+        renderItem={({item: trip}) => {
+          const disabled = trip.status === 'COMPLETED' || trip.status === 'CANCELLED';
+          return (
+            <View style={styles.itemWrap}>
+              <TouchableOpacity
+                style={disabled ? styles.cardDisabled : undefined}
+                onPress={() => onSelectTrip(trip)}
+                disabled={disabled}
+                activeOpacity={0.8}>
+                <TripCard trip={trip} locale={locale} />
+              </TouchableOpacity>
+              {!disabled && (
+                <View style={styles.tapHint}>
+                  <Text style={styles.tapHintText}>{locale === 'ar' ? 'اضغط لفتح الرحلة' : 'Tap to open trip'}</Text>
+                </View>
+              )}
             </View>
-            <Text style={styles.date}>
-              {formatDateTime(trip.scheduledStart, locale)}
-            </Text>
-          </TouchableOpacity>
-        )}
+          );
+        }}
         ListEmptyComponent={
-          <Text style={styles.empty}>{i18n.noTrips}</Text>
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyIcon}>🗺️</Text>
+            <Text style={styles.emptyText}>{i18n.noTrips}</Text>
+          </View>
         }
       />
     </View>
@@ -92,54 +88,13 @@ export function TripsListScreen({onSelectTrip, locale, onToggleLocale}: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#f9fafb'},
-  headerRow: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  heading: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  headingRtl: {
-    textAlign: 'right',
-  },
-  langBtn: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  langText: {
-    color: '#374151',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  list: {padding: 16, gap: 12},
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-    gap: 6,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  route: {fontSize: 15, fontWeight: '600', color: '#111827', flex: 1},
-  badge: {paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6},
-  badgeText: {fontSize: 11, fontWeight: '700'},
-  date: {fontSize: 13, color: '#6b7280'},
-  empty: {textAlign: 'center', color: '#9ca3af', marginTop: 48, fontSize: 15},
+  container: {flex: 1, backgroundColor: Colors.bg},
+  list: {padding: Spacing.md, gap: Spacing.sm},
+  itemWrap: {gap: 6},
+  cardDisabled: {opacity: 0.55},
+  tapHint: {alignItems: 'flex-end', paddingHorizontal: 6},
+  tapHintText: {...Typography.caption, color: Colors.primary, fontWeight: '600'},
+  emptyWrap: {alignItems: 'center', paddingTop: Spacing.xxl},
+  emptyIcon: {fontSize: 48, marginBottom: Spacing.md},
+  emptyText: {...Typography.body, color: Colors.textMuted},
 });

@@ -233,6 +233,7 @@ model Trip {
   companyId          String
   vehicleId          String
   driverId           String
+  name               String?    // Human-readable trip label
   status             TripStatus @default(SCHEDULED)
   tripType           TripType   @default(ONE_TIME)
   origin             String

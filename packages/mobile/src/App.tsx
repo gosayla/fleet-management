@@ -16,7 +16,10 @@ import {AdminFleetScreen} from './screens/AdminFleetScreen';
 import {AdminTripsScreen} from './screens/AdminTripsScreen';
 import {VehicleDetailScreen} from './screens/VehicleDetailScreen';
 import {VehicleFormScreen} from './screens/VehicleFormScreen';
+import {DriverDetailScreen} from './screens/DriverDetailScreen';
 import {DriverFormScreen} from './screens/DriverFormScreen';
+import {TripDetailScreen} from './screens/TripDetailScreen';
+import {TripFormScreen} from './screens/TripFormScreen';
 import {Trip} from '@fleet/shared';
 import {Locale} from './lib/i18n';
 import {Colors} from './lib/theme';
@@ -35,7 +38,7 @@ const DRIVER_TABS: TabItem[] = [
 const ADMIN_TABS: TabItem[] = [
   {key: 'dashboard',     icon: 'view-grid-outline',    labelAr: 'الرئيسية',  labelEn: 'Home'},
   {key: 'fleet',         icon: 'truck-outline',         labelAr: 'الأسطول',   labelEn: 'Fleet'},
-  {key: 'trips',         icon: 'calendar-outline',      labelAr: 'الجداول',   labelEn: 'Schedule'},
+  {key: 'trips',         icon: 'map-marker-path',       labelAr: 'الرحلات',   labelEn: 'Trips'},
   {key: 'notifications', icon: 'bell-outline',          labelAr: 'النشاط',    labelEn: 'Activity'},
   {key: 'profile',       icon: 'account-outline',       labelAr: 'حسابي',     labelEn: 'Profile'},
 ];
@@ -50,6 +53,11 @@ function Navigator() {
   const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
   const [vehicleFormId, setVehicleFormId] = useState<string | null>(null);
   const [driverFormOpen, setDriverFormOpen] = useState(false);
+  const [driverFormId, setDriverFormId] = useState<string | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [tripFormOpen, setTripFormOpen] = useState(false);
+  const [tripFormId, setTripFormId] = useState<string | null>(null);
 
   const toggleLocale = () => setLocale(l => (l === 'ar' ? 'en' : 'ar'));
   const isAdmin = user && user.role !== 'DRIVER';
@@ -98,8 +106,54 @@ function Navigator() {
     return (
       <DriverFormScreen
         locale={locale}
+        driverId={driverFormId ?? undefined}
         onBack={() => setDriverFormOpen(false)}
-        onSuccess={() => setDriverFormOpen(false)}
+        onSuccess={() => {
+          setDriverFormOpen(false);
+          // If we were editing the selected driver, keep detail open (re-fetches on next open)
+        }}
+      />
+    );
+  }
+
+  // Full-screen driver detail (hides tab bar)
+  if (selectedDriverId) {
+    return (
+      <DriverDetailScreen
+        driverId={selectedDriverId}
+        locale={locale}
+        onBack={() => setSelectedDriverId(null)}
+        onEdit={() => {
+          setDriverFormId(selectedDriverId);
+          setDriverFormOpen(true);
+        }}
+      />
+    );
+  }
+
+  // Full-screen trip form
+  if (tripFormOpen) {
+    return (
+      <TripFormScreen
+        locale={locale}
+        tripId={tripFormId ?? undefined}
+        onBack={() => setTripFormOpen(false)}
+        onSuccess={() => setTripFormOpen(false)}
+      />
+    );
+  }
+
+  // Full-screen trip detail
+  if (selectedTripId) {
+    return (
+      <TripDetailScreen
+        tripId={selectedTripId}
+        locale={locale}
+        onBack={() => setSelectedTripId(null)}
+        onEdit={() => {
+          setTripFormId(selectedTripId);
+          setTripFormOpen(true);
+        }}
       />
     );
   }
@@ -149,8 +203,8 @@ function Navigator() {
     <View style={styles.shell}>
       <View style={styles.screenArea}>
         {adminTab === 'dashboard'     && <AdminDashboardScreen locale={locale} onToggleLocale={toggleLocale} />}
-        {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onToggleLocale={toggleLocale} onSelectVehicle={setSelectedVehicleId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => setDriverFormOpen(true)} />}
-        {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onToggleLocale={toggleLocale} />}
+        {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onToggleLocale={toggleLocale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} />}
+        {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onToggleLocale={toggleLocale} onSelectTrip={setSelectedTripId} onAddTrip={() => { setTripFormId(null); setTripFormOpen(true); }} />}
         {adminTab === 'notifications'  && <NotificationsScreen   locale={locale} onToggleLocale={toggleLocale} onBack={() => setAdminTab('dashboard')} />}
         {adminTab === 'profile'        && <ProfileScreen locale={locale} onToggleLocale={toggleLocale} onBack={() => setAdminTab('dashboard')} />}
       </View>

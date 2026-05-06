@@ -17,6 +17,7 @@ interface Props {
   driver: DriverCardData;
   locale: Locale;
   isLast?: boolean;
+  onPress?: () => void;
 }
 
 // Status maps to a teal badge (ACTIVE) or muted badge
@@ -28,7 +29,7 @@ const STATUS_BADGE: Record<string, {bg: string; text: string; label: {en: string
   TERMINATED: {bg: Colors.dangerLight, text: Colors.danger,     label: {en: 'Terminated',ar: 'منتهي'}},
 };
 
-export function DriverCard({driver, locale}: Props) {
+export function DriverCard({driver, locale, onPress}: Props) {
   const badge = STATUS_BADGE[driver.status] ?? STATUS_BADGE.OFF_DUTY;
   const initials = (driver.fullName ?? '?')
     .split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
@@ -36,7 +37,7 @@ export function DriverCard({driver, locale}: Props) {
   const label = badge.label[locale === 'ar' ? 'ar' : 'en'];
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.75}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.75} onPress={onPress}>
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{initials}</Text>
       </View>
