@@ -371,21 +371,23 @@ function DocFileRow({
   async function handleOpen() {
     const url = doc.fileUrl;
     if (!url) return;
+    const resolvedUrl = encodeURI(resolveApiUrl(url));
     try {
-      const resolvedUrl = resolveApiUrl(url);
-      const canOpen = await Linking.canOpenURL(resolvedUrl);
-      if (canOpen) {
-        await Linking.openURL(resolvedUrl);
-      } else {
-        Alert.alert(
-          isAr ? 'تعذر فتح الملف' : 'Cannot open file',
-          isAr ? 'الرابط غير مدعوم على هذا الجهاز' : 'This URL cannot be opened on this device.',
-        );
-      }
+      await Linking.openURL(resolvedUrl);
     } catch {
+      const isPdf = /\.pdf($|\?)/i.test(resolvedUrl);
+      if (isPdf) {
+        try {
+          await Linking.openURL(`https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(resolvedUrl)}`);
+          return;
+        } catch {
+          // Fall through to the user-facing error below.
+        }
+      }
+
       Alert.alert(
-        isAr ? 'خطأ' : 'Error',
-        isAr ? 'تعذر فتح الملف' : 'Could not open the file.',
+        isAr ? 'تعذر فتح الملف' : 'Cannot open file',
+        isAr ? 'تعذر فتح المستند على هذا الجهاز حالياً.' : 'The document could not be opened on this device right now.',
       );
     }
   }
