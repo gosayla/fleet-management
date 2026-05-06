@@ -1,16 +1,33 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { existsSync } from 'fs';
+import { join } from 'path';
+import { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AuthTokenPayload } from '@fleet/shared';
 import { CreateDocumentDto, DocumentsQueryDto, UpdateDocumentDto } from './documents.dto';
 import { DocumentsService } from './documents.service';
+import { Public } from '../auth/public.decorator';
 
 @ApiTags('documents')
 @ApiBearerAuth()
 @Controller('documents')
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
+
+  @Public()
+  @Get('files/:filename')
+  serveFile(
+    @Param('filename') filename: string,
+    @Res() response: Response,
+  ) {
+    const filePath = join(process.cwd(), 'uploads', 'documents', filename);
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('File not found');
+    }
+    return response.sendFile(filePath);
+  }
 
   /** Upload a file and receive a fileUrl to use when creating/updating a document. */
   @Post('files')
