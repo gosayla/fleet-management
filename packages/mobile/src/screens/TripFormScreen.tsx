@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  Alert,
 } from 'react-native';
 import {api} from '../lib/api';
 import {Locale} from '../lib/i18n';
@@ -178,11 +179,30 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
         ...(form.contractNumber.trim() ? {contractNumber: form.contractNumber.trim()} : {}),
       };
 
-      if (isEdit) {
-        await api.patch(`/trips/${tripId}`, {...payload, status: form.status});
-      } else {
-        await api.post('/trips', payload);
+      try {
+        if (isEdit) {
+          await api.patch(`/trips/${tripId}`, {...payload, status: form.status});
+        } else {
+          await api.post('/trips', payload);
+        }
+      } catch (e: any) {
+        if (!shouldRetryWithoutName(e, payload)) throw e;
+
+        const {name: _name, ...fallbackPayload} = payload;
+        if (isEdit) {
+          await api.patch(`/trips/${tripId}`, {...fallbackPayload, status: form.status});
+        } else {
+          await api.post('/trips', fallbackPayload);
+        }
+
+        Alert.alert(
+          isAr ? 'تم الحفظ' : 'Saved',
+          isAr
+            ? 'تم حفظ الرحلة بدون الاسم لأن الخادم الحالي لا يدعم هذا الحقل بعد.'
+            : 'The trip was saved without the name because the current server does not support that field yet.',
+        );
       }
+
       onSuccess();
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? e?.message ?? 'Error';
@@ -487,6 +507,13 @@ function parseLocalInput(val: string): Date | null {
   if (!m) return null;
   const d = new Date(`${m[1]}T${m[2] ?? '00:00'}:00`);
   return isNaN(d.getTime()) ? null : d;
+}
+
+function shouldRetryWithoutName(error: any, payload: Record<string, any>): boolean {
+  if (!payload.name) return false;
+  const message = error?.response?.data?.message ?? error?.message;
+  const text = Array.isArray(message) ? message.join(' ') : String(message ?? '');
+  return text.includes('name') && (text.includes('non-whitelisted') || text.includes('غير مسموح بالحقل'));
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────────

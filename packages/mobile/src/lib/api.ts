@@ -3,6 +3,16 @@ import {API_URL} from './env';
 
 const API_BASE = API_URL;
 
+function trimTrailingSlash(value: string): string {
+  return value.endsWith('/') ? value.slice(0, -1) : value;
+}
+
+export function resolveApiUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  const base = trimTrailingSlash(API_BASE.replace(/\/api\/v1\/?$/, ''));
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 async function getToken(): Promise<string | null> {
   return AsyncStorage.getItem('accessToken');
 }

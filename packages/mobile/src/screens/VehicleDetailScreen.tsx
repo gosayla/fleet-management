@@ -11,7 +11,7 @@ import {
   Linking,
   Alert,
 } from 'react-native';
-import {api} from '../lib/api';
+import {api, resolveApiUrl} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {Locale} from '../lib/i18n';
@@ -372,9 +372,10 @@ function DocFileRow({
     const url = doc.fileUrl;
     if (!url) return;
     try {
-      const canOpen = await Linking.canOpenURL(url);
+      const resolvedUrl = resolveApiUrl(url);
+      const canOpen = await Linking.canOpenURL(resolvedUrl);
       if (canOpen) {
-        await Linking.openURL(url);
+        await Linking.openURL(resolvedUrl);
       } else {
         Alert.alert(
           isAr ? 'تعذر فتح الملف' : 'Cannot open file',
