@@ -217,7 +217,7 @@ export function DocumentForm({
           {currentFileUrl && !selectedFile && (
             <div className="mb-1 flex items-center gap-2">
               <a
-                href={currentFileUrl.startsWith('/') ? `http://localhost:3001${currentFileUrl}` : currentFileUrl}
+                href={currentFileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"

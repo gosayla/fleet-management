@@ -308,7 +308,7 @@ export default function DocumentsPage() {
                             {tc.delete}
                           </button>
                           <a
-                            href={row.fileUrl.startsWith('/') ? `http://localhost:3001${row.fileUrl}` : row.fileUrl}
+                            href={row.fileUrl}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
