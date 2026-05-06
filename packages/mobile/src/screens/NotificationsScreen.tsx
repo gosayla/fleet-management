@@ -4,11 +4,17 @@ import {
   Text,
   FlatList,
   StyleSheet,
-  TouchableOpacity,
   RefreshControl,
+  StatusBar,
+  Platform,
+  TouchableOpacity,
 } from 'react-native';
 import {api} from '../lib/api';
 import {Locale, t, formatDateTime} from '../lib/i18n';
+import {Colors, Radius, Shadow, Spacing, Typography} from '../lib/theme';
+import {AppIcon} from '../components/ui/AppIcon';
+
+const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
 interface Notification {
   id: string;
@@ -24,7 +30,7 @@ interface Props {
   onBack: () => void;
 }
 
-export function NotificationsScreen({locale, onToggleLocale, onBack}: Props) {
+export function NotificationsScreen({locale, onToggleLocale}: Props) {
   const i18n = t(locale);
   const isRTL = locale === 'ar';
   const [items, setItems] = useState<Notification[]>([]);
@@ -48,87 +54,88 @@ export function NotificationsScreen({locale, onToggleLocale, onBack}: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, isRTL && styles.headerRtl]}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backText}>{isRTL ? '→' : '←'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.heading}>{i18n.notifications}</Text>
-        <TouchableOpacity style={styles.langBtn} onPress={onToggleLocale}>
-          <Text style={styles.langText}>{i18n.languageLabel}</Text>
-        </TouchableOpacity>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+
+      {/* Teal header */}
+      <View style={styles.header}>
+        <View style={{height: SB_HEIGHT}} />
+        <View style={styles.headerRow}>
+          <Text style={styles.headerTitle}>{i18n.notifications}</Text>
+          <TouchableOpacity style={styles.langPill} onPress={onToggleLocale} activeOpacity={0.7}>
+            <Text style={styles.langText}>{i18n.languageLabel}</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.headerSub}>{locale === 'ar' ? 'آخر التنبيهات' : 'Latest alerts'}</Text>
       </View>
 
-      <FlatList
-        data={items}
-        keyExtractor={n => n.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} />}
-        contentContainerStyle={styles.list}
-        renderItem={({item}) => (
-          <View style={[styles.card, !item.read && styles.cardUnread]}>
-            {!item.read && <View style={styles.dot} />}
-            <View style={styles.cardBody}>
-              <Text style={[styles.title, isRTL && styles.rtlText]}>{item.title}</Text>
-              <Text style={[styles.body, isRTL && styles.rtlText]}>{item.body}</Text>
-              <Text style={[styles.date, isRTL && styles.rtlText]}>
-                {formatDateTime(item.createdAt, locale)}
-              </Text>
+      {/* White curved panel */}
+      <View style={styles.panel}>
+        <FlatList
+          data={items}
+          keyExtractor={n => n.id}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} tintColor={Colors.primary} />}
+          contentContainerStyle={styles.list}
+          renderItem={({item}) => (
+            <View style={[styles.card, !item.read && styles.cardUnread]}>
+              <View style={styles.iconWrap}>
+                <AppIcon name={item.read ? 'bell-outline' : 'bell-badge-outline'} size={18} color={Colors.primary} />
+              </View>
+              <View style={styles.cardBody}>
+                <Text style={[styles.title, isRTL && styles.rtlText]}>{item.title}</Text>
+                <Text style={[styles.body, isRTL && styles.rtlText]}>{item.body}</Text>
+                <Text style={[styles.date, isRTL && styles.rtlText]}>
+                  {formatDateTime(item.createdAt, locale)}
+                </Text>
+              </View>
             </View>
-          </View>
-        )}
-        ListEmptyComponent={
-          <Text style={[styles.empty, isRTL && styles.rtlText]}>{i18n.noNotifications}</Text>
-        }
-      />
+          )}
+          ListEmptyComponent={
+            <Text style={[styles.empty, isRTL && styles.rtlText]}>{i18n.noNotifications}</Text>
+          }
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#f9fafb'},
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 12,
-    gap: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderColor: '#f3f4f6',
+  container: {flex: 1, backgroundColor: Colors.primary},
+  header: {paddingBottom: 24},
+  headerRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md, paddingVertical: 10,
   },
-  headerRtl: {flexDirection: 'row-reverse'},
-  backBtn: {padding: 4},
-  backText: {fontSize: 20, color: '#2563eb', fontWeight: '700'},
-  heading: {flex: 1, fontSize: 20, fontWeight: '700', color: '#111827'},
-  langBtn: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  headerTitle: {fontSize: 22, fontWeight: '700' as const, color: '#fff', letterSpacing: 0.3},
+  headerSub: {fontSize: 13, color: 'rgba(255,255,255,0.7)', paddingHorizontal: Spacing.md, paddingBottom: 4},
+  langPill: {
+    backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 6,
   },
-  langText: {color: '#374151', fontSize: 12, fontWeight: '600'},
-  list: {padding: 16, gap: 10},
+  langText: {fontSize: 12, fontWeight: '600' as const, color: '#fff'},
+  panel: {
+    flex: 1, backgroundColor: Colors.bg,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    marginTop: -20, overflow: 'hidden',
+  },
+  list: {padding: Spacing.md, gap: Spacing.sm},
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
     flexDirection: 'row',
-    gap: 10,
-    elevation: 1,
+    gap: Spacing.sm,
+    ...Shadow.sm,
   },
-  cardUnread: {borderLeftWidth: 3, borderLeftColor: '#2563eb'},
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#2563eb',
-    marginTop: 6,
+  cardUnread: {borderLeftWidth: 3, borderLeftColor: Colors.primary},
+  iconWrap: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center', alignItems: 'center',
   },
   cardBody: {flex: 1, gap: 4},
-  title: {fontSize: 15, fontWeight: '600', color: '#111827'},
-  body: {fontSize: 13, color: '#6b7280'},
-  date: {fontSize: 11, color: '#9ca3af', marginTop: 2},
+  title: {...Typography.bodyMd, color: Colors.textPrimary},
+  body: {...Typography.bodySm, color: Colors.textSecondary},
+  date: {...Typography.caption, color: Colors.textMuted, marginTop: 2},
   rtlText: {textAlign: 'right'},
-  empty: {textAlign: 'center', color: '#9ca3af', marginTop: 60, fontSize: 15},
+  empty: {...Typography.body, textAlign: 'center', color: Colors.textMuted, marginTop: 60},
 });

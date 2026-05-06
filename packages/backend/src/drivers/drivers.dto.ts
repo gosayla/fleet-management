@@ -8,7 +8,6 @@ import {
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { DriverStatus } from '@fleet/shared';
 import { IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
 import { BloodType } from '@prisma/client';
 
 export class CreateDriverDto {
@@ -38,8 +37,8 @@ export class CreateDriverDto {
   licenseNumber: string;
 
   @ApiProperty({ example: '2027-06-15' })
-  @Type(() => Date)
-  licenseExpiry: Date;
+  @IsDateString()
+  licenseExpiry: string;
 
   @ApiPropertyOptional({ enum: BloodType, example: 'A_POS' })
   @IsEnum(BloodType)

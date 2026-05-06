@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDriverDto, UpdateDriverDto } from './drivers.dto';
 
@@ -39,16 +39,24 @@ export class DriversService {
   }
 
   async create(companyId: string, dto: CreateDriverDto) {
-    return this.prisma.driver.create({
-      data: { ...dto, companyId },
-    });
+    try {
+      return await this.prisma.driver.create({
+        data: { ...dto, companyId, licenseExpiry: new Date(dto.licenseExpiry) },
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2002') {
+        throw new ConflictException('رقم الهوية مسجل مسبقاً لهذه الشركة');
+      }
+      throw e;
+    }
   }
 
   async update(companyId: string, id: string, dto: UpdateDriverDto) {
     await this.findOne(companyId, id);
+    const { licenseExpiry, ...rest } = dto;
     return this.prisma.driver.update({
       where: { id },
-      data: dto,
+      data: { ...rest, ...(licenseExpiry ? { licenseExpiry: new Date(licenseExpiry) } : {}) },
     });
   }
 

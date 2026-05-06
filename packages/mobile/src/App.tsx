@@ -1,32 +1,66 @@
 import React, {useState} from 'react';
-import {ActivityIndicator, View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import {
+  ActivityIndicator,
+  View,
+  Text,
+  StyleSheet,
+} from 'react-native';
 import {AuthProvider, useAuth} from './context/AuthContext';
 import {LoginScreen} from './screens/LoginScreen';
 import {TripsListScreen} from './screens/TripsListScreen';
 import {ActiveTripScreen} from './screens/ActiveTripScreen';
 import {NotificationsScreen} from './screens/NotificationsScreen';
 import {ProfileScreen} from './screens/ProfileScreen';
+import {AdminDashboardScreen} from './screens/AdminDashboardScreen';
+import {AdminFleetScreen} from './screens/AdminFleetScreen';
+import {AdminTripsScreen} from './screens/AdminTripsScreen';
+import {VehicleDetailScreen} from './screens/VehicleDetailScreen';
+import {VehicleFormScreen} from './screens/VehicleFormScreen';
+import {DriverFormScreen} from './screens/DriverFormScreen';
 import {Trip} from '@fleet/shared';
-import {Locale, t} from './lib/i18n';
+import {Locale} from './lib/i18n';
+import {Colors} from './lib/theme';
+import {BottomTabBar, TabItem} from './components/ui/BottomTabBar';
 
-type Tab = 'trips' | 'notifications' | 'profile';
+type DriverTab = 'trips' | 'notifications' | 'profile';
+type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'notifications' | 'profile';
+
+// ── Tab config ───────────────────────────────────────────────────────────────
+const DRIVER_TABS: TabItem[] = [
+  {key: 'trips',         icon: 'truck-outline',      labelAr: 'رحلاتي',    labelEn: 'Trips'},
+  {key: 'notifications', icon: 'bell-outline',       labelAr: 'الإشعارات', labelEn: 'Alerts'},
+  {key: 'profile',       icon: 'account-outline',    labelAr: 'حسابي',     labelEn: 'Profile'},
+];
+
+const ADMIN_TABS: TabItem[] = [
+  {key: 'dashboard',     icon: 'view-grid-outline',    labelAr: 'الرئيسية',  labelEn: 'Home'},
+  {key: 'fleet',         icon: 'truck-outline',         labelAr: 'الأسطول',   labelEn: 'Fleet'},
+  {key: 'trips',         icon: 'calendar-outline',      labelAr: 'الجداول',   labelEn: 'Schedule'},
+  {key: 'notifications', icon: 'bell-outline',          labelAr: 'النشاط',    labelEn: 'Activity'},
+  {key: 'profile',       icon: 'account-outline',       labelAr: 'حسابي',     labelEn: 'Profile'},
+];
 
 function Navigator() {
   const {user, isLoading} = useAuth();
   const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
   const [locale, setLocale] = useState<Locale>('ar');
-  const [tab, setTab] = useState<Tab>('trips');
+  const [driverTab, setDriverTab] = useState<DriverTab>('trips');
+  const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
+  const [vehicleFormId, setVehicleFormId] = useState<string | null>(null);
+  const [driverFormOpen, setDriverFormOpen] = useState(false);
 
-  function toggleLocale() {
-    setLocale((current) => (current === 'ar' ? 'en' : 'ar'));
-  }
-
-  const i18n = t(locale);
+  const toggleLocale = () => setLocale(l => (l === 'ar' ? 'en' : 'ar'));
+  const isAdmin = user && user.role !== 'DRIVER';
 
   if (isLoading) {
     return (
-      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View style={styles.loader}>
+        <View style={styles.loaderIcon}>
+          <Text style={styles.loaderTruck}>🚛</Text>
+        </View>
+        <ActivityIndicator size="large" color={Colors.primary} style={{marginTop: 24}} />
       </View>
     );
   }
@@ -44,66 +78,105 @@ function Navigator() {
     );
   }
 
-  if (tab === 'notifications') {
+  // Full-screen vehicle form (hides tab bar)
+  if (vehicleFormOpen) {
     return (
-      <NotificationsScreen
+      <VehicleFormScreen
+        vehicleId={vehicleFormId ?? undefined}
         locale={locale}
-        onToggleLocale={toggleLocale}
-        onBack={() => setTab('trips')}
+        onBack={() => setVehicleFormOpen(false)}
+        onSuccess={() => {
+          setVehicleFormOpen(false);
+          // If editing the currently viewed vehicle, keep detail open; it will re-fetch next open
+        }}
       />
     );
   }
 
-  if (tab === 'profile') {
+  // Full-screen driver form (hides tab bar)
+  if (driverFormOpen) {
     return (
-      <ProfileScreen
+      <DriverFormScreen
         locale={locale}
-        onToggleLocale={toggleLocale}
-        onBack={() => setTab('trips')}
+        onBack={() => setDriverFormOpen(false)}
+        onSuccess={() => setDriverFormOpen(false)}
       />
     );
   }
 
-  return (
-    <View style={{flex: 1}}>
-      <TripsListScreen locale={locale} onToggleLocale={toggleLocale} onSelectTrip={setActiveTrip} />
-      <View style={styles.tabBar}>
-        <TouchableOpacity style={styles.tabItem} onPress={() => setTab('trips')}>
-          <Text style={[styles.tabIcon, tab === 'trips' && styles.tabIconActive]}>🚗</Text>
-          <Text style={[styles.tabLabel, tab === 'trips' && styles.tabLabelActive]}>
-            {i18n.myTrips}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => setTab('notifications')}>
-          <Text style={[styles.tabIcon, tab === 'notifications' && styles.tabIconActive]}>🔔</Text>
-          <Text style={[styles.tabLabel, tab === 'notifications' && styles.tabLabelActive]}>
-            {i18n.notifications}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => setTab('profile')}>
-          <Text style={[styles.tabIcon, tab === 'profile' && styles.tabIconActive]}>👤</Text>
-          <Text style={[styles.tabLabel, tab === 'profile' && styles.tabLabelActive]}>
-            {i18n.profile}
-          </Text>
-        </TouchableOpacity>
+  // Full-screen vehicle detail (hides tab bar)
+  if (selectedVehicleId) {
+    return (
+      <VehicleDetailScreen
+        vehicleId={selectedVehicleId}
+        locale={locale}
+        onBack={() => setSelectedVehicleId(null)}
+        onEdit={() => {
+          setVehicleFormId(selectedVehicleId);
+          setVehicleFormOpen(true);
+        }}
+      />
+    );
+  }
+
+  // ── Driver shell ─────────────────────────────────────────────────────────────
+  if (!isAdmin) {
+    return (
+      <View style={styles.shell}>
+        <View style={styles.screenArea}>
+          {driverTab === 'trips' && (
+            <TripsListScreen locale={locale} onToggleLocale={toggleLocale} onSelectTrip={setActiveTrip} />
+          )}
+          {driverTab === 'notifications' && (
+            <NotificationsScreen locale={locale} onToggleLocale={toggleLocale} onBack={() => setDriverTab('trips')} />
+          )}
+          {driverTab === 'profile' && (
+            <ProfileScreen locale={locale} onToggleLocale={toggleLocale} onBack={() => setDriverTab('trips')} />
+          )}
+        </View>
+        <BottomTabBar
+          tabs={DRIVER_TABS}
+          activeKey={driverTab}
+          locale={locale}
+          onPress={k => setDriverTab(k as DriverTab)}
+        />
       </View>
+    );
+  }
+
+  // ── Admin shell ──────────────────────────────────────────────────────────────
+  return (
+    <View style={styles.shell}>
+      <View style={styles.screenArea}>
+        {adminTab === 'dashboard'     && <AdminDashboardScreen locale={locale} onToggleLocale={toggleLocale} />}
+        {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onToggleLocale={toggleLocale} onSelectVehicle={setSelectedVehicleId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => setDriverFormOpen(true)} />}
+        {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onToggleLocale={toggleLocale} />}
+        {adminTab === 'notifications'  && <NotificationsScreen   locale={locale} onToggleLocale={toggleLocale} onBack={() => setAdminTab('dashboard')} />}
+        {adminTab === 'profile'        && <ProfileScreen locale={locale} onToggleLocale={toggleLocale} onBack={() => setAdminTab('dashboard')} />}
+      </View>
+      <BottomTabBar
+        tabs={ADMIN_TABS}
+        activeKey={adminTab}
+        locale={locale}
+        onPress={k => setAdminTab(k as AdminTab)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-    paddingBottom: 8,
+  loader: {
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: Colors.primaryLight,
   },
-  tabItem: {flex: 1, alignItems: 'center', paddingTop: 10, gap: 2},
-  tabIcon: {fontSize: 22},
-  tabIconActive: {},
-  tabLabel: {fontSize: 11, color: '#9ca3af'},
-  tabLabelActive: {color: '#2563eb', fontWeight: '600'},
+  loaderIcon: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  loaderTruck: {fontSize: 36},
+  shell: {flex: 1, backgroundColor: Colors.bg},
+  screenArea: {flex: 1},
 });
 
 export default function App() {
@@ -113,3 +186,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+

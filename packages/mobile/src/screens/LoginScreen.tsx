@@ -1,17 +1,13 @@
-import React, {useState} from 'react';
+﻿import React, {useState} from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  ScrollView, StatusBar,
 } from 'react-native';
 import {useAuth} from '../context/AuthContext';
 import {Locale, t} from '../lib/i18n';
+import {Colors, Spacing, Typography} from '../lib/theme';
+import {AppIcon} from '../components/ui/AppIcon';
 
 interface Props {
   locale: Locale;
@@ -25,6 +21,7 @@ export function LoginScreen({locale, onToggleLocale}: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
 
   async function handleLogin() {
     if (!email || !password) {
@@ -42,100 +39,143 @@ export function LoginScreen({locale, onToggleLocale}: Props) {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.inner}>
-        <View style={[styles.topBar, isRTL && styles.topBarRtl]}>
-          <TouchableOpacity style={styles.langBtn} onPress={onToggleLocale}>
-            <Text style={styles.langText}>{i18n.languageLabel}</Text>
-          </TouchableOpacity>
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+
+        {/* Hero */}
+        <View style={styles.hero}>
+          <View style={styles.logoCircle}>
+            <AppIcon name="truck" size={32} color={Colors.white} />
+          </View>
+          <Text style={styles.brand}>eLEET</Text>
+          <Text style={[styles.welcome, isRTL && styles.rtl]}>
+            {locale === 'ar' ? 'مرحباً بعودتك' : 'Welcome back'}
+          </Text>
+          <Text style={[styles.tagline, isRTL && styles.rtl]}>
+            {locale === 'ar' ? 'إدارة أساطيلك بكفاءة' : 'Manage your fleet efficiently'}
+          </Text>
         </View>
 
-        <Text style={[styles.title, isRTL && styles.rtlText]}>{i18n.appName}</Text>
-        <Text style={[styles.subtitle, isRTL && styles.rtlText]}>{i18n.subtitle}</Text>
+        {/* Form card */}
+        <View style={styles.card}>
+          {/* Email */}
+          <View style={styles.field}>
+            <Text style={[styles.fieldLabel, isRTL && styles.rtl]}>{i18n.email}</Text>
+            <View style={[styles.inputWrap, focusedField === 'email' && styles.inputWrapFocused]}>
+              <AppIcon name="email-outline" size={18} color={focusedField === 'email' ? Colors.primary : Colors.textMuted} />
+              <TextInput
+                style={[styles.input, isRTL && styles.rtl]}
+                placeholder={i18n.email}
+                placeholderTextColor={Colors.textMuted}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                textAlign={isRTL ? 'right' : 'left'}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
+              />
+            </View>
+          </View>
 
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder={i18n.email}
-            placeholderTextColor="#9ca3af"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            textAlign={isRTL ? 'right' : 'left'}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder={i18n.password}
-            placeholderTextColor="#9ca3af"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textAlign={isRTL ? 'right' : 'left'}
-          />
+          {/* Password */}
+          <View style={styles.field}>
+            <Text style={[styles.fieldLabel, isRTL && styles.rtl]}>{i18n.password}</Text>
+            <View style={[styles.inputWrap, focusedField === 'password' && styles.inputWrapFocused]}>
+              <AppIcon name="lock-outline" size={18} color={focusedField === 'password' ? Colors.primary : Colors.textMuted} />
+              <TextInput
+                style={[styles.input, isRTL && styles.rtl]}
+                placeholder={i18n.password}
+                placeholderTextColor={Colors.textMuted}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                textAlign={isRTL ? 'right' : 'left'}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
+              />
+            </View>
+          </View>
+
+          {/* Submit */}
           <TouchableOpacity
             style={[styles.btn, loading && styles.btnDisabled]}
             onPress={handleLogin}
-            disabled={loading}>
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.btnText}>{i18n.signIn}</Text>
-            )}
+            disabled={loading}
+            activeOpacity={0.85}>
+            {loading
+              ? <ActivityIndicator color={Colors.white} />
+              : <Text style={styles.btnText}>{i18n.signIn}</Text>}
           </TouchableOpacity>
         </View>
-      </View>
+
+        {/* Language toggle */}
+        <TouchableOpacity style={styles.langPill} onPress={onToggleLocale} activeOpacity={0.7}>
+          <Text style={styles.langText}>{i18n.languageLabel}</Text>
+        </TouchableOpacity>
+
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#1e40af'},
-  inner: {flex: 1, justifyContent: 'center', padding: 24},
-  topBar: {alignItems: 'flex-end', marginBottom: 14},
-  topBarRtl: {alignItems: 'flex-start'},
-  langBtn: {
-    borderWidth: 1,
-    borderColor: '#93c5fd',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  root: {flex: 1, backgroundColor: Colors.primary},
+  scroll: {flexGrow: 1, justifyContent: 'center'},
+
+  hero: {alignItems: 'center', paddingTop: Spacing.xxl, paddingBottom: Spacing.xl, paddingHorizontal: Spacing.lg},
+  logoCircle: {
+    width: 72, height: 72, borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: Spacing.md,
   },
-  langText: {color: '#dbeafe', fontSize: 12, fontWeight: '700'},
-  title: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 4,
+  brand: {fontSize: 32, fontWeight: '800' as const, color: Colors.white, letterSpacing: 3, marginBottom: 6},
+  welcome: {...Typography.h2, color: Colors.white, textAlign: 'center'},
+  tagline: {fontSize: 14, color: 'rgba(255,255,255,0.65)', marginTop: 6, textAlign: 'center'},
+
+  card: {
+    backgroundColor: Colors.white,
+    marginHorizontal: Spacing.md,
+    borderRadius: 20,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#bfdbfe',
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  rtlText: {textAlign: 'center'},
-  form: {gap: 12},
-  input: {
-    backgroundColor: '#fff',
+  field: {gap: 6},
+  fieldLabel: {fontSize: 12, fontWeight: '600' as const, color: Colors.textSecondary, letterSpacing: 0.5},
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: Colors.bg,
+    borderWidth: 1.5, borderColor: Colors.border,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: '#111827',
+    paddingHorizontal: Spacing.md, paddingVertical: 13,
   },
+  inputWrapFocused: {borderColor: Colors.primary, backgroundColor: Colors.primaryLight},
+  input: {flex: 1, fontSize: 15, color: Colors.textPrimary, padding: 0},
+  rtl: {textAlign: 'right' as const},
   btn: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#3b82f6',
+    marginTop: 4,
   },
-  btnDisabled: {opacity: 0.6},
-  btnText: {color: '#fff', fontWeight: '700', fontSize: 16},
+  btnDisabled: {opacity: 0.55},
+  btnText: {fontSize: 16, fontWeight: '700' as const, color: Colors.white},
+
+  langPill: {
+    alignSelf: 'center',
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.xl,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 20,
+    paddingHorizontal: Spacing.md, paddingVertical: 8,
+  },
+  langText: {fontSize: 13, fontWeight: '600' as const, color: Colors.white},
 });
