@@ -7,7 +7,8 @@ import { mkdirSync } from 'fs';
 import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
 
-const uploadDir = join(process.cwd(), 'uploads', 'documents');
+const uploadsRoot = process.env.UPLOADS_DIR ?? join(process.cwd(), 'uploads');
+const uploadDir = join(uploadsRoot, 'documents');
 mkdirSync(uploadDir, { recursive: true });
 
 @Module({

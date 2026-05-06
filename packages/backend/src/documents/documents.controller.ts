@@ -22,7 +22,8 @@ export class DocumentsController {
     @Param('filename') filename: string,
     @Res() response: Response,
   ) {
-    const filePath = join(process.cwd(), 'uploads', 'documents', filename);
+    const uploadsRoot = process.env.UPLOADS_DIR ?? join(process.cwd(), 'uploads');
+    const filePath = join(uploadsRoot, 'documents', filename);
     if (!existsSync(filePath)) {
       throw new NotFoundException('File not found');
     }

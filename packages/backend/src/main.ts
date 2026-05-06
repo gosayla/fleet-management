@@ -65,7 +65,8 @@ async function bootstrap() {
   });
 
   // Serve uploaded files
-  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/' });
+  const uploadsRoot = process.env.UPLOADS_DIR ?? join(process.cwd(), 'uploads');
+  app.useStaticAssets(uploadsRoot, { prefix: '/' });
 
   // API prefix
   app.setGlobalPrefix('api/v1');
