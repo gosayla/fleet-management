@@ -16,6 +16,7 @@ COPY packages/shared ./packages/shared
 COPY packages/web ./packages/web
 
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @fleet/shared build
 RUN pnpm --filter @fleet/web build
 
 # ── Runtime ────────────────────────────────────────────────────────────────────

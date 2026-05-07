@@ -14,6 +14,9 @@ COPY packages/backend ./packages/backend
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
+# Build shared package first
+RUN pnpm --filter @fleet/shared build
+
 # Generate Prisma client
 RUN pnpm --filter @fleet/backend db:generate
 
