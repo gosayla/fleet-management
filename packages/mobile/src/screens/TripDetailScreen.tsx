@@ -15,6 +15,7 @@ import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {Locale} from '../lib/i18n';
+import {ENABLE_MAPS} from '../lib/env';
 
 interface TripDetail {
   id: string;
@@ -306,30 +307,38 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
                 noBorder
               />
             </View>
-            <View style={styles.mapWrap}>
-              <MapView
-                provider={PROVIDER_GOOGLE}
-                style={styles.map}
-                region={{
-                  latitude: latestLocation.lat,
-                  longitude: latestLocation.lng,
-                  latitudeDelta: 0.03,
-                  longitudeDelta: 0.03,
-                }}
-                scrollEnabled={false}
-                zoomEnabled={false}
-                rotateEnabled={false}
-                pitchEnabled={false}>
-                {routeCoords.length > 1 && (
-                  <Polyline coordinates={routeCoords} strokeColor={Colors.primary} strokeWidth={4} />
-                )}
-                <Marker
-                  coordinate={{latitude: latestLocation.lat, longitude: latestLocation.lng}}
-                  title={isAr ? 'آخر موقع' : 'Latest Location'}
-                  description={fmtDateTime(latestLocation.recordedAt)}
-                />
-              </MapView>
-            </View>
+            {ENABLE_MAPS ? (
+              <View style={styles.mapWrap}>
+                <MapView
+                  provider={PROVIDER_GOOGLE}
+                  style={styles.map}
+                  region={{
+                    latitude: latestLocation.lat,
+                    longitude: latestLocation.lng,
+                    latitudeDelta: 0.03,
+                    longitudeDelta: 0.03,
+                  }}
+                  scrollEnabled={false}
+                  zoomEnabled={false}
+                  rotateEnabled={false}
+                  pitchEnabled={false}>
+                  {routeCoords.length > 1 && (
+                    <Polyline coordinates={routeCoords} strokeColor={Colors.primary} strokeWidth={4} />
+                  )}
+                  <Marker
+                    coordinate={{latitude: latestLocation.lat, longitude: latestLocation.lng}}
+                    title={isAr ? 'آخر موقع' : 'Latest Location'}
+                    description={fmtDateTime(latestLocation.recordedAt)}
+                  />
+                </MapView>
+              </View>
+            ) : (
+              <EmptyCard
+                isAr={isAr}
+                icon="map-outline"
+                text={isAr ? 'الخريطة غير مفعلة حتى يتم إضافة المفتاح' : 'Map is disabled until API key is added'}
+              />
+            )}
           </>
         ) : (
           <EmptyCard

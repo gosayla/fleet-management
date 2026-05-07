@@ -15,6 +15,7 @@ import {startBroadcastingLocation, stopBroadcasting} from '../lib/socket';
 import {api} from '../lib/api';
 import {Trip} from '@fleet/shared';
 import {Locale, t} from '../lib/i18n';
+import {ENABLE_MAPS} from '../lib/env';
 
 const {height} = Dimensions.get('window');
 
@@ -150,32 +151,42 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
   return (
     <View style={styles.container}>
       {/* Map */}
-      <MapView
-        provider={PROVIDER_GOOGLE}
-        style={styles.map}
-        region={
-          currentLocation
-            ? {
-                latitude: currentLocation.lat,
-                longitude: currentLocation.lng,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              }
-            : {latitude: 24.7136, longitude: 46.6753, latitudeDelta: 1, longitudeDelta: 1}
-        }
-        showsUserLocation
-        showsMyLocationButton>
-        {routeCoords.length > 1 && (
-          <Polyline coordinates={routeCoords} strokeColor="#2563eb" strokeWidth={4} />
-        )}
-        {currentLocation && (
-          <Marker
-            coordinate={{latitude: currentLocation.lat, longitude: currentLocation.lng}}
-            title={i18n.vehicle}
-            description={trip.vehicleId}
-          />
-        )}
-      </MapView>
+      {ENABLE_MAPS ? (
+        <MapView
+          provider={PROVIDER_GOOGLE}
+          style={styles.map}
+          region={
+            currentLocation
+              ? {
+                  latitude: currentLocation.lat,
+                  longitude: currentLocation.lng,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                }
+              : {latitude: 24.7136, longitude: 46.6753, latitudeDelta: 1, longitudeDelta: 1}
+          }
+          showsUserLocation
+          showsMyLocationButton>
+          {routeCoords.length > 1 && (
+            <Polyline coordinates={routeCoords} strokeColor="#2563eb" strokeWidth={4} />
+          )}
+          {currentLocation && (
+            <Marker
+              coordinate={{latitude: currentLocation.lat, longitude: currentLocation.lng}}
+              title={i18n.vehicle}
+              description={trip.vehicleId}
+            />
+          )}
+        </MapView>
+      ) : (
+        <View style={styles.mapDisabledWrap}>
+          <Text style={styles.mapDisabledTitle}>{locale === 'ar' ? 'الخريطة غير مفعلة حالياً' : 'Map is temporarily disabled'}</Text>
+          <Text style={styles.mapDisabledText}>{locale === 'ar' ? 'فعّل مفتاح Google Maps لإظهار الخريطة.' : 'Set a Google Maps key to enable map preview.'}</Text>
+          {currentLocation && (
+            <Text style={styles.mapDisabledCoords}>{currentLocation.lat.toFixed(5)}, {currentLocation.lng.toFixed(5)}</Text>
+          )}
+        </View>
+      )}
 
       {/* Info card */}
       <View style={styles.bottomSheet}>
@@ -214,6 +225,18 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#f9fafb'},
   map: {width: '100%', height: height * 0.55},
+  mapDisabledWrap: {
+    width: '100%',
+    height: height * 0.55,
+    backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    gap: 6,
+  },
+  mapDisabledTitle: {fontSize: 16, fontWeight: '700' as const, color: '#111827', textAlign: 'center'},
+  mapDisabledText: {fontSize: 13, color: '#4b5563', textAlign: 'center'},
+  mapDisabledCoords: {fontSize: 12, color: '#1f2937', fontWeight: '600' as const},
   bottomSheet: {
     flex: 1,
     backgroundColor: '#fff',
