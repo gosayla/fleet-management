@@ -20,17 +20,19 @@ import {DriverDetailScreen} from './screens/DriverDetailScreen';
 import {DriverFormScreen} from './screens/DriverFormScreen';
 import {TripDetailScreen} from './screens/TripDetailScreen';
 import {TripFormScreen} from './screens/TripFormScreen';
+import {DriverDashboardScreen} from './screens/DriverDashboardScreen';
 import {Trip} from '@fleet/shared';
 import {Locale} from './lib/i18n';
 import {Colors} from './lib/theme';
 import {BottomTabBar, TabItem} from './components/ui/BottomTabBar';
 import {api} from './lib/api';
 
-type DriverTab = 'trips' | 'profile';
+type DriverTab = 'dashboard' | 'trips' | 'profile';
 type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'profile';
 
 // ── Tab config ───────────────────────────────────────────────────────────────
 const DRIVER_TABS: TabItem[] = [
+  {key: 'dashboard',     icon: 'view-grid-outline',  labelAr: 'الرئيسية',  labelEn: 'Home'},
   {key: 'trips',         icon: 'truck-outline',      labelAr: 'رحلاتي',    labelEn: 'Trips'},
   {key: 'profile',       icon: 'account-outline',    labelAr: 'حسابي',     labelEn: 'Profile'},
 ];
@@ -46,7 +48,7 @@ function Navigator() {
   const {user, isLoading} = useAuth();
   const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
   const [locale, setLocale] = useState<Locale>('ar');
-  const [driverTab, setDriverTab] = useState<DriverTab>('trips');
+  const [driverTab, setDriverTab] = useState<DriverTab>('dashboard');
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
@@ -59,6 +61,8 @@ function Navigator() {
   const [tripFormId, setTripFormId] = useState<string | null>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  // Driver trip detail (separate from admin selectedTripId so back nav is scoped)
+  const [driverViewTripId, setDriverViewTripId] = useState<string | null>(null);
 
   const toggleLocale = () => setLocale(l => (l === 'ar' ? 'en' : 'ar'));
   const isAdmin = user && user.role !== 'DRIVER';
@@ -205,20 +209,72 @@ function Navigator() {
 
   // ── Driver shell ─────────────────────────────────────────────────────────────
   if (!isAdmin) {
+    // Driver trip detail view
+    if (driverViewTripId) {
+      return (
+        <TripDetailScreen
+          tripId={driverViewTripId}
+          locale={locale}
+          onBack={() => setDriverViewTripId(null)}
+          onStartTrip={trip => {
+            setDriverViewTripId(null);
+            // Cast TripDetail → Trip shape expected by ActiveTripScreen
+            setActiveTrip({
+              id: trip.id,
+              origin: trip.origin,
+              destination: trip.destination,
+              status: trip.status as any,
+              tripType: trip.tripType as any,
+              scheduledStart: new Date(trip.scheduledStart),
+              scheduledEnd: new Date(trip.scheduledEnd),
+              vehicleId: trip.vehicle?.id ?? '',
+              driverId: trip.driver?.id ?? '',
+              companyId: '',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+          }}
+        />
+      );
+    }
+
     return (
       <View style={styles.shell}>
         <View style={styles.screenArea}>
+          {driverTab === 'dashboard' && (
+            <DriverDashboardScreen
+              locale={locale}
+              onToggleLocale={toggleLocale}
+              onNotificationsPress={() => setNotificationsOpen(true)}
+              unreadNotifications={unreadNotifications}
+              onSelectTrip={setDriverViewTripId}
+              onStartTrip={trip => setActiveTrip({
+                id: trip.id,
+                origin: trip.origin,
+                destination: trip.destination,
+                status: trip.status as any,
+                tripType: 'ONE_TIME' as any,
+                scheduledStart: new Date(trip.scheduledStart),
+                scheduledEnd: new Date(trip.scheduledStart),
+                vehicleId: trip.vehicle?.id ?? '',
+                driverId: '',
+                companyId: '',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              })}
+            />
+          )}
           {driverTab === 'trips' && (
             <TripsListScreen
               locale={locale}
               onToggleLocale={toggleLocale}
-              onSelectTrip={setActiveTrip}
+              onSelectTrip={trip => setDriverViewTripId(trip.id)}
               onNotificationsPress={() => setNotificationsOpen(true)}
               unreadNotifications={unreadNotifications}
             />
           )}
           {driverTab === 'profile' && (
-            <ProfileScreen locale={locale} onToggleLocale={toggleLocale} onBack={() => setDriverTab('trips')} />
+            <ProfileScreen locale={locale} onToggleLocale={toggleLocale} onBack={() => setDriverTab('dashboard')} />
           )}
         </View>
         <BottomTabBar

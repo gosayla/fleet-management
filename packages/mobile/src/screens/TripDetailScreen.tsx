@@ -78,9 +78,10 @@ interface Props {
   locale: Locale;
   onBack: () => void;
   onEdit?: () => void;
+  onStartTrip?: (trip: TripDetail) => void;
 }
 
-export function TripDetailScreen({tripId, locale, onBack, onEdit}: Props) {
+export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: Props) {
   const isAr = locale === 'ar';
   const scrollY = useRef(new Animated.Value(0)).current;
   const [trip, setTrip] = useState<TripDetail | null>(null);
@@ -411,6 +412,19 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit}: Props) {
           </>
         )}
 
+        {/* Start Trip button — only for SCHEDULED trips when driver can act */}
+        {trip.status === 'SCHEDULED' && onStartTrip && (
+          <TouchableOpacity
+            style={styles.startTripBtn}
+            onPress={() => onStartTrip(trip)}
+            activeOpacity={0.85}>
+            <AppIcon name="play-circle-outline" size={20} color="#fff" />
+            <Text style={styles.startTripText}>
+              {isAr ? 'بدء الرحلة' : 'Start Trip'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         <View style={{height: 32}} />
       </Animated.ScrollView>
     </View>
@@ -512,4 +526,11 @@ const styles = StyleSheet.create({
 
   emptyCard: {flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: Colors.borderLight, paddingVertical: 16, paddingHorizontal: Spacing.md},
   emptyCardText: {fontSize: 14, color: Colors.textMuted},
+
+  startTripBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    backgroundColor: Colors.success, borderRadius: 16,
+    paddingVertical: 16, marginTop: 24,
+  },
+  startTripText: {fontSize: 16, fontWeight: '700' as const, color: '#fff'},
 });
