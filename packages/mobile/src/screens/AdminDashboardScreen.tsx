@@ -21,13 +21,22 @@ interface Props {
   onToggleLocale: () => void;
 }
 
-interface MaintenanceItem {
+interface TripItem {
   id: string;
-  type: string;
-  description: string;
-  scheduledDate: string;
+  origin: string;
+  destination: string;
   status: string;
-  vehicle?: {plateNumber: string};
+  scheduledStart: string;
+  actualStart?: string;
+  vehicle?: {id: string; plateNumber: string; make: string; model: string; lastLocationLat?: number; lastLocationLng?: number; lastLocationAt?: string};
+  driver?: {id: string; fullName: string; phone: string};
+}
+
+interface FuelLog {
+  id: string;
+  costSar: number;
+  liters: number;
+  filledAt: string;
 }
 
 interface ExpiryDoc {
@@ -40,15 +49,21 @@ interface ExpiryDoc {
 
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
-const MAINTENANCE_ICON: Record<string, string> = {
-  OIL_CHANGE: 'oil',
-  TIRE_ROTATION: 'tire',
-  FILTER_CHANGE: 'air-filter',
-  BRAKE_SERVICE: 'car-brake-hold',
-  ENGINE_SERVICE: 'engine-outline',
-  TRANSMISSION: 'car-cog',
-  INSPECTION: 'clipboard-check-outline',
-};
+const MONTH_NAMES_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_NAMES_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+function buildMonthlyFuel(logs: FuelLog[], numMonths = 6): {label: string; labelAr: string; value: number}[] {
+  const now = new Date();
+  return Array.from({length: numMonths}, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (numMonths - 1 - i), 1);
+    const m = d.getMonth();
+    const y = d.getFullYear();
+    const total = logs
+      .filter(l => { const ld = new Date(l.filledAt); return ld.getMonth() === m && ld.getFullYear() === y; })
+      .reduce((s, l) => s + (l.costSar ?? 0), 0);
+    return {label: MONTH_NAMES_EN[m], labelAr: MONTH_NAMES_AR[m], value: total};
+  });
+}
 
 const DOC_LABELS_BRIEF: Record<string, {en: string; ar: string}> = {
   VEHICLE_REGISTRATION: {en: 'Vehicle Registration', ar: '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u0645\u0631\u0643\u0628\u0629'},
@@ -64,25 +79,31 @@ export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
   const {user} = useAuth();
   const isAr = locale === 'ar';
   const [stats, setStats] = useState<FleetStats | null>(null);
-  const [maintenance, setMaintenance] = useState<MaintenanceItem[]>([]);
+  const [activeTrips, setActiveTrips] = useState<TripItem[]>([]);
+  const [scheduledTrips, setScheduledTrips] = useState<TripItem[]>([]);
+  const [monthlyFuel, setMonthlyFuel] = useState<{label: string; labelAr: string; value: number}[]>([]);
   const [expiringDocs, setExpiringDocs] = useState<ExpiryDoc[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   async function load() {
     setRefreshing(true);
     try {
-      const [s, m, docs] = await Promise.all([
+      const [s, trips, fuel, docs] = await Promise.all([
         api.get<FleetStats>('/dashboard/stats'),
-        api.get<MaintenanceItem[]>('/maintenance'),
+        api.get<TripItem[]>('/trips'),
+        api.get<FuelLog[]>('/fuel'),
         api.get<{expired: ExpiryDoc[]; critical: ExpiryDoc[]; warning: ExpiryDoc[]}>('/documents/expiring'),
       ]);
       setStats(s);
-      setMaintenance(
-        (Array.isArray(m) ? m : [])
-          .filter((x: MaintenanceItem) => x.status === 'SCHEDULED')
+      const allTrips = Array.isArray(trips) ? trips : [];
+      setActiveTrips(allTrips.filter(t => t.status === 'IN_PROGRESS').slice(0, 5));
+      setScheduledTrips(
+        allTrips
+          .filter(t => t.status === 'SCHEDULED')
+          .sort((a, b) => new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime())
           .slice(0, 3),
       );
-      // Merge expired + critical (most urgent)
+      setMonthlyFuel(buildMonthlyFuel(Array.isArray(fuel) ? fuel : []));
       const urgent = [...(docs.expired ?? []), ...(docs.critical ?? [])].slice(0, 5);
       setExpiringDocs(urgent);
     } catch {}
@@ -127,82 +148,94 @@ export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{isAr ? 'GPS مباشر' : 'Live GPS'}</Text>
-            <TouchableOpacity><Text style={styles.seeAll}>{isAr ? 'عرض الكل' : 'See all'}</Text></TouchableOpacity>
-          </View>
-          <View style={styles.mapBox}>
-            {/* Map-like decorative background */}
-            <View style={styles.mapGrid}>
-              {[...Array(6)].map((_, i) => (
-                <View key={`h${i}`} style={[styles.mapLine, styles.mapLineH, {top: `${15 + i * 14}%`}]} />
-              ))}
-              {[...Array(5)].map((_, i) => (
-                <View key={`v${i}`} style={[styles.mapLine, styles.mapLineV, {left: `${10 + i * 20}%`}]} />
-              ))}
-            </View>
-            {/* Route line */}
-            <View style={styles.routeLine} />
-            {/* Vehicle pin */}
-            <View style={styles.vehiclePin}>
-              <View style={styles.vehiclePinInner}>
-                <AppIcon name="truck-outline" size={16} color={Colors.primary} />
-              </View>
-            </View>
-            {/* Stats overlay */}
-            <View style={styles.mapStats}>
-              {stats && (
-                <>
-                  <View style={styles.mapStat}>
-                    <AppIcon name="truck-outline" size={14} color={Colors.primary} />
-                    <Text style={styles.mapStatText}>{stats.activeVehicles} {isAr ? 'نشط' : 'active'}</Text>
-                  </View>
-                  <View style={styles.mapStat}>
-                    <AppIcon name="map-marker-path" size={14} color={Colors.purple} />
-                    <Text style={styles.mapStatText}>{stats.tripsInProgress} {isAr ? 'رحلة' : 'trips'}</Text>
-                  </View>
-                </>
-              )}
+            <View style={styles.mapStat}>
+              <AppIcon name="truck-outline" size={13} color={Colors.primary} />
+              <Text style={styles.mapStatText}>{stats?.tripsInProgress ?? 0} {isAr ? 'رحلة نشطة' : 'active'}</Text>
             </View>
           </View>
+          {activeTrips.length === 0 ? (
+            <View style={styles.emptyDeadline}>
+              <AppIcon name="map-marker-off-outline" size={32} color={Colors.border} />
+              <Text style={styles.emptyDeadlineText}>{isAr ? 'لا توجد رحلات نشطة' : 'No active trips'}</Text>
+            </View>
+          ) : (
+            activeTrips.map(trip => {
+              const hasGps = !!(trip.vehicle?.lastLocationLat);
+              const lastUpdate = trip.vehicle?.lastLocationAt
+                ? new Date(trip.vehicle.lastLocationAt).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})
+                : null;
+              return (
+                <View key={trip.id} style={styles.tripCard}>
+                  {/* GPS pulse indicator */}
+                  <View style={[styles.gpsDot, hasGps && styles.gpsDotActive]}>
+                    <AppIcon name={hasGps ? 'map-marker' : 'map-marker-outline'} size={16} color={hasGps ? '#fff' : Colors.textMuted} />
+                  </View>
+                  <View style={{flex: 1}}>
+                    <Text style={styles.tripRoute} numberOfLines={1}>
+                      {trip.origin} → {trip.destination}
+                    </Text>
+                    <Text style={styles.tripMeta} numberOfLines={1}>
+                      {trip.vehicle?.plateNumber ?? '—'} · {trip.driver?.fullName ?? '—'}
+                    </Text>
+                    {lastUpdate && (
+                      <Text style={styles.tripGpsTime}>
+                        {isAr ? `آخر تحديث ${lastUpdate}` : `Last GPS ${lastUpdate}`}
+                      </Text>
+                    )}
+                  </View>
+                  {hasGps && <View style={styles.gpsLiveBadge}><Text style={styles.gpsLiveText}>LIVE</Text></View>}
+                </View>
+              );
+            })
+          )}
         </View>
 
         {/* ── Spending section ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{isAr ? 'الإنفاق' : 'Spending'}</Text>
-            <TouchableOpacity><Text style={styles.seeAll}>{isAr ? 'عرض الكل' : 'See all'}</Text></TouchableOpacity>
+            <Text style={styles.sectionTitle}>{isAr ? 'الإنفاق على الوقود' : 'Fuel Spending'}</Text>
+            {stats && stats.fuelCostThisMonth > 0 && (
+              <Text style={styles.seeAll}>
+                {Math.round(stats.fuelCostThisMonth).toLocaleString()} {isAr ? 'ريال' : 'SAR'}
+              </Text>
+            )}
           </View>
           <View style={styles.spendingBox}>
-            <SpendingLineChart peakValue={stats?.fuelConsumedThisMonth ?? null} />
+            <SpendingLineChart monthlyData={monthlyFuel} isAr={isAr} />
           </View>
         </View>
 
-        {/* ── Upcoming Deadlines ── */}
+        {/* ── Upcoming Trips ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{isAr ? 'المواعيد القادمة' : 'Upcoming Deadlines'}</Text>
-            <TouchableOpacity><Text style={styles.seeAll}>{isAr ? 'عرض الكل' : 'See all'}</Text></TouchableOpacity>
+            <Text style={styles.sectionTitle}>{isAr ? 'الرحلات القادمة' : 'Upcoming Trips'}</Text>
           </View>
-          {maintenance.length === 0 ? (
+          {scheduledTrips.length === 0 ? (
             <View style={styles.emptyDeadline}>
               <AppIcon name="calendar-check-outline" size={32} color={Colors.border} />
-              <Text style={styles.emptyDeadlineText}>{isAr ? 'لا توجد مواعيد' : 'No upcoming deadlines'}</Text>
+              <Text style={styles.emptyDeadlineText}>{isAr ? 'لا توجد رحلات مجدولة' : 'No upcoming trips'}</Text>
             </View>
           ) : (
-            maintenance.map((item, i) => {
-              const highlighted = i === maintenance.length - 1;
-              const date = new Date(item.scheduledDate);
-              const dateStr = `${isAr ? 'بتاريخ' : 'Due On:'} ${date.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}`;
-              const iconName = MAINTENANCE_ICON[item.type] ?? 'wrench-outline';
+            scheduledTrips.map((trip, i) => {
+              const highlighted = i === scheduledTrips.length - 1;
+              const date = new Date(trip.scheduledStart);
+              const dateStr = date.toLocaleDateString(isAr ? 'ar-SA' : 'en-US', {weekday: 'short', month: 'short', day: 'numeric'});
+              const timeStr = date.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
               return (
-                <View key={item.id} style={[styles.deadlineRow, highlighted && styles.deadlineRowHL]}>
+                <View key={trip.id} style={[styles.deadlineRow, highlighted && styles.deadlineRowHL]}>
                   <View style={[styles.deadlineIcon, highlighted && styles.deadlineIconHL]}>
-                    <AppIcon name={iconName} size={20} color={highlighted ? '#fff' : Colors.primary} />
+                    <AppIcon name="truck-outline" size={20} color={highlighted ? '#fff' : Colors.primary} />
                   </View>
                   <View style={styles.deadlineBody}>
                     <Text style={[styles.deadlineTitle, highlighted && styles.deadlineTextHL]} numberOfLines={1}>
-                      {item.description || item.type.replace(/_/g,' ')}
+                      {trip.origin} → {trip.destination}
                     </Text>
-                    <Text style={[styles.deadlineDate, highlighted && styles.deadlineTextHL]}>{dateStr}</Text>
+                    <Text style={[styles.deadlineDate, highlighted && styles.deadlineTextHL]}>
+                      {trip.vehicle?.plateNumber ?? '—'} · {trip.driver?.fullName ?? '—'}
+                    </Text>
+                    <Text style={[styles.deadlineDate, highlighted && styles.deadlineTextHL]}>
+                      {dateStr} {timeStr}
+                    </Text>
                   </View>
                   <AppIcon name="arrow-right" size={20} color={highlighted ? '#fff' : Colors.primary} />
                 </View>
@@ -276,18 +309,19 @@ export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
 }
 
 // ─── Spending line chart (pure RN, no SVG) ──────────────────────────────────
-const CHART_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'];
-const CHART_DATA   = [0.22, 0.38, 0.28, 0.52, 0.88, 0.65, 0.42, 0.58]; // May is peak
-const ACTIVE_IDX   = 4; // May
-
-function SpendingLineChart({peakValue}: {peakValue: number | null}) {
+function SpendingLineChart({monthlyData, isAr}: {monthlyData: {label: string; labelAr: string; value: number}[]; isAr: boolean}) {
   const [w, setW] = useState(0);
   const H = 90;
   const PAD_Y = 16;
 
-  const pts = CHART_DATA.map((v, i) => ({
-    x: w > 0 ? (i / (CHART_DATA.length - 1)) * w : 0,
-    y: PAD_Y + (H - PAD_Y * 2) * (1 - v),
+  const data = monthlyData.length > 0 ? monthlyData : [{label:'—', labelAr:'—', value:0}];
+  const maxVal = Math.max(...data.map(d => d.value), 1);
+  // Current month is last entry
+  const activeIdx = data.length - 1;
+
+  const pts = data.map((d, i) => ({
+    x: w > 0 ? (i / Math.max(data.length - 1, 1)) * w : 0,
+    y: PAD_Y + (H - PAD_Y * 2) * (1 - d.value / maxVal),
   }));
 
   const segs = pts.slice(0, -1).map((p, i) => {
@@ -299,14 +333,15 @@ function SpendingLineChart({peakValue}: {peakValue: number | null}) {
     return {mx: (p.x + q.x) / 2, my: (p.y + q.y) / 2, len, angle};
   });
 
-  const peak = pts[ACTIVE_IDX];
-  const peakLabel = peakValue != null && peakValue > 0
-    ? `${Math.round(peakValue).toLocaleString()} L`
-    : '$1,230'; // fallback display value
+  const peak = pts[activeIdx] ?? pts[0];
+  const currentVal = data[activeIdx]?.value ?? 0;
+  const peakLabel = currentVal > 0
+    ? `${Math.round(currentVal).toLocaleString()} ${isAr ? 'ريال' : 'SAR'}`
+    : (isAr ? 'لا توجد بيانات' : 'No data');
 
   return (
     <View onLayout={e => setW(e.nativeEvent.layout.width)}>
-      {/* Peak label above chart */}
+      {/* Current month label above chart */}
       <Text style={lcStyles.peakLabel}>{peakLabel}</Text>
 
       {/* Line chart area */}
@@ -325,7 +360,7 @@ function SpendingLineChart({peakValue}: {peakValue: number | null}) {
                 }]}
               />
             ))}
-            {/* Dashed vertical from peak to bottom */}
+            {/* Dashed vertical from current month to bottom */}
             {Array.from({length: 7}, (_, di) => (
               <View
                 key={`d${di}`}
@@ -335,7 +370,7 @@ function SpendingLineChart({peakValue}: {peakValue: number | null}) {
                 }]}
               />
             ))}
-            {/* Peak dot (outer ring + inner) */}
+            {/* Current month dot (outer ring + inner) */}
             <View style={[lcStyles.peakRing, {left: peak.x - 8, top: peak.y - 8}]} />
             <View style={[lcStyles.peakDot, {left: peak.x - 5, top: peak.y - 5}]} />
           </>
@@ -344,11 +379,11 @@ function SpendingLineChart({peakValue}: {peakValue: number | null}) {
 
       {/* Month axis */}
       <View style={lcStyles.axis}>
-        {CHART_MONTHS.map((m, i) => (
+        {data.map((d, i) => (
           <Text
-            key={m}
-            style={[lcStyles.axisLabel, i === ACTIVE_IDX && lcStyles.axisLabelActive]}>
-            {m}
+            key={i}
+            style={[lcStyles.axisLabel, i === activeIdx && lcStyles.axisLabelActive]}>
+            {isAr ? d.labelAr : d.label}
           </Text>
         ))}
       </View>
@@ -432,6 +467,16 @@ const styles = StyleSheet.create({
   deadlineTextHL: {color: '#fff'},
   emptyDeadline: {alignItems: 'center', paddingVertical: 24, gap: 8, backgroundColor: Colors.white, borderRadius: 14, borderWidth: 1, borderColor: Colors.borderLight},
   emptyDeadlineText: {fontSize: 14, color: Colors.textMuted},
+
+  // Trip GPS cards
+  tripCard: {flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.white, borderRadius: 14, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: Colors.borderLight},
+  tripRoute: {fontSize: 14, fontWeight: '600' as const, color: Colors.textPrimary},
+  tripMeta: {fontSize: 12, color: Colors.textMuted, marginTop: 2},
+  tripGpsTime: {fontSize: 11, color: Colors.primary, marginTop: 2},
+  gpsDot: {width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.borderLight, justifyContent: 'center', alignItems: 'center'},
+  gpsDotActive: {backgroundColor: Colors.primary},
+  gpsLiveBadge: {backgroundColor: '#e74c3c', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2},
+  gpsLiveText: {fontSize: 9, fontWeight: '800' as const, color: '#fff', letterSpacing: 0.5},
 
   // Pills
   pills: {flexDirection: 'row', gap: 10},
