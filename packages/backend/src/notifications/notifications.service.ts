@@ -153,12 +153,37 @@ export class NotificationsService implements OnModuleInit {
 
   /** Sends a real FCM push + creates a DB notification — used for manual testing */
   async sendTestNotification(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, fcmToken: true },
+    });
+    if (!user) return { message: 'User not found' };
+
     await this.createNotification(
       userId,
       '🚀 Test Notification',
       'FCM push is working correctly!',
       'TRIP_STARTED',
     );
-    return { message: 'Test notification sent' };
+    return {
+      message: 'Test notification sent',
+      targetUser: user.name,
+      hasFcmToken: !!user.fcmToken,
+    };
+  }
+
+  /** Returns all users and whether they have an FCM token registered */
+  async getFcmStatus() {
+    const users = await this.prisma.user.findMany({
+      select: { id: true, name: true, role: true, fcmToken: true },
+      orderBy: { name: 'asc' },
+    });
+    return users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      role: u.role,
+      hasFcmToken: !!u.fcmToken,
+      fcmTokenPreview: u.fcmToken ? u.fcmToken.slice(0, 20) + '…' : null,
+    }));
   }
 }
