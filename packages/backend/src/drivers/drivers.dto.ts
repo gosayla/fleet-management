@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  MinLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { DriverStatus } from '@fleet/shared';
@@ -21,10 +22,14 @@ export class CreateDriverDto {
   @IsNotEmpty()
   phone: string;
 
-  @ApiPropertyOptional({ example: 'driver@fleet.com' })
+  @ApiProperty({ example: 'driver@fleet.com' })
   @IsEmail()
-  @IsOptional()
-  email?: string;
+  email: string;
+
+  @ApiProperty({ example: 'Driver@1234' })
+  @IsString()
+  @MinLength(8)
+  accountPassword: string;
 
   @ApiProperty({ example: '1098765432' })
   @IsString()

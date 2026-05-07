@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDriverDto, UpdateDriverDto } from './drivers.dto';
+import * as argon2 from 'argon2';
 
 @Injectable()
 export class DriversService {
@@ -54,12 +55,42 @@ export class DriversService {
 
   async create(companyId: string, dto: CreateDriverDto) {
     try {
-      return await this.prisma.driver.create({
-        data: { ...dto, companyId, licenseExpiry: new Date(dto.licenseExpiry) },
+      return await this.prisma.$transaction(async tx => {
+        const user = await tx.user.create({
+          data: {
+            companyId,
+            email: dto.email.trim().toLowerCase(),
+            password: await argon2.hash(dto.accountPassword),
+            fullName: dto.fullName,
+            phone: dto.phone,
+            role: 'DRIVER',
+          },
+        });
+
+        return tx.driver.create({
+          data: {
+            companyId,
+            userId: user.id,
+            fullName: dto.fullName,
+            phone: dto.phone,
+            email: dto.email.trim().toLowerCase(),
+            nationalId: dto.nationalId,
+            licenseNumber: dto.licenseNumber,
+            licenseExpiry: new Date(dto.licenseExpiry),
+            bloodType: dto.bloodType,
+          },
+        });
       });
     } catch (e: any) {
       if (e?.code === 'P2002') {
-        throw new ConflictException('رقم الهوية مسجل مسبقاً لهذه الشركة');
+        const target = Array.isArray(e?.meta?.target) ? e.meta.target.join(',') : String(e?.meta?.target ?? '');
+        if (target.includes('email')) {
+          throw new ConflictException('البريد الإلكتروني مسجل مسبقاً');
+        }
+        if (target.includes('companyId') && target.includes('nationalId')) {
+          throw new ConflictException('رقم الهوية مسجل مسبقاً لهذه الشركة');
+        }
+        throw new ConflictException('البيانات مسجلة مسبقاً');
       }
       throw e;
     }
@@ -67,7 +98,7 @@ export class DriversService {
 
   async update(companyId: string, id: string, dto: UpdateDriverDto) {
     await this.findOne(companyId, id);
-    const { licenseExpiry, ...rest } = dto;
+    const { licenseExpiry, accountPassword, ...rest } = dto;
     return this.prisma.driver.update({
       where: { id },
       data: { ...rest, ...(licenseExpiry ? { licenseExpiry: new Date(licenseExpiry) } : {}) },

@@ -64,6 +64,7 @@ interface FormState {
   fullName: string;
   phone: string;
   email: string;
+  accountPassword: string;
   nationalId: string;
   licenseNumber: string;
   licenseExpiry: string;
@@ -75,6 +76,7 @@ const EMPTY: FormState = {
   fullName: '',
   phone: '',
   email: '',
+  accountPassword: '',
   nationalId: '',
   licenseNumber: '',
   licenseExpiry: '',
@@ -102,6 +104,7 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
           fullName: d.fullName ?? '',
           phone: d.phone ?? '',
           email: d.email ?? '',
+          accountPassword: '',
           nationalId: d.nationalId ?? '',
           licenseNumber: d.licenseNumber ?? '',
           licenseExpiry: expiry,
@@ -126,6 +129,8 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
       [form.nationalId, isAr ? 'رقم الهوية' : 'National ID'],
       [form.licenseNumber, isAr ? 'رقم الرخصة' : 'License Number'],
       [form.licenseExpiry, isAr ? 'انتهاء الرخصة' : 'License Expiry'],
+      [form.email, isAr ? 'البريد الإلكتروني' : 'Email'],
+      ...(isEdit ? [] : [[form.accountPassword, isAr ? 'كلمة المرور' : 'Password'] as [string, string]]),
     ];
 
     for (const [value, label] of required) {
@@ -141,15 +146,20 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
       return;
     }
 
+    if (!isEdit && form.accountPassword.trim().length < 8) {
+      setError(isAr ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' : 'Password must be at least 8 characters');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const basePayload: Record<string, any> = {
         fullName: form.fullName.trim(),
         phone: form.phone.trim(),
+        email: form.email.trim().toLowerCase(),
         nationalId: form.nationalId.trim(),
         licenseNumber: form.licenseNumber.trim(),
         licenseExpiry: parsedExpiry.toISOString(),
-        ...(form.email.trim() ? {email: form.email.trim()} : {}),
         ...(form.bloodType ? {bloodType: form.bloodType} : {}),
       };
 
@@ -159,7 +169,10 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
           status: form.status,
         });
       } else {
-        await api.post('/drivers', basePayload);
+        await api.post('/drivers', {
+          ...basePayload,
+          accountPassword: form.accountPassword.trim(),
+        });
       }
 
       onSuccess();
@@ -218,9 +231,25 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
               <TextInput style={styles.input} value={form.phone} onChangeText={v => set('phone', v)} keyboardType="phone-pad" placeholder="+966501234567" placeholderTextColor={Colors.textMuted} />
             </Field>
             <Divider />
-            <Field label={isAr ? 'البريد الإلكتروني' : 'Email'}>
+            <Field label={isAr ? 'البريد الإلكتروني' : 'Email'} required>
               <TextInput style={styles.input} value={form.email} onChangeText={v => set('email', v)} keyboardType="email-address" autoCapitalize="none" placeholder="driver@fleet.com" placeholderTextColor={Colors.textMuted} />
             </Field>
+            {!isEdit && (
+              <>
+                <Divider />
+                <Field label={isAr ? 'كلمة مرور الحساب' : 'Account Password'} required>
+                  <TextInput
+                    style={styles.input}
+                    value={form.accountPassword}
+                    onChangeText={v => set('accountPassword', v)}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    placeholder={isAr ? '8 أحرف على الأقل' : 'Minimum 8 characters'}
+                    placeholderTextColor={Colors.textMuted}
+                  />
+                </Field>
+              </>
+            )}
             <Divider />
             <Field label={isAr ? 'رقم الهوية' : 'National ID'} required>
               <TextInput style={styles.input} value={form.nationalId} onChangeText={v => set('nationalId', v)} placeholder="1098765432" placeholderTextColor={Colors.textMuted} keyboardType="number-pad" />
