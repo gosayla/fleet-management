@@ -33,12 +33,12 @@ export function AuthProvider({children}: {children: ReactNode}) {
     await AsyncStorage.setItem('accessToken', res.accessToken);
     await AsyncStorage.setItem('user', JSON.stringify(res.user));
     setUser(res.user);
-    // Register FCM token with backend (best-effort)
+    // Register FCM token with backend (best-effort, silently skip if Firebase not configured)
     initNotifications().then(fcmToken => {
       if (fcmToken) {
         api.post('/notifications/register', {token: fcmToken}).catch(() => {});
       }
-    });
+    }).catch(() => {});
   }
 
   async function logout() {

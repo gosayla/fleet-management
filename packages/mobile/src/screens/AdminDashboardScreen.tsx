@@ -51,15 +51,13 @@ const MAINTENANCE_ICON: Record<string, string> = {
 };
 
 const DOC_LABELS_BRIEF: Record<string, {en: string; ar: string}> = {
-  REGISTRATION:     {en: 'Vehicle Registration', ar: 'تسجيل المركبة'},
-  INSURANCE:        {en: 'Vehicle Insurance',    ar: 'تأمين المركبة'},
-  INSPECTION:       {en: 'Vehicle Inspection',   ar: 'فحص المركبة'},
-  DRIVING_LICENSE:  {en: 'Driving License',      ar: 'رخصة القيادة'},
-  NATIONAL_ID:      {en: 'National ID',          ar: 'الهوية الوطنية'},
-  RESIDENCY:        {en: 'Residency',             ar: 'الإقامة'},
-  MULKIYA:          {en: 'Mulkiya',               ar: 'الملكية'},
-  ISTIMARA:         {en: 'Istimara',              ar: 'الاستمارة'},
-  CUSTOM:           {en: 'Document',              ar: 'وثيقة'},
+  VEHICLE_REGISTRATION: {en: 'Vehicle Registration', ar: '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u0645\u0631\u0643\u0628\u0629'},
+  VEHICLE_INSURANCE:    {en: 'Vehicle Insurance',    ar: '\u062a\u0623\u0645\u064a\u0646 \u0627\u0644\u0645\u0631\u0643\u0628\u0629'},
+  PERIODIC_INSPECTION:  {en: 'Periodic Inspection',  ar: '\u0627\u0644\u0641\u062d\u0635 \u0627\u0644\u062f\u0648\u0631\u064a'},
+  DRIVER_LICENSE:       {en: 'Driving License',      ar: '\u0631\u062e\u0635\u0629 \u0627\u0644\u0642\u064a\u0627\u062f\u0629'},
+  TRANSPORT_PERMIT:     {en: 'Transport Permit',     ar: '\u062a\u0635\u0631\u064a\u062d \u0646\u0642\u0644'},
+  OWNERSHIP_DEED:       {en: 'Ownership Deed',       ar: '\u0639\u0642\u062f \u0627\u0644\u0645\u0644\u0643\u064a\u0629'},
+  OPERATION_CARD:       {en: 'Operation Card',       ar: '\u0628\u0637\u0627\u0642\u0629 \u062a\u0634\u063a\u064a\u0644'},
 };
 
 export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
