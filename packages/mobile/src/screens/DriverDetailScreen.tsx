@@ -11,7 +11,9 @@ import {
   Linking,
   Image,
   Modal,
+  Alert,
 } from 'react-native';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import {api, resolvePhotoUrl} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
@@ -71,6 +73,7 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
   const [driver, setDriver] = useState<DriverDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPhoto, setShowPhoto] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     api.get<DriverDetail>(`/drivers/${driverId}`)
@@ -78,6 +81,52 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [driverId]);
+
+  async function uploadPhoto(uri: string, fileName: string, type: string) {
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', {uri, name: fileName, type} as any);
+      const updated = await api.upload<{photoUrl: string}>(`/drivers/${driverId}/photo`, form);
+      setDriver(prev => prev ? {...prev, photoUrl: updated.photoUrl} : prev);
+    } catch (e: any) {
+      Alert.alert(isAr ? 'خطأ' : 'Error', e?.message ?? 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function showPhotoOptions() {
+    Alert.alert(
+      isAr ? 'تغيير الصورة' : 'Change Photo',
+      '',
+      [
+        {
+          text: isAr ? 'الكاميرا' : 'Camera',
+          onPress: () => launchCamera(
+            {mediaType: 'photo', quality: 0.8, saveToPhotos: false},
+            res => {
+              if (res.didCancel || res.errorCode) return;
+              const asset = res.assets?.[0];
+              if (asset?.uri) uploadPhoto(asset.uri, asset.fileName ?? 'photo.jpg', asset.type ?? 'image/jpeg');
+            },
+          ),
+        },
+        {
+          text: isAr ? 'المعرض' : 'Gallery',
+          onPress: () => launchImageLibrary(
+            {mediaType: 'photo', quality: 0.8, selectionLimit: 1},
+            res => {
+              if (res.didCancel || res.errorCode) return;
+              const asset = res.assets?.[0];
+              if (asset?.uri) uploadPhoto(asset.uri, asset.fileName ?? 'photo.jpg', asset.type ?? 'image/jpeg');
+            },
+          ),
+        },
+        {text: isAr ? 'إلغاء' : 'Cancel', style: 'cancel'},
+      ],
+    );
+  }
 
   if (loading) {
     return (
@@ -151,22 +200,35 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
 
         {/* Avatar + name */}
         <View style={styles.avatarSection}>
-          <TouchableOpacity
-            activeOpacity={driver.photoUrl ? 0.8 : 1}
-            onPress={() => { if (driver.photoUrl) setShowPhoto(true); }}
-          >
-            <View style={styles.avatar}>
-              {driver.photoUrl && resolvePhotoUrl(driver.photoUrl) ? (
-                <Image
-                  source={{uri: resolvePhotoUrl(driver.photoUrl)!}}
-                  style={{width: 72, height: 72, borderRadius: 36}}
-                  resizeMode="cover"
-                />
-              ) : (
-                <Text style={styles.avatarText}>{initials}</Text>
-              )}
-            </View>
-          </TouchableOpacity>
+          <View style={{position: 'relative'}}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => { if (driver.photoUrl) setShowPhoto(true); }}
+            >
+              <View style={styles.avatar}>
+                {driver.photoUrl && resolvePhotoUrl(driver.photoUrl) ? (
+                  <Image
+                    source={{uri: resolvePhotoUrl(driver.photoUrl)!}}
+                    style={{width: 72, height: 72, borderRadius: 36}}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text style={styles.avatarText}>{initials}</Text>
+                )}
+              </View>
+            </TouchableOpacity>
+            {/* Camera badge */}
+            <TouchableOpacity
+              style={styles.cameraBadge}
+              onPress={showPhotoOptions}
+              activeOpacity={0.8}
+              disabled={uploading}
+            >
+              {uploading
+                ? <ActivityIndicator size={10} color="#fff" />
+                : <AppIcon name="camera" size={12} color="#fff" />}
+            </TouchableOpacity>
+          </View>
           <Text style={styles.driverName}>{driver.fullName}</Text>
           <View style={[styles.statusPill, {backgroundColor: statusCfg.bg}]}>
             <Text style={[styles.statusPillText, {color: statusCfg.color}]}>{statusLabel}</Text>
@@ -435,6 +497,13 @@ const styles = StyleSheet.create({
   },
   headerLabel: {fontSize: 16, fontWeight: '600' as const, color: '#fff', opacity: 0.9},
   avatarSection: {alignItems: 'center', gap: 8, paddingTop: 16},
+  cameraBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: Colors.primary,
+    borderWidth: 2, borderColor: '#fff',
+    justifyContent: 'center', alignItems: 'center',
+  },
   avatar: {
     width: 72, height: 72, borderRadius: 36,
     backgroundColor: 'rgba(255,255,255,0.22)',

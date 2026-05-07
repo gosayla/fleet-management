@@ -14,6 +14,7 @@ import {
   FlatList,
   Modal,
 } from 'react-native';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import {api, resolveApiAssetUrls, resolvePhotoUrl} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
@@ -86,6 +87,13 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
   const [photos, setPhotos] = useState<VehiclePhoto[]>([]);
   const [activePhoto, setActivePhoto] = useState<VehiclePhoto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
+  function refreshPhotos() {
+    api.get<VehiclePhoto[]>(`/vehicles/${vehicleId}/photos`)
+      .then(p => setPhotos(Array.isArray(p) ? p : []))
+      .catch(() => {});
+  }
 
   useEffect(() => {
     Promise.all([
@@ -96,6 +104,81 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [vehicleId]);
+
+  async function uploadPhoto(uri: string, fileName: string, type: string) {
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', {uri, name: fileName, type} as any);
+      await api.upload<VehiclePhoto>(`/vehicles/${vehicleId}/photos`, form);
+      refreshPhotos();
+    } catch (e: any) {
+      Alert.alert(isAr ? 'خطأ' : 'Error', e?.message ?? 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function showAddPhotoOptions() {
+    Alert.alert(
+      isAr ? 'إضافة صورة' : 'Add Photo',
+      '',
+      [
+        {
+          text: isAr ? 'الكاميرا' : 'Camera',
+          onPress: () => launchCamera(
+            {mediaType: 'photo', quality: 0.8, saveToPhotos: false},
+            res => {
+              if (res.didCancel || res.errorCode) return;
+              const asset = res.assets?.[0];
+              if (asset?.uri) uploadPhoto(asset.uri, asset.fileName ?? 'photo.jpg', asset.type ?? 'image/jpeg');
+            },
+          ),
+        },
+        {
+          text: isAr ? 'المعرض' : 'Gallery',
+          onPress: () => launchImageLibrary(
+            {mediaType: 'photo', quality: 0.8, selectionLimit: 1},
+            res => {
+              if (res.didCancel || res.errorCode) return;
+              const asset = res.assets?.[0];
+              if (asset?.uri) uploadPhoto(asset.uri, asset.fileName ?? 'photo.jpg', asset.type ?? 'image/jpeg');
+            },
+          ),
+        },
+        {text: isAr ? 'إلغاء' : 'Cancel', style: 'cancel'},
+      ],
+    );
+  }
+
+  async function setAsProfile(photo: VehiclePhoto) {
+    try {
+      await api.patch(`/vehicles/${vehicleId}/photos/${photo.id}/profile`, {});
+      refreshPhotos();
+      setActivePhoto(null);
+    } catch {}
+  }
+
+  async function deletePhoto(photo: VehiclePhoto) {
+    Alert.alert(
+      isAr ? 'حذف الصورة' : 'Delete Photo',
+      isAr ? 'هل تريد حذف هذه الصورة؟' : 'Delete this photo?',
+      [
+        {text: isAr ? 'إلغاء' : 'Cancel', style: 'cancel'},
+        {
+          text: isAr ? 'حذف' : 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/vehicles/${vehicleId}/photos/${photo.id}`);
+              setActivePhoto(null);
+              refreshPhotos();
+            } catch {}
+          },
+        },
+      ],
+    );
+  }
 
   if (loading) {
     return (
@@ -308,34 +391,50 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
         )}
 
         {/* ── Vehicle Photos ── */}
-        {photos.length > 0 && (
-          <>
-            <Text style={[styles.sectionTitle, {marginTop: 16}]}>{isAr ? 'صور المركبة' : 'Vehicle Photos'}</Text>
-            <FlatList
-              data={photos}
-              keyExtractor={p => p.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={{marginBottom: 16}}
-              contentContainerStyle={{gap: 8, paddingRight: 4}}
-              renderItem={({item: photo}) => {
-                const uri = resolvePhotoUrl(photo.url);
-                if (!uri) return null;
-                return (
-                  <TouchableOpacity onPress={() => setActivePhoto(photo)} activeOpacity={0.85}>
-                    <View style={[styles.photoThumb, photo.isProfile && styles.photoThumbProfile]}>
-                      <Image source={{uri}} style={styles.photoThumbImg} resizeMode="cover" />
-                      {photo.isProfile && (
-                        <View style={styles.profileBadge}>
-                          <AppIcon name="star" size={10} color="#fff" />
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          </>
+        <View style={styles.photosSectionHeader}>
+          <Text style={[styles.sectionTitle, {marginTop: 16}]}>{isAr ? 'صور المركبة' : 'Vehicle Photos'}</Text>
+          <TouchableOpacity
+            style={styles.addPhotoBtn}
+            onPress={showAddPhotoOptions}
+            activeOpacity={0.8}
+            disabled={uploading}
+          >
+            {uploading
+              ? <ActivityIndicator size={14} color={Colors.primary} />
+              : <><AppIcon name="camera-plus" size={14} color={Colors.primary} /><Text style={styles.addPhotoBtnText}>{isAr ? 'إضافة' : 'Add'}</Text></>
+            }
+          </TouchableOpacity>
+        </View>
+        {photos.length > 0 ? (
+          <FlatList
+            data={photos}
+            keyExtractor={p => p.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{marginBottom: 16}}
+            contentContainerStyle={{gap: 8, paddingRight: 4}}
+            renderItem={({item: photo}) => {
+              const uri = resolvePhotoUrl(photo.url);
+              if (!uri) return null;
+              return (
+                <TouchableOpacity onPress={() => setActivePhoto(photo)} activeOpacity={0.85}>
+                  <View style={[styles.photoThumb, photo.isProfile && styles.photoThumbProfile]}>
+                    <Image source={{uri}} style={styles.photoThumbImg} resizeMode="cover" />
+                    {photo.isProfile && (
+                      <View style={styles.profileBadge}>
+                        <AppIcon name="star" size={10} color="#fff" />
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        ) : (
+          <TouchableOpacity style={styles.emptyPhotos} onPress={showAddPhotoOptions} activeOpacity={0.8}>
+            <AppIcon name="camera-plus-outline" size={28} color={Colors.textMuted} />
+            <Text style={styles.emptyPhotosText}>{isAr ? 'أضف صورة للمركبة' : 'Add vehicle photos'}</Text>
+          </TouchableOpacity>
         )}
 
         {/* ── Recent Maintenance ── */}
@@ -394,7 +493,8 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
 
       {/* ── Photo lightbox ── */}
       <Modal visible={!!activePhoto} transparent animationType="fade" onRequestClose={() => setActivePhoto(null)}>
-        <TouchableOpacity style={styles.lightboxOverlay} activeOpacity={1} onPress={() => setActivePhoto(null)}>
+        <View style={styles.lightboxOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setActivePhoto(null)} />
           {activePhoto && resolvePhotoUrl(activePhoto.url) && (
             <Image
               source={{uri: resolvePhotoUrl(activePhoto.url)!}}
@@ -402,10 +502,32 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
               resizeMode="contain"
             />
           )}
+          {/* Close */}
           <TouchableOpacity style={styles.lightboxClose} onPress={() => setActivePhoto(null)}>
             <AppIcon name="close" size={20} color="#fff" />
           </TouchableOpacity>
-        </TouchableOpacity>
+          {/* Action bar */}
+          {activePhoto && (
+            <View style={styles.lightboxActions}>
+              {!activePhoto.isProfile && (
+                <TouchableOpacity style={styles.lightboxAction} onPress={() => setAsProfile(activePhoto)}>
+                  <AppIcon name="star-outline" size={18} color="#fff" />
+                  <Text style={styles.lightboxActionText}>{isAr ? 'تعيين كرئيسية' : 'Set as Profile'}</Text>
+                </TouchableOpacity>
+              )}
+              {activePhoto.isProfile && (
+                <View style={[styles.lightboxAction, {opacity: 0.6}]}>
+                  <AppIcon name="star" size={18} color="#FFD700" />
+                  <Text style={styles.lightboxActionText}>{isAr ? 'الصورة الرئيسية' : 'Profile Photo'}</Text>
+                </View>
+              )}
+              <TouchableOpacity style={styles.lightboxAction} onPress={() => deletePhoto(activePhoto)}>
+                <AppIcon name="trash-can-outline" size={18} color="#e74c3c" />
+                <Text style={[styles.lightboxActionText, {color: '#e74c3c'}]}>{isAr ? 'حذف' : 'Delete'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </Modal>
     </View>
   );
@@ -699,13 +821,37 @@ const styles = StyleSheet.create({
 
   // Lightbox
   lightboxOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.9)',
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.92)',
     justifyContent: 'center', alignItems: 'center',
   },
-  lightboxImg: {width: '100%', height: '80%'},
+  lightboxImg: {width: '100%', height: '75%'},
   lightboxClose: {
     position: 'absolute', top: 50, right: 16,
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 20, padding: 8,
   },
+  lightboxActions: {
+    position: 'absolute', bottom: 48,
+    flexDirection: 'row', gap: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 16, paddingHorizontal: 20, paddingVertical: 12,
+  },
+  lightboxAction: {alignItems: 'center', gap: 4},
+  lightboxActionText: {fontSize: 11, color: '#fff'},
+
+  // Photos section header
+  photosSectionHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16},
+  addPhotoBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1, borderColor: Colors.primary, borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  addPhotoBtnText: {fontSize: 12, color: Colors.primary, fontWeight: '600' as const},
+  emptyPhotos: {
+    alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 20, gap: 6,
+    borderWidth: 1, borderColor: Colors.border, borderRadius: 12,
+    borderStyle: 'dashed', marginBottom: 16,
+  },
+  emptyPhotosText: {fontSize: 13, color: Colors.textMuted},
 });
