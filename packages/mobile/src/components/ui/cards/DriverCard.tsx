@@ -1,8 +1,9 @@
 ﻿import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
 import {Locale} from '../../../lib/i18n';
 import {Colors, Spacing} from '../../../lib/theme';
 import {AppIcon} from '../AppIcon';
+import {resolvePhotoUrl} from '../../../lib/api';
 
 export interface DriverCardData {
   id: string;
@@ -11,6 +12,7 @@ export interface DriverCardData {
   phone?: string;
   licenseNumber: string;
   status: string;
+  photoUrl?: string;
 }
 
 interface Props {
@@ -35,11 +37,16 @@ export function DriverCard({driver, locale, onPress}: Props) {
     .split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
   const subtitle = driver.phone ?? driver.licenseNumber;
   const label = badge.label[locale === 'ar' ? 'ar' : 'en'];
+  const photoUrl = resolvePhotoUrl(driver.photoUrl);
 
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.75} onPress={onPress}>
       <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initials}</Text>
+        {photoUrl ? (
+          <Image source={{uri: photoUrl}} style={styles.photo} />
+        ) : (
+          <Text style={styles.avatarText}>{initials}</Text>
+        )}
       </View>
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1}>{driver.fullName}</Text>
@@ -74,7 +81,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
+  photo: {width: 48, height: 48, borderRadius: 24},
   avatarText: {fontSize: 17, fontWeight: '700' as const, color: Colors.primary},
   body: {flex: 1},
   name: {fontSize: 15, fontWeight: '600' as const, color: Colors.textPrimary},

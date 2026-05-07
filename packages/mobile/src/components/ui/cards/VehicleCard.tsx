@@ -1,8 +1,9 @@
 ﻿import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
 import {Locale} from '../../../lib/i18n';
 import {Colors, Spacing} from '../../../lib/theme';
 import {AppIcon} from '../AppIcon';
+import {resolvePhotoUrl} from '../../../lib/api';
 
 export interface VehicleCardData {
   id: string;
@@ -14,6 +15,7 @@ export interface VehicleCardData {
   status: string;
   mileage: number;
   companyName?: string;
+  photos?: {url: string; isProfile: boolean}[];
 }
 
 interface Props {
@@ -47,11 +49,17 @@ export function VehicleCard({vehicle, locale, onPress}: Props) {
 
   // Abbreviate plate: take up to 4 chars (handles both Arabic & alphanumeric plates)
   const plateAbbr = vehicle.plateNumber.replace(/\s+/g, '').slice(-4);
+  const profilePhoto = vehicle.photos?.find(p => p.isProfile) ?? vehicle.photos?.[0];
+  const photoUrl = resolvePhotoUrl(profilePhoto?.url);
 
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.75} onPress={onPress}>
       <View style={styles.iconWrap}>
-        <Text style={styles.plateAbbr} numberOfLines={1} adjustsFontSizeToFit>{plateAbbr}</Text>
+        {photoUrl ? (
+          <Image source={{uri: photoUrl}} style={styles.photo} />
+        ) : (
+          <Text style={styles.plateAbbr} numberOfLines={1} adjustsFontSizeToFit>{plateAbbr}</Text>
+        )}
       </View>
       <View style={styles.body}>
         <Text style={styles.plate}>{vehicle.plateNumber}</Text>
@@ -85,7 +93,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
+  photo: {width: 48, height: 48, borderRadius: 24},
   body: {flex: 1},
   plateAbbr: {fontSize: 12, fontWeight: '800' as const, color: Colors.primary, textAlign: 'center', letterSpacing: 0.3},
   plate: {fontSize: 15, fontWeight: '700' as const, color: Colors.textPrimary, letterSpacing: 0.5},

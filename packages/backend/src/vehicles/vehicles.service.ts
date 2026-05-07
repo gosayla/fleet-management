@@ -72,7 +72,10 @@ export class VehiclesService {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.vehicle.findMany({
         where,
-        include: { drivers: { select: { id: true, fullName: true, phone: true, status: true, photoUrl: true } } },
+        include: {
+          drivers: { select: { id: true, fullName: true, phone: true, status: true, photoUrl: true } },
+          photos: { where: { isProfile: true }, take: 1 },
+        },
         orderBy: { [sortBy]: sortOrder },
         skip,
         take: limit,
