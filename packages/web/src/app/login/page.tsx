@@ -13,6 +13,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [identifier, setIdentifier] = useState('');
+  const [crNumber, setCrNumber] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,6 +41,55 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setResetError('');
+    setResetSuccess('');
+
+    if (!identifier.trim() || !crNumber.trim() || !newPassword || !confirmPassword) {
+      setResetError(t.login.resetFillAllFields);
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setResetError(t.login.resetPasswordTooShort);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setResetError(t.login.resetPasswordsMismatch);
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await api.post('/auth/reset-password', {
+        identifier: identifier.trim(),
+        crNumber: crNumber.trim(),
+        newPassword,
+      });
+      setResetSuccess(t.login.resetSuccess);
+      setIdentifier('');
+      setCrNumber('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        setResetError(t.login.resetInvalidVerification);
+      } else {
+        setResetError(t.login.resetGeneralError);
+      }
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
+  function closeResetModal() {
+    setShowReset(false);
+    setResetError('');
+    setResetSuccess('');
   }
 
   return (
@@ -85,6 +142,16 @@ export default function LoginPage() {
             />
           </div>
 
+          <div className={`-mt-1 flex ${isRTL ? 'justify-start' : 'justify-end'}`}>
+            <button
+              type="button"
+              onClick={() => setShowReset(true)}
+              className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+            >
+              {t.login.forgotPassword}
+            </button>
+          </div>
+
           {error && (
             <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
           )}
@@ -98,6 +165,94 @@ export default function LoginPage() {
           </button>
         </form>
       </div>
+
+      {showReset && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4" onClick={closeResetModal}>
+          <div
+            className={`w-full max-w-md bg-white rounded-2xl border border-gray-100 shadow-xl p-6 ${isRTL ? 'text-right' : 'text-left'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">{t.login.resetTitle}</h2>
+              <p className="text-sm text-gray-500 mt-1">{t.login.resetSubtitle}</p>
+            </div>
+
+            <form onSubmit={handleResetPassword} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.login.identifier}</label>
+                <input
+                  type="text"
+                  dir="ltr"
+                  required
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder={t.login.identifierPlaceholder}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.login.crNumber}</label>
+                <input
+                  type="text"
+                  dir="ltr"
+                  required
+                  value={crNumber}
+                  onChange={(e) => setCrNumber(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder={t.login.crNumberPlaceholder}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.login.newPassword}</label>
+                <input
+                  type="password"
+                  dir="ltr"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder={t.login.passwordPlaceholder}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.login.confirmPassword}</label>
+                <input
+                  type="password"
+                  dir="ltr"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder={t.login.passwordPlaceholder}
+                />
+              </div>
+
+              {resetError && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{resetError}</p>}
+              {resetSuccess && <p className="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">{resetSuccess}</p>}
+
+              <div className={`pt-2 flex gap-2 ${isRTL ? 'justify-start' : 'justify-end'}`}>
+                <button
+                  type="button"
+                  onClick={closeResetModal}
+                  className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50"
+                >
+                  {t.common.confirmNo}
+                </button>
+                <button
+                  type="submit"
+                  disabled={resetLoading}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {resetLoading ? t.login.resetSubmitting : t.login.resetSubmit}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

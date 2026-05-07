@@ -7,7 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
-import { LoginDto, RegisterDto } from './auth.dto';
+import { LoginDto, RegisterDto, ResetPasswordDto } from './auth.dto';
 import { AuthTokenPayload } from '@fleet/shared';
 
 @Injectable()
@@ -87,6 +87,35 @@ export class AuthService {
         companyId: user.companyId,
       },
     };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const identifier = dto.identifier.trim();
+    const crNumber = dto.crNumber.trim();
+    const isEmail = identifier.includes('@');
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        ...(isEmail
+          ? { email: { equals: identifier, mode: 'insensitive' } }
+          : { phone: identifier }),
+        role: { in: ['SUPER_ADMIN', 'FLEET_MANAGER', 'DISPATCHER', 'VIEWER'] },
+        company: { crNumber },
+      },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('بيانات التحقق غير صحيحة');
+    }
+
+    const hashed = await argon2.hash(dto.newPassword);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashed },
+    });
+
+    return { message: 'تم تحديث كلمة المرور بنجاح' };
   }
 
   async updateFcmToken(userId: string, fcmToken: string) {

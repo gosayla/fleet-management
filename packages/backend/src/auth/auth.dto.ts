@@ -50,3 +50,20 @@ export class UpdateFcmTokenDto {
   @IsNotEmpty()
   fcmToken: string;
 }
+
+export class ResetPasswordDto {
+  @ApiProperty({ example: '+966501234567 or admin@fleet.com' })
+  @IsString()
+  @IsNotEmpty()
+  identifier: string;
+
+  @ApiProperty({ example: '1234567890' })
+  @IsString()
+  @IsNotEmpty()
+  crNumber: string;
+
+  @ApiProperty({ example: 'NewStrongPassword123' })
+  @IsString()
+  @MinLength(8)
+  newPassword: string;
+}

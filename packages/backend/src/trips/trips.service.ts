@@ -36,10 +36,33 @@ export class TripsService {
       where: { companyId, userId },
       select: { id: true },
     });
-    if (!driver) {
+    if (driver) return driver.id;
+
+    // Backward compatibility: older driver users may exist without driver.userId linked.
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, companyId },
+      select: { phone: true, role: true },
+    });
+
+    if (!user || user.role !== 'DRIVER') {
       throw new ForbiddenException('حساب السائق غير مرتبط بملف سائق');
     }
-    return driver.id;
+
+    const fallbackDriver = await this.prisma.driver.findFirst({
+      where: { companyId, phone: user.phone },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, userId: true },
+    });
+
+    if (fallbackDriver && !fallbackDriver.userId) {
+      await this.prisma.driver.update({
+        where: { id: fallbackDriver.id },
+        data: { userId },
+      });
+      return fallbackDriver.id;
+    }
+
+    throw new ForbiddenException('حساب السائق غير مرتبط بملف سائق');
   }
 
   async findAll(companyId: string, user: AuthTokenPayload, search?: string) {
