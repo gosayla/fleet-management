@@ -16,14 +16,18 @@ interface Props {
   activeKey: string;
   locale: Locale;
   onPress: (key: string) => void;
+  badgeByKey?: Record<string, number | undefined>;
 }
 
-export function BottomTabBar({tabs, activeKey, locale, onPress}: Props) {
+export function BottomTabBar({tabs, activeKey, locale, onPress, badgeByKey}: Props) {
   return (
     <View style={styles.bar}>
       {tabs.map(tab => {
         const active = tab.key === activeKey;
         const label = locale === 'ar' ? tab.labelAr : tab.labelEn;
+        const badge = badgeByKey?.[tab.key] ?? 0;
+        const showBadge = badge > 0;
+        const badgeLabel = badge > 99 ? '99+' : String(badge);
         return (
           <TouchableOpacity
             key={tab.key}
@@ -32,11 +36,18 @@ export function BottomTabBar({tabs, activeKey, locale, onPress}: Props) {
             activeOpacity={0.7}>
             {/* Active indicator dot at top */}
             <View style={[styles.indicator, active && styles.indicatorActive]} />
-            <AppIcon
-              name={tab.icon}
-              size={24}
-              color={active ? Colors.tabActive : Colors.tabInactive}
-            />
+            <View style={styles.iconWrap}>
+              <AppIcon
+                name={tab.icon}
+                size={24}
+                color={active ? Colors.tabActive : Colors.tabInactive}
+              />
+              {showBadge && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{badgeLabel}</Text>
+                </View>
+              )}
+            </View>
             <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
               {label}
             </Text>
@@ -50,13 +61,31 @@ export function BottomTabBar({tabs, activeKey, locale, onPress}: Props) {
 const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    backgroundColor: 'transparent',
+    borderTopWidth: 0,
     paddingBottom: Platform.OS === 'ios' ? 24 : 10,
     paddingHorizontal: Spacing.xs,
   },
   item: {flex: 1, alignItems: 'center', paddingTop: 6, gap: 3},
+  iconWrap: {position: 'relative'},
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -12,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+    backgroundColor: Colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700' as const,
+    lineHeight: 12,
+  },
   indicator: {
     width: 20,
     height: 3,

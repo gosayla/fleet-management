@@ -20,7 +20,7 @@ interface Notification {
   id: string;
   title: string;
   body: string;
-  read: boolean;
+  isRead: boolean;
   createdAt: string;
 }
 
@@ -28,23 +28,57 @@ interface Props {
   locale: Locale;
   onToggleLocale: () => void;
   onBack: () => void;
+  onUnreadCountChange?: (count: number) => void;
 }
 
-export function NotificationsScreen({locale, onToggleLocale}: Props) {
+export function NotificationsScreen({locale, onToggleLocale, onUnreadCountChange}: Props) {
   const i18n = t(locale);
   const isRTL = locale === 'ar';
   const [items, setItems] = useState<Notification[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
+
+  function applyItems(nextItems: Notification[]) {
+    setItems(nextItems);
+    onUnreadCountChange?.(nextItems.filter(n => !n.isRead).length);
+  }
 
   async function load() {
     setRefreshing(true);
     try {
       const data = await api.get<Notification[]>('/notifications');
-      setItems(data);
+      applyItems(data);
     } catch {
       // endpoint may not exist yet — silently ignore
     } finally {
       setRefreshing(false);
+    }
+  }
+
+  async function markRead(notificationId: string) {
+    const item = items.find(n => n.id === notificationId);
+    if (!item || item.isRead) return;
+
+    try {
+      await api.patch(`/notifications/${notificationId}/read`, {});
+      applyItems(items.map(n => (n.id === notificationId ? {...n, isRead: true} : n)));
+    } catch {
+      // ignore mark-read failures to keep browsing smooth
+    }
+  }
+
+  async function markAllRead() {
+    const unread = items.filter(n => !n.isRead);
+    if (!unread.length) return;
+
+    setMarkingAll(true);
+    try {
+      await Promise.all(unread.map(n => api.patch(`/notifications/${n.id}/read`, {})));
+      applyItems(items.map(n => ({...n, isRead: true})));
+    } catch {
+      // ignore failures; user can pull to refresh
+    } finally {
+      setMarkingAll(false);
     }
   }
 
@@ -61,11 +95,25 @@ export function NotificationsScreen({locale, onToggleLocale}: Props) {
         <View style={{height: SB_HEIGHT}} />
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>{i18n.notifications}</Text>
-          <TouchableOpacity style={styles.langPill} onPress={onToggleLocale} activeOpacity={0.7}>
-            <Text style={styles.langText}>{i18n.languageLabel}</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.actionPill}
+              onPress={markAllRead}
+              activeOpacity={0.7}
+              disabled={markingAll || !items.some(n => !n.isRead)}>
+              <Text style={styles.actionText}>
+                {markingAll ? i18n.marking : i18n.markAllRead}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.langPill} onPress={onToggleLocale} activeOpacity={0.7}>
+              <Text style={styles.langText}>{i18n.languageLabel}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <Text style={styles.headerSub}>{locale === 'ar' ? 'آخر التنبيهات' : 'Latest alerts'}</Text>
+        <Text style={styles.headerSub}>
+          {locale === 'ar' ? 'آخر التنبيهات' : 'Latest alerts'}
+          {` • ${items.filter(n => !n.isRead).length} ${i18n.unreadLabel}`}
+        </Text>
       </View>
 
       {/* White curved panel */}
@@ -76,9 +124,12 @@ export function NotificationsScreen({locale, onToggleLocale}: Props) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} tintColor={Colors.primary} />}
           contentContainerStyle={styles.list}
           renderItem={({item}) => (
-            <View style={[styles.card, !item.read && styles.cardUnread]}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => markRead(item.id)}
+              style={[styles.card, !item.isRead && styles.cardUnread]}>
               <View style={styles.iconWrap}>
-                <AppIcon name={item.read ? 'bell-outline' : 'bell-badge-outline'} size={18} color={Colors.primary} />
+                <AppIcon name={item.isRead ? 'bell-outline' : 'bell-badge-outline'} size={18} color={Colors.primary} />
               </View>
               <View style={styles.cardBody}>
                 <Text style={[styles.title, isRTL && styles.rtlText]}>{item.title}</Text>
@@ -87,7 +138,7 @@ export function NotificationsScreen({locale, onToggleLocale}: Props) {
                   {formatDateTime(item.createdAt, locale)}
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
           )}
           ListEmptyComponent={
             <Text style={[styles.empty, isRTL && styles.rtlText]}>{i18n.noNotifications}</Text>
@@ -107,6 +158,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {fontSize: 22, fontWeight: '700' as const, color: '#fff', letterSpacing: 0.3},
   headerSub: {fontSize: 13, color: 'rgba(255,255,255,0.7)', paddingHorizontal: Spacing.md, paddingBottom: 4},
+  headerActions: {flexDirection: 'row', gap: 8},
+  actionPill: {
+    backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 6,
+  },
+  actionText: {fontSize: 12, fontWeight: '600' as const, color: '#fff'},
   langPill: {
     backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20,
     paddingHorizontal: 14, paddingVertical: 6,

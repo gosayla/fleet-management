@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   View,
@@ -24,6 +24,7 @@ import {Trip} from '@fleet/shared';
 import {Locale} from './lib/i18n';
 import {Colors} from './lib/theme';
 import {BottomTabBar, TabItem} from './components/ui/BottomTabBar';
+import {api} from './lib/api';
 
 type DriverTab = 'trips' | 'notifications' | 'profile';
 type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'notifications' | 'profile';
@@ -58,9 +59,28 @@ function Navigator() {
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [tripFormOpen, setTripFormOpen] = useState(false);
   const [tripFormId, setTripFormId] = useState<string | null>(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   const toggleLocale = () => setLocale(l => (l === 'ar' ? 'en' : 'ar'));
   const isAdmin = user && user.role !== 'DRIVER';
+
+  async function loadUnreadNotificationsCount() {
+    if (!user) return;
+    try {
+      const items = await api.get<Array<{isRead: boolean}>>('/notifications');
+      setUnreadNotifications(items.filter(n => !n.isRead).length);
+    } catch {
+      // Notifications endpoint may be unavailable temporarily.
+    }
+  }
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadNotifications(0);
+      return;
+    }
+    loadUnreadNotificationsCount();
+  }, [user?.id]);
 
   if (isLoading) {
     return (
@@ -182,7 +202,12 @@ function Navigator() {
             <TripsListScreen locale={locale} onToggleLocale={toggleLocale} onSelectTrip={setActiveTrip} />
           )}
           {driverTab === 'notifications' && (
-            <NotificationsScreen locale={locale} onToggleLocale={toggleLocale} onBack={() => setDriverTab('trips')} />
+            <NotificationsScreen
+              locale={locale}
+              onToggleLocale={toggleLocale}
+              onBack={() => setDriverTab('trips')}
+              onUnreadCountChange={setUnreadNotifications}
+            />
           )}
           {driverTab === 'profile' && (
             <ProfileScreen locale={locale} onToggleLocale={toggleLocale} onBack={() => setDriverTab('trips')} />
@@ -193,6 +218,7 @@ function Navigator() {
           activeKey={driverTab}
           locale={locale}
           onPress={k => setDriverTab(k as DriverTab)}
+          badgeByKey={{notifications: unreadNotifications}}
         />
       </View>
     );
@@ -205,7 +231,14 @@ function Navigator() {
         {adminTab === 'dashboard'     && <AdminDashboardScreen locale={locale} onToggleLocale={toggleLocale} onSelectTrip={setSelectedTripId} />}
         {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onToggleLocale={toggleLocale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} />}
         {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onToggleLocale={toggleLocale} onSelectTrip={setSelectedTripId} onAddTrip={() => { setTripFormId(null); setTripFormOpen(true); }} />}
-        {adminTab === 'notifications'  && <NotificationsScreen   locale={locale} onToggleLocale={toggleLocale} onBack={() => setAdminTab('dashboard')} />}
+        {adminTab === 'notifications'  && (
+          <NotificationsScreen
+            locale={locale}
+            onToggleLocale={toggleLocale}
+            onBack={() => setAdminTab('dashboard')}
+            onUnreadCountChange={setUnreadNotifications}
+          />
+        )}
         {adminTab === 'profile'        && <ProfileScreen locale={locale} onToggleLocale={toggleLocale} onBack={() => setAdminTab('dashboard')} />}
       </View>
       <BottomTabBar
@@ -213,6 +246,7 @@ function Navigator() {
         activeKey={adminTab}
         locale={locale}
         onPress={k => setAdminTab(k as AdminTab)}
+        badgeByKey={{notifications: unreadNotifications}}
       />
     </View>
   );
