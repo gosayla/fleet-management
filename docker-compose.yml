@@ -59,6 +59,9 @@ services:
       TAMM_CLIENT_SECRET: ${TAMM_CLIENT_SECRET:-}
       NAQL_MOCK: ${NAQL_MOCK:-true}
       APP_URL: ${APP_URL:-http://localhost:3000}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
       UPLOADS_DIR: /app/uploads
     ports:
       - "3001:3001"
