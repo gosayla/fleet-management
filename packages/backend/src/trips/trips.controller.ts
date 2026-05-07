@@ -60,7 +60,7 @@ export class TripsController {
     @Param('id') id: string,
     @Body() dto: TripLocationDto,
   ) {
-    return this.tripsService.addLocation(user.companyId, id, dto);
+    return this.tripsService.addLocation(user.companyId, id, dto, user);
   }
 
   @Post(':id/locations/batch')
@@ -69,7 +69,7 @@ export class TripsController {
     @Param('id') id: string,
     @Body() dtos: TripLocationDto[],
   ) {
-    return this.tripsService.addLocationsBatch(user.companyId, id, dtos);
+    return this.tripsService.addLocationsBatch(user.companyId, id, dtos, user);
   }
 
   @Get(':id/locations')

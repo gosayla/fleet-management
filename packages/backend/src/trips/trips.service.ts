@@ -1,10 +1,35 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto, TripLocationDto, UpdateTripDto } from './trips.dto';
+import { AuthTokenPayload } from '@fleet/shared';
 
 @Injectable()
 export class TripsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private async assertCanWriteLocation(
+    companyId: string,
+    tripId: string,
+    user: AuthTokenPayload,
+  ) {
+    const trip = await this.prisma.trip.findFirst({
+      where: { id: tripId, companyId },
+      select: { id: true, driverId: true },
+    });
+    if (!trip) throw new NotFoundException(`الرحلة ${tripId} غير موجودة`);
+
+    // Managers/dispatchers can still write locations for operational overrides.
+    if (user.role !== 'DRIVER') return;
+
+    const driver = await this.prisma.driver.findFirst({
+      where: { companyId, userId: user.sub },
+      select: { id: true },
+    });
+
+    if (!driver || driver.id !== trip.driverId) {
+      throw new ForbiddenException('لا يمكنك إرسال الموقع لهذه الرحلة');
+    }
+  }
 
   async findAll(companyId: string, search?: string) {
     return this.prisma.trip.findMany({
@@ -69,9 +94,8 @@ export class TripsService {
 
   // ─── GPS Location Tracking ─────────────────────────────────────────────────
 
-  async addLocation(companyId: string, tripId: string, dto: TripLocationDto) {
-    // Validate trip belongs to company
-    await this.findOne(companyId, tripId);
+  async addLocation(companyId: string, tripId: string, dto: TripLocationDto, user: AuthTokenPayload) {
+    await this.assertCanWriteLocation(companyId, tripId, user);
     return this.prisma.tripLocation.create({
       data: {
         tripId,
@@ -84,8 +108,8 @@ export class TripsService {
     });
   }
 
-  async addLocationsBatch(companyId: string, tripId: string, locations: TripLocationDto[]) {
-    await this.findOne(companyId, tripId);
+  async addLocationsBatch(companyId: string, tripId: string, locations: TripLocationDto[], user: AuthTokenPayload) {
+    await this.assertCanWriteLocation(companyId, tripId, user);
     return this.prisma.tripLocation.createMany({
       data: locations.map(dto => ({
         tripId,
