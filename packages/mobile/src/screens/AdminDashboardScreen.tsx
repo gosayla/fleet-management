@@ -50,13 +50,16 @@ const MAINTENANCE_ICON: Record<string, string> = {
   INSPECTION: 'clipboard-check-outline',
 };
 
-const DOC_LABELS_BRIEF: Record<string, string> = {
-  REGISTRATION: 'Registration',
-  INSURANCE: 'Insurance',
-  INSPECTION: 'Inspection',
-  DRIVING_LICENSE: 'License',
-  NATIONAL_ID: 'National ID',
-  RESIDENCY: 'Residency',
+const DOC_LABELS_BRIEF: Record<string, {en: string; ar: string}> = {
+  REGISTRATION:     {en: 'Vehicle Registration', ar: 'تسجيل المركبة'},
+  INSURANCE:        {en: 'Vehicle Insurance',    ar: 'تأمين المركبة'},
+  INSPECTION:       {en: 'Vehicle Inspection',   ar: 'فحص المركبة'},
+  DRIVING_LICENSE:  {en: 'Driving License',      ar: 'رخصة القيادة'},
+  NATIONAL_ID:      {en: 'National ID',          ar: 'الهوية الوطنية'},
+  RESIDENCY:        {en: 'Residency',             ar: 'الإقامة'},
+  MULKIYA:          {en: 'Mulkiya',               ar: 'الملكية'},
+  ISTIMARA:         {en: 'Istimara',              ar: 'الاستمارة'},
+  CUSTOM:           {en: 'Document',              ar: 'وثيقة'},
 };
 
 export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
@@ -253,7 +256,7 @@ export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
                   </View>
                   <View style={styles.deadlineBody}>
                     <Text style={styles.deadlineTitle} numberOfLines={1}>
-                      {DOC_LABELS_BRIEF[doc.type] ?? doc.type.replace(/_/g,' ')} — {subject}
+                      {(DOC_LABELS_BRIEF[doc.type]?.[isAr ? 'ar' : 'en']) ?? doc.type.replace(/_/g,' ')} — {subject}
                     </Text>
                     <Text style={[styles.deadlineDate, {color: isExpired ? '#e74c3c' : '#e67e22'}]}>
                       {isExpired
