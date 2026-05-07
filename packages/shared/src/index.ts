@@ -214,9 +214,7 @@ export interface Driver {
 export interface CreateDriverDto {
   fullName: string;
   phone: string;
-  accountPassword: string;
   nationalId: string;
-  licenseNumber: string;
   licenseExpiry: Date;
   bloodType?: BloodType;
 }

@@ -2,10 +2,12 @@ import { Controller, Delete, Get, Post, Patch, Body, Param } from '@nestjs/commo
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { MaintenanceService, CreateMaintenanceDto, UpdateMaintenanceDto } from './maintenance.service';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { AuthTokenPayload } from '@fleet/shared';
+import { AuthTokenPayload, UserRole } from '@fleet/shared';
+import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('maintenance')
 @ApiBearerAuth()
+@Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.VIEWER)
 @Controller('maintenance')
 export class MaintenanceController {
   constructor(private readonly maintenanceService: MaintenanceService) {}

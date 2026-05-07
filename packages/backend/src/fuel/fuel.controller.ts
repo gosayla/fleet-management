@@ -2,10 +2,12 @@ import { Controller, Get, Post, Delete, Body, Param, HttpCode } from '@nestjs/co
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FuelService, CreateFuelLogDto } from './fuel.service';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { AuthTokenPayload } from '@fleet/shared';
+import { AuthTokenPayload, UserRole } from '@fleet/shared';
+import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('fuel')
 @ApiBearerAuth()
+@Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.VIEWER)
 @Controller('fuel')
 export class FuelController {
   constructor(private readonly fuelService: FuelService) {}

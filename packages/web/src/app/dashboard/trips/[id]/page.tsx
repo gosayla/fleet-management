@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import api from '@/lib/api';
@@ -50,6 +51,12 @@ export default function TripDetailPage() {
   const tc = t.common;
   const tt = t.trips;
   const ArrowBack = isRTL ? ArrowRight : ArrowLeft;
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const isDriver = userRole === 'DRIVER';
+
+  useEffect(() => {
+    setUserRole(localStorage.getItem('userRole'));
+  }, []);
 
   const { data: trip, isLoading } = useQuery<TripDetails>({
     queryKey: ['trip', tripId],
@@ -149,12 +156,18 @@ export default function TripDetailPage() {
             {tt.vehicle}
           </h2>
           {(trip as any).vehicle ? (
-            <Link
-              href={`/${locale}/dashboard/vehicles/${(trip as any).vehicle.id}`}
-              className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium"
-            >
-              {(trip as any).vehicle.plateNumber} — {(trip as any).vehicle.make} {(trip as any).vehicle.model}
-            </Link>
+            isDriver ? (
+              <p className="text-gray-700 text-sm font-medium">
+                {(trip as any).vehicle.plateNumber} — {(trip as any).vehicle.make} {(trip as any).vehicle.model}
+              </p>
+            ) : (
+              <Link
+                href={`/${locale}/dashboard/vehicles/${(trip as any).vehicle.id}`}
+                className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium"
+              >
+                {(trip as any).vehicle.plateNumber} — {(trip as any).vehicle.make} {(trip as any).vehicle.model}
+              </Link>
+            )
           ) : (
             <p className="text-gray-400 text-sm">{tc.empty}</p>
           )}
@@ -166,12 +179,16 @@ export default function TripDetailPage() {
             {tt.driver}
           </h2>
           {(trip as any).driver ? (
-            <Link
-              href={`/${locale}/dashboard/drivers/${(trip as any).driver.id}`}
-              className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium"
-            >
-              {(trip as any).driver.fullName}
-            </Link>
+            isDriver ? (
+              <p className="text-gray-700 text-sm font-medium">{(trip as any).driver.fullName}</p>
+            ) : (
+              <Link
+                href={`/${locale}/dashboard/drivers/${(trip as any).driver.id}`}
+                className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium"
+              >
+                {(trip as any).driver.fullName}
+              </Link>
+            )
           ) : (
             <p className="text-gray-400 text-sm">{tc.empty}</p>
           )}

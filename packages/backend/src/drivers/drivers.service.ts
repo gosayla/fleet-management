@@ -56,12 +56,16 @@ export class DriversService {
   async create(companyId: string, dto: CreateDriverDto) {
     try {
       return await this.prisma.$transaction(async tx => {
+        const normalizedPhone = dto.phone.trim();
+        const phoneDigits = normalizedPhone.replace(/\D/g, '');
+        const generatedEmail = `driver.${phoneDigits || Date.now().toString()}.${companyId}@fleet.local`;
         const user = await tx.user.create({
           data: {
             companyId,
-            password: await argon2.hash(dto.accountPassword),
+            email: generatedEmail,
+            password: await argon2.hash(normalizedPhone),
             fullName: dto.fullName,
-            phone: dto.phone,
+            phone: normalizedPhone,
             role: 'DRIVER',
           },
         });
@@ -71,9 +75,9 @@ export class DriversService {
             companyId,
             userId: user.id,
             fullName: dto.fullName,
-            phone: dto.phone,
+            phone: normalizedPhone,
             nationalId: dto.nationalId,
-            licenseNumber: dto.licenseNumber,
+            licenseNumber: dto.nationalId,
             licenseExpiry: new Date(dto.licenseExpiry),
             bloodType: dto.bloodType,
           },
@@ -96,7 +100,7 @@ export class DriversService {
 
   async update(companyId: string, id: string, dto: UpdateDriverDto) {
     await this.findOne(companyId, id);
-    const { licenseExpiry, accountPassword, ...rest } = dto;
+    const { licenseExpiry, ...rest } = dto;
     return this.prisma.driver.update({
       where: { id },
       data: { ...rest, ...(licenseExpiry ? { licenseExpiry: new Date(licenseExpiry) } : {}) },

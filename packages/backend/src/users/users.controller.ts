@@ -11,13 +11,15 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { AuthTokenPayload } from '@fleet/shared';
+import { AuthTokenPayload, UserRole } from '@fleet/shared';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './users.dto';
+import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('users')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.VIEWER)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

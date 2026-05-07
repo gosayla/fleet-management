@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
@@ -24,6 +24,7 @@ import { useLocale } from '@/providers/locale-provider';
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { locale, isRTL, toggleLocale, t } = useLocale();
 
   const [userName, setUserName] = useState('');
@@ -37,7 +38,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   // Role display label
   const roleLabel = (t.users.roles as Record<string, string>)[userRole] ?? userRole;
 
-  const navItems = [
+  const isDriver = userRole === 'DRIVER';
+
+  const managerNavItems = [
     { path: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard },
     { path: '/dashboard/vehicles', label: t.nav.vehicles, icon: Truck },
     { path: '/dashboard/drivers', label: t.nav.drivers, icon: Users },
@@ -52,7 +55,23 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     { path: '/dashboard/settings', label: t.nav.settings, icon: Settings },
   ];
 
+  const driverNavItems = [
+    { path: '/dashboard/trips', label: t.nav.trips, icon: Route },
+    { path: '/dashboard/settings', label: t.nav.settings, icon: Settings },
+  ];
+
+  const navItems = isDriver ? driverNavItems : managerNavItems;
+
   const normalizedPath = (pathname || '/').replace(/^\/(ar|en)(?=\/|$)/, '') || '/';
+
+  useEffect(() => {
+    if (!isDriver) return;
+    const allowedDriverPrefixes = ['/dashboard/trips', '/dashboard/settings'];
+    const isAllowed = allowedDriverPrefixes.some((prefix) => normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`));
+    if (!isAllowed) {
+      router.replace(`/${locale}/dashboard/trips`);
+    }
+  }, [isDriver, normalizedPath, locale, router]);
 
   function handleLogout() {
     localStorage.removeItem('accessToken');

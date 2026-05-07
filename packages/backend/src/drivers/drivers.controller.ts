@@ -16,10 +16,12 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { DriversService } from './drivers.service';
 import { CreateDriverDto, UpdateDriverDto } from './drivers.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { AuthTokenPayload } from '@fleet/shared';
+import { AuthTokenPayload, UserRole } from '@fleet/shared';
+import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('drivers')
 @ApiBearerAuth()
+@Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.VIEWER)
 @Controller('drivers')
 export class DriversController {
   constructor(private readonly driversService: DriversService) {}

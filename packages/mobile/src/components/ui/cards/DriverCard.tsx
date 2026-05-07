@@ -35,7 +35,7 @@ export function DriverCard({driver, locale, onPress}: Props) {
   const badge = STATUS_BADGE[driver.status] ?? STATUS_BADGE.OFF_DUTY;
   const initials = (driver.fullName ?? '?')
     .split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
-  const subtitle = driver.phone ?? driver.licenseNumber;
+  const subtitle = driver.phone ?? '—';
   const label = badge.label[locale === 'ar' ? 'ar' : 'en'];
   const photoUrl = resolvePhotoUrl(driver.photoUrl);
 

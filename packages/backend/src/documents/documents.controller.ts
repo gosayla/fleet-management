@@ -5,13 +5,15 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { AuthTokenPayload } from '@fleet/shared';
+import { AuthTokenPayload, UserRole } from '@fleet/shared';
 import { CreateDocumentDto, DocumentsQueryDto, UpdateDocumentDto } from './documents.dto';
 import { DocumentsService } from './documents.service';
 import { Public } from '../auth/public.decorator';
+import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('documents')
 @ApiBearerAuth()
+@Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.VIEWER)
 @Controller('documents')
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}

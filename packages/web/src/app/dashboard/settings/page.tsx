@@ -6,11 +6,6 @@ import { Settings, Building2, User } from 'lucide-react';
 import api from '@/lib/api';
 import { useLocale } from '@/providers/locale-provider';
 
-function getCurrentRole(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('userRole');
-}
-
 interface CompanyData {
   id: string;
   name: string;
@@ -29,12 +24,17 @@ interface ProfileData {
 
 export default function SettingsPage() {
   const { t } = useLocale();
-  const currentRole = getCurrentRole();
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrentRole(localStorage.getItem('userRole'));
+  }, []);
 
   // ── Company form ─────────────────────────────────────────
   const { data: company } = useQuery<CompanyData>({
     queryKey: ['settings-company'],
     queryFn: async () => (await api.get('/settings/company')).data,
+    enabled: currentRole === 'FLEET_MANAGER' || currentRole === 'SUPER_ADMIN' || currentRole === 'DISPATCHER' || currentRole === 'VIEWER',
   });
 
   const [companyForm, setCompanyForm] = useState({

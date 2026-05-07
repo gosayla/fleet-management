@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto, TripLocationDto, UpdateTripDto } from './trips.dto';
-import { AuthTokenPayload } from '@fleet/shared';
+import { AuthTokenPayload, TripStatus } from '@fleet/shared';
 
 @Injectable()
 export class TripsService {
@@ -31,10 +31,26 @@ export class TripsService {
     }
   }
 
-  async findAll(companyId: string, search?: string) {
+  private async getDriverIdForUser(companyId: string, userId: string): Promise<string> {
+    const driver = await this.prisma.driver.findFirst({
+      where: { companyId, userId },
+      select: { id: true },
+    });
+    if (!driver) {
+      throw new ForbiddenException('حساب السائق غير مرتبط بملف سائق');
+    }
+    return driver.id;
+  }
+
+  async findAll(companyId: string, user: AuthTokenPayload, search?: string) {
+    const driverFilter = user.role === 'DRIVER'
+      ? { driverId: await this.getDriverIdForUser(companyId, user.sub) }
+      : {};
+
     return this.prisma.trip.findMany({
       where: {
         companyId,
+        ...driverFilter,
         ...(search
           ? {
               OR: [
@@ -49,9 +65,13 @@ export class TripsService {
     });
   }
 
-  async findOne(companyId: string, id: string) {
+  async findOne(companyId: string, id: string, user?: AuthTokenPayload) {
+    const driverFilter = user?.role === 'DRIVER'
+      ? { driverId: await this.getDriverIdForUser(companyId, user.sub) }
+      : {};
+
     const trip = await this.prisma.trip.findFirst({
-      where: { id, companyId },
+      where: { id, companyId, ...driverFilter },
       include: { vehicle: true, driver: true, permit: true },
     });
     if (!trip) throw new NotFoundException(`الرحلة ${id} غير موجودة`);
@@ -65,10 +85,23 @@ export class TripsService {
     });
   }
 
-  async update(companyId: string, id: string, dto: UpdateTripDto) {
-    await this.findOne(companyId, id);
+  async update(companyId: string, id: string, dto: UpdateTripDto, user: AuthTokenPayload) {
+    await this.findOne(companyId, id, user);
 
     const data: Record<string, unknown> = { ...dto };
+
+    if (user.role === 'DRIVER') {
+      const allowedStatuses: TripStatus[] = [TripStatus.IN_PROGRESS, TripStatus.COMPLETED];
+      if (!dto.status || !allowedStatuses.includes(dto.status)) {
+        throw new ForbiddenException('يمكنك فقط بدء أو إنهاء الرحلة');
+      }
+
+      Object.keys(data).forEach((key) => {
+        if (key !== 'status') {
+          delete data[key];
+        }
+      });
+    }
 
     if (dto.status === 'IN_PROGRESS' && !data.actualStart) {
       data.actualStart = new Date();
@@ -122,8 +155,8 @@ export class TripsService {
     });
   }
 
-  async getLocations(companyId: string, tripId: string) {
-    await this.findOne(companyId, tripId);
+  async getLocations(companyId: string, tripId: string, user: AuthTokenPayload) {
+    await this.findOne(companyId, tripId, user);
     return this.prisma.tripLocation.findMany({
       where: { tripId },
       orderBy: { recordedAt: 'asc' },

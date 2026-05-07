@@ -63,9 +63,7 @@ interface Props {
 interface FormState {
   fullName: string;
   phone: string;
-  accountPassword: string;
   nationalId: string;
-  licenseNumber: string;
   licenseExpiry: string;
   bloodType: '' | BloodType;
   status: DriverStatus;
@@ -74,9 +72,7 @@ interface FormState {
 const EMPTY: FormState = {
   fullName: '',
   phone: '',
-  accountPassword: '',
   nationalId: '',
-  licenseNumber: '',
   licenseExpiry: '',
   bloodType: '',
   status: 'ACTIVE',
@@ -101,9 +97,7 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
         setForm({
           fullName: d.fullName ?? '',
           phone: d.phone ?? '',
-          accountPassword: '',
           nationalId: d.nationalId ?? '',
-          licenseNumber: d.licenseNumber ?? '',
           licenseExpiry: expiry,
           bloodType: (d.bloodType as BloodType | null) ?? '',
           status: (d.status as DriverStatus) ?? 'ACTIVE',
@@ -124,9 +118,7 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
       [form.fullName, isAr ? 'الاسم الكامل' : 'Full Name'],
       [form.phone, isAr ? 'رقم الجوال' : 'Phone'],
       [form.nationalId, isAr ? 'رقم الهوية' : 'National ID'],
-      [form.licenseNumber, isAr ? 'رقم الرخصة' : 'License Number'],
       [form.licenseExpiry, isAr ? 'انتهاء الرخصة' : 'License Expiry'],
-      ...(isEdit ? [] : [[form.accountPassword, isAr ? 'كلمة المرور' : 'Password'] as [string, string]]),
     ];
 
     for (const [value, label] of required) {
@@ -142,18 +134,12 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
       return;
     }
 
-    if (!isEdit && form.accountPassword.trim().length < 8) {
-      setError(isAr ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' : 'Password must be at least 8 characters');
-      return;
-    }
-
     setSubmitting(true);
     try {
       const basePayload: Record<string, any> = {
         fullName: form.fullName.trim(),
         phone: form.phone.trim(),
         nationalId: form.nationalId.trim(),
-        licenseNumber: form.licenseNumber.trim(),
         licenseExpiry: parsedExpiry.toISOString(),
         ...(form.bloodType ? {bloodType: form.bloodType} : {}),
       };
@@ -164,10 +150,7 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
           status: form.status,
         });
       } else {
-        await api.post('/drivers', {
-          ...basePayload,
-          accountPassword: form.accountPassword.trim(),
-        });
+        await api.post('/drivers', basePayload);
       }
 
       onSuccess();
@@ -225,34 +208,19 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
             <Field label={isAr ? 'رقم الجوال' : 'Phone'} required>
               <TextInput style={styles.input} value={form.phone} onChangeText={v => set('phone', v)} keyboardType="phone-pad" placeholder="+966501234567" placeholderTextColor={Colors.textMuted} />
             </Field>
-            {!isEdit && (
-              <>
-                <Divider />
-                <Field label={isAr ? 'كلمة مرور الحساب' : 'Account Password'} required>
-                  <TextInput
-                    style={styles.input}
-                    value={form.accountPassword}
-                    onChangeText={v => set('accountPassword', v)}
-                    secureTextEntry
-                    autoCapitalize="none"
-                    placeholder={isAr ? '8 أحرف على الأقل' : 'Minimum 8 characters'}
-                    placeholderTextColor={Colors.textMuted}
-                  />
-                </Field>
-              </>
-            )}
             <Divider />
             <Field label={isAr ? 'رقم الهوية' : 'National ID'} required>
               <TextInput style={styles.input} value={form.nationalId} onChangeText={v => set('nationalId', v)} placeholder="1098765432" placeholderTextColor={Colors.textMuted} keyboardType="number-pad" />
             </Field>
+            {!isEdit && (
+              <Text style={styles.helperText}>
+                {isAr ? 'كلمة المرور الافتراضية ستكون نفس رقم الجوال ويمكن للسائق تغييرها لاحقاً.' : 'Default password will be the same as phone number and can be changed later.'}
+              </Text>
+            )}
           </View>
 
           <Text style={styles.section}>{isAr ? 'الرخصة' : 'License'}</Text>
           <View style={styles.card}>
-            <Field label={isAr ? 'رقم الرخصة' : 'License Number'} required>
-              <TextInput style={styles.input} value={form.licenseNumber} onChangeText={v => set('licenseNumber', v)} placeholder="SA-DL-123456" placeholderTextColor={Colors.textMuted} />
-            </Field>
-            <Divider />
             <Field label={isAr ? 'تاريخ انتهاء الرخصة' : 'License Expiry Date'} required>
               <TextInput style={styles.input} value={form.licenseExpiry} onChangeText={v => set('licenseExpiry', v)} placeholder="YYYY-MM-DD" placeholderTextColor={Colors.textMuted} keyboardType="numbers-and-punctuation" />
             </Field>
@@ -364,6 +332,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   errorText: {flex: 1, fontSize: 13, color: '#dc2626'},
+  helperText: {fontSize: 12, color: Colors.textMuted, lineHeight: 18, marginTop: 10},
 
   section: {
     fontSize: 13,

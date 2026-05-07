@@ -162,7 +162,6 @@ export default function EditDriverPage() {
       phone: String(fd.get('phone') ?? '').trim(),
       email: String(fd.get('email') ?? '').trim() || undefined,
       nationalId: String(fd.get('nationalId') ?? '').trim(),
-      licenseNumber: String(fd.get('licenseNumber') ?? '').trim(),
       licenseExpiry: parsedLicenseExpiry,
       status: String(fd.get('status') ?? DriverStatus.ACTIVE) as DriverStatus,
       bloodType: bloodType || undefined,
@@ -202,7 +201,6 @@ export default function EditDriverPage() {
             <Field label={td.phone} name="phone" type="tel" defaultValue={driver.phone} required />
             <Field label={td.email} name="email" type="email" defaultValue={driver.email ?? ''} />
             <Field label={td.nationalId} name="nationalId" defaultValue={driver.nationalId} required />
-            <Field label={td.licenseNumber} name="licenseNumber" defaultValue={driver.licenseNumber} required />
             <DatePicker
               label={td.licenseExpiry}
               value={licenseExpiry}

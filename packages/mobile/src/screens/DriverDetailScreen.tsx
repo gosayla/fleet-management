@@ -255,11 +255,6 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
             value={bloodTypeLabel}
             highlight
           />
-          <View style={styles.stripDiv} />
-          <InfoCol
-            label={isAr ? 'رقم الرخصة' : 'License No.'}
-            value={driver.licenseNumber}
-          />
         </View>
 
         {/* 4-tile stats row */}
@@ -341,12 +336,6 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
             icon="card-account-details"
             label={isAr ? 'رقم الهوية' : 'National ID'}
             value={driver.nationalId}
-          />
-          <InfoRow
-            icon="card-text-outline"
-            label={isAr ? 'رقم الرخصة' : 'License Number'}
-            value={driver.licenseNumber}
-            noBorder
           />
         </View>
 

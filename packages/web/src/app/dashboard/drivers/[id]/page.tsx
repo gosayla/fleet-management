@@ -182,7 +182,6 @@ export default function DriverDetailPage() {
           <InfoRow label={td.phone} value={driver.phone} />
           {driver.email && <InfoRow label={td.email} value={driver.email} />}
           <InfoRow label={td.nationalId} value={driver.nationalId} mono />
-          <InfoRow label={td.licenseNumber} value={driver.licenseNumber} mono />
           <InfoRow label={td.licenseExpiry} value={formatDate(driver.licenseExpiry, locale)} />
           {(driver as any).bloodType && (
             <InfoRow

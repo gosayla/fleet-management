@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { TripsService } from './trips.service';
@@ -25,16 +26,19 @@ export class TripsController {
     @CurrentUser() user: AuthTokenPayload,
     @Query('search') search?: string,
   ) {
-    return this.tripsService.findAll(user.companyId, search);
+    return this.tripsService.findAll(user.companyId, user, search);
   }
 
   @Get(':id')
   findOne(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
-    return this.tripsService.findOne(user.companyId, id);
+    return this.tripsService.findOne(user.companyId, id, user);
   }
 
   @Post()
   create(@CurrentUser() user: AuthTokenPayload, @Body() dto: CreateTripDto) {
+    if (user.role === 'DRIVER') {
+      throw new ForbiddenException('ليس لديك صلاحية إنشاء رحلة');
+    }
     return this.tripsService.create(user.companyId, dto);
   }
 
@@ -44,11 +48,14 @@ export class TripsController {
     @Param('id') id: string,
     @Body() dto: UpdateTripDto,
   ) {
-    return this.tripsService.update(user.companyId, id, dto);
+    return this.tripsService.update(user.companyId, id, dto, user);
   }
 
   @Delete(':id')
   cancel(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
+    if (user.role === 'DRIVER') {
+      throw new ForbiddenException('ليس لديك صلاحية إلغاء الرحلة');
+    }
     return this.tripsService.cancel(user.companyId, id);
   }
 
@@ -74,6 +81,6 @@ export class TripsController {
 
   @Get(':id/locations')
   getLocations(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
-    return this.tripsService.getLocations(user.companyId, id);
+    return this.tripsService.getLocations(user.companyId, id, user);
   }
 }

@@ -24,9 +24,7 @@ const BLOOD_TYPE_LABELS: Record<BloodType, string> = {
 type FormValues = {
   fullName: string;
   phone: string;
-  accountPassword: string;
   nationalId: string;
-  licenseNumber: string;
   licenseExpiry: string;
 };
 
@@ -84,18 +82,12 @@ export default function NewDriverPage() {
     const payload: CreateDriverDto = {
       fullName: String(fd.get('fullName') ?? '').trim(),
       phone: String(fd.get('phone') ?? '').trim(),
-      accountPassword: String(fd.get('accountPassword') ?? '').trim(),
       nationalId: String(fd.get('nationalId') ?? '').trim(),
-      licenseNumber: String(fd.get('licenseNumber') ?? '').trim(),
       licenseExpiry: new Date(licenseExpiry ?? ''),
       bloodType: bloodType || undefined,
     };
 
     if (!licenseExpiry || Number.isNaN(payload.licenseExpiry.getTime())) {
-      return;
-    }
-
-    if (payload.accountPassword.length < 8) {
       return;
     }
 
@@ -122,9 +114,12 @@ export default function NewDriverPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label={td.name} name="fullName" required />
             <Field label={td.phone} name="phone" type="tel" required placeholder="+966501234567" />
-            <Field label={locale === 'ar' ? 'كلمة مرور الحساب' : 'Account Password'} name="accountPassword" type="password" required placeholder={locale === 'ar' ? '8 أحرف على الأقل' : 'Minimum 8 characters'} />
             <Field label={td.nationalId} name="nationalId" required placeholder="1098765432" />
-            <Field label={td.licenseNumber} name="licenseNumber" required placeholder="SA-DL-123456" />
+            <p className="text-xs text-gray-500 md:col-span-2">
+              {locale === 'ar'
+                ? 'كلمة المرور الافتراضية ستكون نفس رقم الجوال ويمكن للسائق تغييرها لاحقاً.'
+                : 'Default password will be the same as phone number and can be changed later.'}
+            </p>
             <DatePicker
               label={td.licenseExpiry}
               value={licenseExpiry}

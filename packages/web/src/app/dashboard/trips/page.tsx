@@ -1,7 +1,7 @@
 'use client';
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Trip, TripStatus, TripType } from '@fleet/shared';
@@ -34,12 +34,18 @@ export default function TripsPage() {
   const { isRTL, locale, t } = useLocale();
   const tt = t.trips;
   const tc = t.common;
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const isDriver = userRole === 'DRIVER';
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(ALL_STATUS);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>(ALL_TYPE);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [cancelTarget, setCancelTarget] = useState<Trip | null>(null);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    setUserRole(localStorage.getItem('userRole'));
+  }, []);
 
   const { data: trips = [], isLoading } = useQuery<Trip[]>({
     queryKey: ['trips'],
@@ -80,13 +86,15 @@ export default function TripsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">{tt.title}</h1>
-        <Link
-          href={`/${locale}/dashboard/trips/new`}
-          className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          {locale === 'ar' ? 'إضافة رحلة' : 'Add Trip'}
-        </Link>
+        {!isDriver && (
+          <Link
+            href={`/${locale}/dashboard/trips/new`}
+            className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            {locale === 'ar' ? 'إضافة رحلة' : 'Add Trip'}
+          </Link>
+        )}
       </div>
 
       {/* Type + Status filter row */}
@@ -176,7 +184,7 @@ export default function TripsPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </Link>
-                          {(trip.status === 'SCHEDULED' || trip.status === 'IN_PROGRESS') && (
+                          {!isDriver && (trip.status === 'SCHEDULED' || trip.status === 'IN_PROGRESS') && (
                             <button
                               onClick={() => setCancelTarget(trip)}
                               className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"

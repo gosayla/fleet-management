@@ -3,7 +3,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  MinLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { DriverStatus } from '@fleet/shared';
@@ -21,20 +20,10 @@ export class CreateDriverDto {
   @IsNotEmpty()
   phone: string;
 
-  @ApiProperty({ example: 'Driver@1234' })
-  @IsString()
-  @MinLength(8)
-  accountPassword: string;
-
   @ApiProperty({ example: '1098765432' })
   @IsString()
   @IsNotEmpty()
   nationalId: string;
-
-  @ApiProperty({ example: 'SA-DL-123456' })
-  @IsString()
-  @IsNotEmpty()
-  licenseNumber: string;
 
   @ApiProperty({ example: '2027-06-15' })
   @IsDateString()
