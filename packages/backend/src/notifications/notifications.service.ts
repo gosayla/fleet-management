@@ -155,7 +155,7 @@ export class NotificationsService implements OnModuleInit {
   async sendTestNotification(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, fcmToken: true },
+      select: { id: true, fullName: true, fcmToken: true },
     });
     if (!user) return { message: 'User not found' };
 
@@ -167,7 +167,7 @@ export class NotificationsService implements OnModuleInit {
     );
     return {
       message: 'Test notification sent',
-      targetUser: user.name,
+      targetUser: user.fullName,
       hasFcmToken: !!user.fcmToken,
     };
   }
@@ -175,12 +175,12 @@ export class NotificationsService implements OnModuleInit {
   /** Returns all users and whether they have an FCM token registered */
   async getFcmStatus() {
     const users = await this.prisma.user.findMany({
-      select: { id: true, name: true, role: true, fcmToken: true },
-      orderBy: { name: 'asc' },
+      select: { id: true, fullName: true, role: true, fcmToken: true },
+      orderBy: { fullName: 'asc' },
     });
     return users.map((u) => ({
       id: u.id,
-      name: u.name,
+      name: u.fullName,
       role: u.role,
       hasFcmToken: !!u.fcmToken,
       fcmTokenPreview: u.fcmToken ? u.fcmToken.slice(0, 20) + '…' : null,
