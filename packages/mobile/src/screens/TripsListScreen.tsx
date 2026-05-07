@@ -14,6 +14,7 @@ import {Trip} from '@fleet/shared';
 import {Locale, t} from '../lib/i18n';
 import {Colors, Spacing, Typography} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
+import {TripCard} from '../components/ui/cards/TripCard';
 
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
