@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import MapView, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
 import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
@@ -31,6 +32,15 @@ interface TripDetail {
   contractNumber?: string;
   driver?: {id: string; fullName: string; phone: string; licenseNumber: string};
   vehicle?: {id: string; plateNumber: string; make: string; model: string; type: string};
+}
+
+interface TripLocationPoint {
+  id: string;
+  lat: number;
+  lng: number;
+  speed?: number | null;
+  heading?: number | null;
+  recordedAt: string;
 }
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
@@ -70,7 +80,17 @@ interface Props {
 export function TripDetailScreen({tripId, locale, onBack, onEdit}: Props) {
   const isAr = locale === 'ar';
   const [trip, setTrip] = useState<TripDetail | null>(null);
+  const [locations, setLocations] = useState<TripLocationPoint[]>([]);
   const [loading, setLoading] = useState(true);
+
+  async function loadLocations() {
+    try {
+      const data = await api.get<TripLocationPoint[]>(`/trips/${tripId}/locations`);
+      const pts = Array.isArray(data) ? data : [];
+      // Keep recent points only for rendering performance.
+      setLocations(pts.slice(-120));
+    } catch {}
+  }
 
   useEffect(() => {
     api.get<TripDetail>(`/trips/${tripId}`)
@@ -78,6 +98,19 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit}: Props) {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [tripId]);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    loadLocations();
+    if (trip?.status === 'IN_PROGRESS') {
+      timer = setInterval(loadLocations, 15000);
+    }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [tripId, trip?.status]);
 
   if (loading) {
     return (
@@ -107,6 +140,8 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit}: Props) {
     ? new Date(trip.scheduledEnd).getTime() - new Date(trip.scheduledStart).getTime()
     : 0;
   const durationHrs = durationMs > 0 ? (durationMs / 3_600_000).toFixed(1) : '—';
+  const latestLocation = locations.length > 0 ? locations[locations.length - 1] : null;
+  const routeCoords = locations.map(p => ({latitude: p.lat, longitude: p.lng}));
 
   return (
     <View style={styles.container}>
@@ -205,6 +240,59 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit}: Props) {
               />
             )}
           </View>
+        )}
+
+        {/* Live GPS tracker */}
+        <Text style={[styles.sectionTitle, {marginTop: 20}]}>{isAr ? 'تتبع الموقع' : 'Location Tracker'}</Text>
+        {latestLocation ? (
+          <>
+            <View style={styles.infoCard}>
+              <InfoRow
+                icon="map-marker"
+                label={isAr ? 'آخر إحداثيات' : 'Latest Coordinates'}
+                value={`${latestLocation.lat.toFixed(5)}, ${latestLocation.lng.toFixed(5)}`}
+                highlight={trip.status === 'IN_PROGRESS'}
+                noBorder={false}
+              />
+              <InfoRow
+                icon="clock-outline"
+                label={isAr ? 'وقت التحديث' : 'Updated At'}
+                value={fmtDateTime(latestLocation.recordedAt)}
+                highlight={trip.status === 'IN_PROGRESS'}
+                noBorder
+              />
+            </View>
+            <View style={styles.mapWrap}>
+              <MapView
+                provider={PROVIDER_GOOGLE}
+                style={styles.map}
+                region={{
+                  latitude: latestLocation.lat,
+                  longitude: latestLocation.lng,
+                  latitudeDelta: 0.03,
+                  longitudeDelta: 0.03,
+                }}
+                scrollEnabled={false}
+                zoomEnabled={false}
+                rotateEnabled={false}
+                pitchEnabled={false}>
+                {routeCoords.length > 1 && (
+                  <Polyline coordinates={routeCoords} strokeColor={Colors.primary} strokeWidth={4} />
+                )}
+                <Marker
+                  coordinate={{latitude: latestLocation.lat, longitude: latestLocation.lng}}
+                  title={isAr ? 'آخر موقع' : 'Latest Location'}
+                  description={fmtDateTime(latestLocation.recordedAt)}
+                />
+              </MapView>
+            </View>
+          </>
+        ) : (
+          <EmptyCard
+            isAr={isAr}
+            icon="map-marker-off-outline"
+            text={isAr ? 'لا توجد بيانات موقع حتى الآن' : 'No location points yet'}
+          />
         )}
 
         {/* Driver */}
@@ -361,6 +449,8 @@ const styles = StyleSheet.create({
   sectionTitle: {fontSize: 16, fontWeight: '700' as const, color: Colors.textPrimary, marginBottom: 10},
 
   infoCard: {backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: Colors.borderLight, overflow: 'hidden'},
+  mapWrap: {height: 170, borderRadius: 14, borderWidth: 1, borderColor: Colors.borderLight, overflow: 'hidden', marginTop: 8},
+  map: {width: '100%', height: '100%'},
   infoRow: {flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: Spacing.md},
   infoRowBorder: {borderBottomWidth: 1, borderBottomColor: Colors.borderLight},
   infoRowIcon: {width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.bg, justifyContent: 'center', alignItems: 'center'},
