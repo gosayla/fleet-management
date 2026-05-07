@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateTripDto, UpdateTripDto } from './trips.dto';
+import { CreateTripDto, TripLocationDto, UpdateTripDto } from './trips.dto';
 
 @Injectable()
 export class TripsService {
@@ -64,6 +64,45 @@ export class TripsService {
     return this.prisma.trip.update({
       where: { id },
       data: { status: 'CANCELLED' },
+    });
+  }
+
+  // ─── GPS Location Tracking ─────────────────────────────────────────────────
+
+  async addLocation(companyId: string, tripId: string, dto: TripLocationDto) {
+    // Validate trip belongs to company
+    await this.findOne(companyId, tripId);
+    return this.prisma.tripLocation.create({
+      data: {
+        tripId,
+        lat: dto.lat,
+        lng: dto.lng,
+        speed: dto.speed ?? null,
+        heading: dto.heading ?? null,
+        recordedAt: dto.recordedAt,
+      },
+    });
+  }
+
+  async addLocationsBatch(companyId: string, tripId: string, locations: TripLocationDto[]) {
+    await this.findOne(companyId, tripId);
+    return this.prisma.tripLocation.createMany({
+      data: locations.map(dto => ({
+        tripId,
+        lat: dto.lat,
+        lng: dto.lng,
+        speed: dto.speed ?? null,
+        heading: dto.heading ?? null,
+        recordedAt: dto.recordedAt,
+      })),
+    });
+  }
+
+  async getLocations(companyId: string, tripId: string) {
+    await this.findOne(companyId, tripId);
+    return this.prisma.tripLocation.findMany({
+      where: { tripId },
+      orderBy: { recordedAt: 'asc' },
     });
   }
 }

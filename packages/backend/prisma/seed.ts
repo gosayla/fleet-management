@@ -125,40 +125,44 @@ async function main() {
     },
   });
 
-  await prisma.fleetDocument.createMany({
-    data: [
-      {
+  await Promise.all([
+    prisma.fleetDocument.create({
+      data: {
         companyId: company.id,
-        vehicleId: vehicles[0].id,
         type: DocumentType.VEHICLE_REGISTRATION,
         fileUrl: 'https://example.com/docs/seed-registration.pdf',
         issueDate: new Date('2025-01-01'),
         expiryDate: new Date('2026-12-31'),
         issuingAuthority: 'Traffic Department',
         referenceNumber: 'SEED-DOC-REG-001',
+        vehicles: { connect: [{ id: vehicles[0].id }] },
       },
-      {
+    }),
+    prisma.fleetDocument.create({
+      data: {
         companyId: company.id,
-        vehicleId: vehicles[1].id,
         type: DocumentType.VEHICLE_INSURANCE,
         fileUrl: 'https://example.com/docs/seed-insurance.pdf',
         issueDate: new Date('2025-06-01'),
         expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 15),
         issuingAuthority: 'Insurance Provider',
         referenceNumber: 'SEED-DOC-INS-001',
+        vehicles: { connect: [{ id: vehicles[1].id }] },
       },
-      {
+    }),
+    prisma.fleetDocument.create({
+      data: {
         companyId: company.id,
-        driverId: drivers[0].id,
         type: DocumentType.DRIVER_LICENSE,
         fileUrl: 'https://example.com/docs/seed-driver-license.pdf',
         issueDate: new Date('2024-01-01'),
         expiryDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
         issuingAuthority: 'Licensing Authority',
         referenceNumber: 'SEED-DOC-DL-001',
+        drivers: { connect: [{ id: drivers[0].id }] },
       },
-    ],
-  });
+    }),
+  ]);
 
   // Maintenance log
   await prisma.maintenanceLog.create({

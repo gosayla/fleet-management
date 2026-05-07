@@ -111,3 +111,28 @@ export class UpdateTripDto extends PartialType(CreateTripDto) {
   @IsOptional()
   status?: TripStatus;
 }
+
+export class TripLocationDto {
+  @ApiProperty({ example: 24.7136 })
+  @IsNumber()
+  lat: number;
+
+  @ApiProperty({ example: 46.6753 })
+  @IsNumber()
+  lng: number;
+
+  @ApiPropertyOptional({ example: 60.5, description: 'Speed in km/h' })
+  @IsNumber()
+  @IsOptional()
+  speed?: number;
+
+  @ApiPropertyOptional({ example: 180, description: 'Heading in degrees' })
+  @IsNumber()
+  @IsOptional()
+  heading?: number;
+
+  @ApiProperty({ example: '2026-05-07T10:30:00Z', description: 'Time the GPS fix was recorded on the device' })
+  @Type(() => Date)
+  @IsDate()
+  recordedAt: Date;
+}

@@ -58,6 +58,11 @@ export class DocumentsController {
     return this.documentsService.findAll(user.companyId, query);
   }
 
+  @Get('expiring')
+  getExpiringSummary(@CurrentUser() user: AuthTokenPayload) {
+    return this.documentsService.getExpiringSummary(user.companyId);
+  }
+
   @Get(':id')
   findOne(
     @CurrentUser() user: AuthTokenPayload,

@@ -82,4 +82,62 @@ export class VehiclesController {
     const rows = this.vehiclesService.parseImportFile(file.buffer);
     return this.vehiclesService.importVehicles(user.companyId, rows);
   }
+
+  // ─── Vehicle Photos ────────────────────────────────────────────────────────
+
+  @Get(':id/photos')
+  getPhotos(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
+    return this.vehiclesService.getPhotos(user.companyId, id);
+  }
+
+  @Post(':id/photos')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  addPhoto(
+    @CurrentUser() user: AuthTokenPayload,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('caption') caption?: string,
+  ) {
+    if (!file) throw new BadRequestException('File is required');
+    return this.vehiclesService.addPhoto(user.companyId, id, file.filename, caption);
+  }
+
+  @Patch(':id/photos/:photoId/profile')
+  setProfilePhoto(
+    @CurrentUser() user: AuthTokenPayload,
+    @Param('id') id: string,
+    @Param('photoId') photoId: string,
+  ) {
+    return this.vehiclesService.setProfilePhoto(user.companyId, id, photoId);
+  }
+
+  @Delete(':id/photos/:photoId')
+  deletePhoto(
+    @CurrentUser() user: AuthTokenPayload,
+    @Param('id') id: string,
+    @Param('photoId') photoId: string,
+  ) {
+    return this.vehiclesService.deletePhoto(user.companyId, id, photoId);
+  }
+
+  // ─── Driver assignment ────────────────────────────────────────────────────
+
+  @Post(':id/drivers/:driverId')
+  assignDriver(
+    @CurrentUser() user: AuthTokenPayload,
+    @Param('id') id: string,
+    @Param('driverId') driverId: string,
+  ) {
+    return this.vehiclesService.assignDriver(user.companyId, id, driverId);
+  }
+
+  @Delete(':id/drivers/:driverId')
+  removeDriver(
+    @CurrentUser() user: AuthTokenPayload,
+    @Param('id') id: string,
+    @Param('driverId') driverId: string,
+  ) {
+    return this.vehiclesService.removeDriver(user.companyId, id, driverId);
+  }
 }

@@ -163,7 +163,6 @@ model Vehicle {
   vin              String        @unique
   odometer         Float         @default(0) // km
   fuelCapacity     Float         @default(0) // liters
-  assignedDriverId String?       @unique
   tammVehicleId    String?       // Tamm platform reference
   lastLocationLat  Float?
   lastLocationLng  Float?
@@ -189,12 +188,13 @@ model Vehicle {
   updatedAt        DateTime      @updatedAt
 
   company          Company           @relation(fields: [companyId], references: [id])
-  assignedDriver   Driver?           @relation("AssignedVehicle", fields: [assignedDriverId], references: [id])
+  drivers          Driver[]
   trips            Trip[]
   maintenanceLogs  MaintenanceLog[]
   fuelLogs         FuelLog[]
   documents        FleetDocument[]
   violations       TammViolation[]
+  photos           VehiclePhoto[]
 
   @@unique([companyId, plateNumber])
   @@index([companyId])
@@ -213,12 +213,12 @@ model Driver {
   licenseExpiry    DateTime
   bloodType        BloodType?
   status           DriverStatus @default(ACTIVE)
-  assignedVehicleId String?     @unique
+  photoUrl         String?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
   company         Company         @relation(fields: [companyId], references: [id])
-  assignedVehicle Vehicle?        @relation("AssignedVehicle")
+  vehicles        Vehicle[]
   trips           Trip[]
   fuelLogs        FuelLog[]
   documents       FleetDocument[]
@@ -261,6 +261,7 @@ model Trip {
   vehicle  Vehicle @relation(fields: [vehicleId], references: [id])
   driver   Driver  @relation(fields: [driverId], references: [id])
   permit   NaqlPermit? @relation(fields: [naqlPermitId], references: [id])
+  locations TripLocation[]
 
   @@index([companyId])
   @@index([vehicleId])
@@ -314,24 +315,53 @@ model FuelLog {
 model FleetDocument {
   id               String       @id @default(uuid())
   companyId        String
-  vehicleId        String?
-  driverId         String?
   type             DocumentType
   fileUrl          String
   issueDate        DateTime
   expiryDate       DateTime
   issuingAuthority String?
   referenceNumber  String?
+  notes            String?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
-  company Company  @relation(fields: [companyId], references: [id])
-  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
-  driver  Driver?  @relation(fields: [driverId], references: [id])
+  company  Company   @relation(fields: [companyId], references: [id])
+  vehicles Vehicle[]
+  drivers  Driver[]
 
   @@index([companyId])
   @@index([expiryDate])
   @@map("fleet_documents")
+}
+
+model VehiclePhoto {
+  id        String   @id @default(uuid())
+  vehicleId String
+  url       String
+  isProfile Boolean  @default(false)
+  caption   String?
+  createdAt DateTime @default(now())
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+  @@map("vehicle_photos")
+}
+
+model TripLocation {
+  id         String   @id @default(uuid())
+  tripId     String
+  lat        Float
+  lng        Float
+  speed      Float?
+  heading    Float?
+  recordedAt DateTime
+  createdAt  DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@map("trip_locations")
 }
 
 // ─── Tamm Integration ─────────────────────────────────────────────────────────

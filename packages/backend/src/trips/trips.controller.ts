@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { TripsService } from './trips.service';
-import { CreateTripDto, UpdateTripDto } from './trips.dto';
+import { CreateTripDto, TripLocationDto, UpdateTripDto } from './trips.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AuthTokenPayload } from '@fleet/shared';
 
@@ -50,5 +50,30 @@ export class TripsController {
   @Delete(':id')
   cancel(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
     return this.tripsService.cancel(user.companyId, id);
+  }
+
+  // ─── GPS Location Tracking ─────────────────────────────────────────────────
+
+  @Post(':id/locations')
+  addLocation(
+    @CurrentUser() user: AuthTokenPayload,
+    @Param('id') id: string,
+    @Body() dto: TripLocationDto,
+  ) {
+    return this.tripsService.addLocation(user.companyId, id, dto);
+  }
+
+  @Post(':id/locations/batch')
+  addLocationsBatch(
+    @CurrentUser() user: AuthTokenPayload,
+    @Param('id') id: string,
+    @Body() dtos: TripLocationDto[],
+  ) {
+    return this.tripsService.addLocationsBatch(user.companyId, id, dtos);
+  }
+
+  @Get(':id/locations')
+  getLocations(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
+    return this.tripsService.getLocations(user.companyId, id);
   }
 }

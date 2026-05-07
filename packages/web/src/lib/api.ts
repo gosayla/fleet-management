@@ -6,6 +6,14 @@ function trimTrailingSlash(value: string): string {
   return value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
+function resolveBackendOrigin(): string {
+  const base = trimTrailingSlash(API_BASE);
+  if (/^https?:\/\//i.test(base)) {
+    return base.replace(/\/api\/v\d+$/i, '');
+  }
+  return '';
+}
+
 export function resolveDocumentFileUrl(fileUrl: string): string {
   if (!fileUrl) return fileUrl;
   if (/^https?:\/\//i.test(fileUrl)) return fileUrl;
@@ -14,6 +22,15 @@ export function resolveDocumentFileUrl(fileUrl: string): string {
   const legacy = normalized.match(/^\/documents\/(?!files\/)(.+)$/i);
   const targetPath = legacy ? `/documents/files/${legacy[1]}` : normalized;
   return `${trimTrailingSlash(API_BASE)}${targetPath}`;
+}
+
+export function resolveUploadedAssetUrl(fileUrl: string): string {
+  if (!fileUrl) return fileUrl;
+  if (/^https?:\/\//i.test(fileUrl)) return fileUrl;
+
+  const normalized = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
+  const backendOrigin = resolveBackendOrigin();
+  return backendOrigin ? `${backendOrigin}${normalized}` : normalized;
 }
 
 export const api = axios.create({

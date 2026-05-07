@@ -1,16 +1,19 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { api, resolveDocumentFileUrl } from '@/lib/api';
+import { api, resolveDocumentFileUrl, resolveUploadedAssetUrl } from '@/lib/api';
 import { useLocale } from '@/providers/locale-provider';
 import { formatDate, formatEnumLabel, formatCurrencySar, formatNumber } from '@/lib/i18n';
 import { DocumentType, Vehicle } from '@fleet/shared';
-import { ArrowLeft, ArrowRight, Droplet, ExternalLink, FileText, Fuel, Gauge, Pencil, Plus, ShieldAlert, Truck, Wrench } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Camera, Droplet, ExternalLink, FileText, Fuel, Gauge, Pencil, Plus, ShieldAlert, Star, Trash2, Truck, UserCheck, Wrench, X } from 'lucide-react';
+
+type DriverBrief = { id: string; fullName: string; phone: string; status: string; photoUrl?: string | null };
 
 type VehicleDetails = Vehicle & {
-  assignedDriver?: { id: string; fullName: string } | null;
+  drivers?: DriverBrief[];
   maintenanceLogs?: Array<{
     id: string;
     type: string;
@@ -48,6 +51,13 @@ type VehicleDetails = Vehicle & {
   insuranceStatus?: string | null;
   insuranceExpiryDate?: string | null;
   restrictionStatus?: string | null;
+};
+
+type VehiclePhoto = {
+  id: string;
+  url: string;
+  isProfile: boolean;
+  caption?: string | null;
 };
 
 type VehicleDocument = {
@@ -88,6 +98,96 @@ export default function VehicleDashboardPage() {
     enabled: !!vehicleId,
   });
 
+  const queryClient = useQueryClient();
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [driverSearch, setDriverSearch] = useState('');
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: allDrivers } = useQuery<DriverBrief[]>({
+    queryKey: ['drivers-list'],
+    queryFn: () => api.get('/drivers').then((r) => r.data),
+    enabled: showAssignModal,
+  });
+
+  const assignDriverMutation = useMutation({
+    mutationFn: (driverId: string) => api.post(`/vehicles/${vehicleId}/drivers/${driverId}`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle', vehicleId] });
+      setShowAssignModal(false);
+      setDriverSearch('');
+    },
+  });
+
+  const removeDriverMutation = useMutation({
+    mutationFn: (driverId: string) => api.delete(`/vehicles/${vehicleId}/drivers/${driverId}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicle', vehicleId] }),
+  });
+  const [activePhoto, setActivePhoto] = useState<VehiclePhoto | null>(null);
+
+  const { data: photosData } = useQuery<VehiclePhoto[]>({
+    queryKey: ['vehicle-photos', vehicleId],
+    queryFn: () => api.get(`/vehicles/${vehicleId}/photos`).then((r) => r.data),
+    enabled: !!vehicleId,
+  });
+
+  const uploadPhotoMutation = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      return api.post(`/vehicles/${vehicleId}/photos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicle-photos', vehicleId] }),
+  });
+
+  const setProfileMutation = useMutation({
+    mutationFn: (photoId: string) => api.patch(`/vehicles/${vehicleId}/photos/${photoId}/profile`, {}),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicle-photos', vehicleId] }),
+  });
+
+  const deletePhotoMutation = useMutation({
+    mutationFn: (photoId: string) => api.delete(`/vehicles/${vehicleId}/photos/${photoId}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicle-photos', vehicleId] }),
+  });
+
+  const photos = photosData ?? [];
+  const activePhotoIndex = activePhoto ? photos.findIndex((p) => p.id === activePhoto.id) : -1;
+
+  const goToPreviousPhoto = () => {
+    if (photos.length === 0 || activePhotoIndex < 0) return;
+    const prevIndex = (activePhotoIndex - 1 + photos.length) % photos.length;
+    setActivePhoto(photos[prevIndex]);
+  };
+
+  const goToNextPhoto = () => {
+    if (photos.length === 0 || activePhotoIndex < 0) return;
+    const nextIndex = (activePhotoIndex + 1) % photos.length;
+    setActivePhoto(photos[nextIndex]);
+  };
+
+  useEffect(() => {
+    if (!activePhoto) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActivePhoto(null);
+        return;
+      }
+
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      if (photos.length === 0) return;
+
+      e.preventDefault();
+      if (e.key === 'ArrowRight') {
+        goToNextPhoto();
+      } else {
+        goToPreviousPhoto();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activePhoto, photos, activePhotoIndex]);
+
   if (isLoading || !vehicle) {
     return (
       <div className="flex justify-center py-16">
@@ -117,7 +217,9 @@ export default function VehicleDashboardPage() {
     },
     {
       label: tv.driver,
-      value: vehicle.assignedDriver?.fullName ?? tv.unassigned,
+      value: (vehicle.drivers ?? []).length > 0
+        ? (vehicle.drivers ?? []).map((d) => d.fullName).join(', ')
+        : tv.unassigned,
       icon: Truck,
       className: 'bg-indigo-50 text-indigo-700',
     },
@@ -237,6 +339,50 @@ export default function VehicleDashboardPage() {
         </ListCard>
       </div>
 
+      {/* Assigned Drivers section */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <UserCheck className="w-4 h-4 text-blue-600" />
+            <h2 className="text-sm font-semibold text-gray-900">{isRTL ? 'السائقون المعيّنون' : 'Assigned Drivers'}</h2>
+          </div>
+          <button
+            onClick={() => setShowAssignModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {isRTL ? 'تعيين سائق' : 'Assign Driver'}
+          </button>
+        </div>
+        {(vehicle.drivers ?? []).length === 0 ? (
+          <Empty>{isRTL ? 'لا يوجد سائقون معيّنون' : 'No drivers assigned'}</Empty>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {(vehicle.drivers ?? []).map((driver) => (
+              <div key={driver.id} className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5">
+                {driver.photoUrl ? (
+                  <img src={resolveUploadedAssetUrl(driver.photoUrl)} alt="" className="h-6 w-6 rounded-full object-cover" />
+                ) : (
+                  <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-[10px] font-bold">
+                    {driver.fullName.charAt(0)}
+                  </div>
+                )}
+                <Link href={`/${locale}/dashboard/drivers/${driver.id}`} className="text-sm font-medium text-gray-800 hover:text-blue-600">
+                  {driver.fullName}
+                </Link>
+                <button
+                  onClick={() => { if (window.confirm(isRTL ? 'إلغاء تعيين السائق؟' : 'Unassign driver?')) removeDriverMutation.mutate(driver.id); }}
+                  className="text-gray-400 hover:text-red-600 ml-1"
+                  title={isRTL ? 'إلغاء التعيين' : 'Unassign'}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Documents section */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
         <div className="flex items-center justify-between mb-4">
@@ -315,6 +461,174 @@ export default function VehicleDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Photos section */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Camera className="w-4 h-4 text-blue-600" />
+            <h2 className="text-sm font-semibold text-gray-900">{isRTL ? 'الصور' : 'Photos'}</h2>
+          </div>
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {isRTL ? 'رفع صورة' : 'Upload Photo'}
+          </button>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) uploadPhotoMutation.mutate(f);
+              e.target.value = '';
+            }}
+          />
+        </div>
+        {(photosData ?? []).length === 0 ? (
+          <Empty>{isRTL ? 'لا توجد صور' : 'No photos yet'}</Empty>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
+            {(photosData ?? []).map((photo) => (
+              <div key={photo.id} className={`relative group rounded-lg overflow-hidden border-2 ${photo.isProfile ? 'border-blue-500' : 'border-gray-100'}`}>
+                <img
+                  src={resolveUploadedAssetUrl(photo.url)}
+                  alt={photo.caption ?? ''}
+                  className="h-28 w-full cursor-zoom-in object-cover"
+                  onClick={() => setActivePhoto(photo)}
+                />
+                {photo.isProfile && (
+                  <span className="absolute top-1 left-1 rounded bg-blue-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                    {isRTL ? 'رئيسية' : 'Profile'}
+                  </span>
+                )}
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                  {!photo.isProfile && (
+                    <button
+                      onClick={() => setProfileMutation.mutate(photo.id)}
+                      className="pointer-events-auto rounded bg-white/90 p-1 text-blue-700 hover:bg-white"
+                      title={isRTL ? 'تعيين كصورة رئيسية' : 'Set as profile'}
+                    >
+                      <Star className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { if (window.confirm(isRTL ? 'حذف الصورة؟' : 'Delete photo?')) deletePhotoMutation.mutate(photo.id); }}
+                    className="pointer-events-auto rounded bg-white/90 p-1 text-red-600 hover:bg-white"
+                    title={isRTL ? 'حذف' : 'Delete'}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {activePhoto && (        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setActivePhoto(null)}
+        >
+          <div
+            className="relative max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-xl bg-black"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setActivePhoto(null)}
+              className="absolute right-3 top-3 z-10 rounded-full bg-white/90 p-1.5 text-gray-700 hover:bg-white"
+              aria-label={isRTL ? 'إغلاق' : 'Close'}
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {photos.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={goToPreviousPhoto}
+                  className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 text-gray-700 hover:bg-white"
+                  aria-label={isRTL ? 'الصورة التالية' : 'Previous photo'}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={goToNextPhoto}
+                  className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 text-gray-700 hover:bg-white"
+                  aria-label={isRTL ? 'الصورة السابقة' : 'Next photo'}
+                >
+                  <ArrowRight className="h-5 w-5" />
+                </button>
+              </>
+            )}
+
+            <img
+              src={resolveUploadedAssetUrl(activePhoto.url)}
+              alt={activePhoto.caption ?? ''}
+              className="max-h-[90vh] w-full object-contain"
+            />
+            {activePhoto.caption && (
+              <div className="px-4 py-3 text-sm text-white/90">{activePhoto.caption}</div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Assign Driver Modal */}
+      {showAssignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <h3 className="text-sm font-semibold text-gray-900">{isRTL ? 'تعيين سائق' : 'Assign Driver'}</h3>
+              <button onClick={() => { setShowAssignModal(false); setDriverSearch(''); }} className="text-gray-400 hover:text-gray-700"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <input
+                autoFocus
+                type="text"
+                placeholder={isRTL ? 'ابحث بالاسم أو الهاتف...' : 'Search by name or phone...'}
+                value={driverSearch}
+                onChange={(e) => setDriverSearch(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="max-h-64 overflow-y-auto space-y-1">
+                {(allDrivers ?? [])
+                  .filter((d) => {
+                    const q = driverSearch.toLowerCase();
+                    const alreadyAssigned = (vehicle.drivers ?? []).some((a) => a.id === d.id);
+                    return !alreadyAssigned && (d.fullName.toLowerCase().includes(q) || d.phone.includes(q));
+                  })
+                  .map((driver) => (
+                    <button
+                      key={driver.id}
+                      onClick={() => assignDriverMutation.mutate(driver.id)}
+                      disabled={assignDriverMutation.isPending}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-blue-50 disabled:opacity-50"
+                    >
+                      {driver.photoUrl ? (
+                        <img src={resolveUploadedAssetUrl(driver.photoUrl)} alt="" className="h-8 w-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold">{driver.fullName.charAt(0)}</div>
+                      )}
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{driver.fullName}</div>
+                        <div className="text-xs text-gray-500">{driver.phone}</div>
+                      </div>
+                    </button>
+                  ))}
+                {(allDrivers ?? []).filter((d) => !(vehicle.drivers ?? []).some((a) => a.id === d.id)).length === 0 && (
+                  <div className="py-6 text-center text-sm text-gray-400">{isRTL ? 'لا توجد نتائج' : 'No drivers available'}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

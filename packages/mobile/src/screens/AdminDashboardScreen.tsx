@@ -30,6 +30,14 @@ interface MaintenanceItem {
   vehicle?: {plateNumber: string};
 }
 
+interface ExpiryDoc {
+  id: string;
+  type: string;
+  expiryDate: string;
+  vehicles?: {plateNumber: string}[];
+  drivers?: {fullName: string}[];
+}
+
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
 const MAINTENANCE_ICON: Record<string, string> = {
@@ -42,19 +50,30 @@ const MAINTENANCE_ICON: Record<string, string> = {
   INSPECTION: 'clipboard-check-outline',
 };
 
+const DOC_LABELS_BRIEF: Record<string, string> = {
+  REGISTRATION: 'Registration',
+  INSURANCE: 'Insurance',
+  INSPECTION: 'Inspection',
+  DRIVING_LICENSE: 'License',
+  NATIONAL_ID: 'National ID',
+  RESIDENCY: 'Residency',
+};
+
 export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
   const {user} = useAuth();
   const isAr = locale === 'ar';
   const [stats, setStats] = useState<FleetStats | null>(null);
   const [maintenance, setMaintenance] = useState<MaintenanceItem[]>([]);
+  const [expiringDocs, setExpiringDocs] = useState<ExpiryDoc[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   async function load() {
     setRefreshing(true);
     try {
-      const [s, m] = await Promise.all([
+      const [s, m, docs] = await Promise.all([
         api.get<FleetStats>('/dashboard/stats'),
         api.get<MaintenanceItem[]>('/maintenance'),
+        api.get<{expired: ExpiryDoc[]; critical: ExpiryDoc[]; warning: ExpiryDoc[]}>('/documents/expiring'),
       ]);
       setStats(s);
       setMaintenance(
@@ -62,6 +81,9 @@ export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
           .filter((x: MaintenanceItem) => x.status === 'SCHEDULED')
           .slice(0, 3),
       );
+      // Merge expired + critical (most urgent)
+      const urgent = [...(docs.expired ?? []), ...(docs.critical ?? [])].slice(0, 5);
+      setExpiringDocs(urgent);
     } catch {}
     finally {setRefreshing(false);}
   }
@@ -208,6 +230,41 @@ export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
                 </View>
               ))}
             </View>
+          </View>
+        )}
+
+        {/* ── Document Expiry Alert ── */}
+        {expiringDocs.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{isAr ? 'وثائق منتهية / قريبة الانتهاء' : 'Expiring Documents'}</Text>
+            </View>
+            {expiringDocs.map((doc, idx) => {
+              const now = new Date();
+              const expiry = new Date(doc.expiryDate);
+              const isExpired = expiry < now;
+              const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+              const subject = doc.vehicles?.[0]?.plateNumber ?? doc.drivers?.[0]?.fullName ?? '—';
+              const expiryStr = expiry.toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'});
+              return (
+                <View key={doc.id} style={[styles.deadlineRow, isExpired && {borderLeftWidth: 3, borderLeftColor: '#e74c3c'}]}>
+                  <View style={[styles.deadlineIcon, {backgroundColor: isExpired ? '#fdecea' : '#fff3e0'}]}>
+                    <AppIcon name="file-alert-outline" size={20} color={isExpired ? '#e74c3c' : '#e67e22'} />
+                  </View>
+                  <View style={styles.deadlineBody}>
+                    <Text style={styles.deadlineTitle} numberOfLines={1}>
+                      {DOC_LABELS_BRIEF[doc.type] ?? doc.type.replace(/_/g,' ')} — {subject}
+                    </Text>
+                    <Text style={[styles.deadlineDate, {color: isExpired ? '#e74c3c' : '#e67e22'}]}>
+                      {isExpired
+                        ? (isAr ? `منتهية منذ ${Math.abs(daysLeft)} يوم` : `Expired ${Math.abs(daysLeft)}d ago`)
+                        : (isAr ? `تنتهي خلال ${daysLeft} يوم` : `Expires in ${daysLeft}d`)}
+                      {' · '}{expiryStr}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
           </View>
         )}
 

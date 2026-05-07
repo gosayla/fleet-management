@@ -10,8 +10,11 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  Image,
+  FlatList,
+  Modal,
 } from 'react-native';
-import {api, resolveApiAssetUrls} from '../lib/api';
+import {api, resolveApiAssetUrls, resolvePhotoUrl} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {Locale} from '../lib/i18n';
@@ -36,10 +39,17 @@ interface VehicleDetail {
   mvpiStatus?: string;
   insuranceStatus?: string;
   restrictionStatus?: string;
-  assignedDriver?: {id: string; fullName: string; phone: string};
+  drivers?: {id: string; fullName: string; phone: string; photoUrl?: string | null}[];
   maintenanceLogs?: {id: string; type: string; status: string; scheduledDate: string; description?: string}[];
   fuelLogs?: {id: string; liters: number; cost: number; filledAt: string}[];
   documents?: {id: string; type: string; fileUrl: string; issueDate: string; expiryDate: string; issuingAuthority?: string; referenceNumber?: string}[];
+}
+
+interface VehiclePhoto {
+  id: string;
+  url: string;
+  isProfile: boolean;
+  caption?: string | null;
 }
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
@@ -73,11 +83,16 @@ interface Props {
 export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) {
   const isAr = locale === 'ar';
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
+  const [photos, setPhotos] = useState<VehiclePhoto[]>([]);
+  const [activePhoto, setActivePhoto] = useState<VehiclePhoto | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<VehicleDetail>(`/vehicles/${vehicleId}`)
-      .then(setVehicle)
+    Promise.all([
+      api.get<VehicleDetail>(`/vehicles/${vehicleId}`),
+      api.get<VehiclePhoto[]>(`/vehicles/${vehicleId}/photos`),
+    ])
+      .then(([v, p]) => { setVehicle(v); setPhotos(Array.isArray(p) ? p : []); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [vehicleId]);
@@ -103,7 +118,11 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
   }
 
   const statusLabel = STATUS_LABELS[vehicle.status]?.[isAr ? 'ar' : 'en'] ?? vehicle.status;
-  const driverName = vehicle.assignedDriver?.fullName ?? (isAr ? 'غير معين' : 'Unassigned');
+  const drivers = vehicle.drivers ?? [];
+  const driverName = drivers.length > 0
+    ? drivers.length === 1 ? drivers[0].fullName : `${drivers[0].fullName} +${drivers.length - 1}`
+    : (isAr ? 'غير معين' : 'Unassigned');
+  const profilePhoto = photos.find(p => p.isProfile) ?? photos[0] ?? null;
 
   const vehicleCheck = vehicle.inspectionExpiryDate
     ? new Date(vehicle.inspectionExpiryDate).toLocaleDateString('en-GB', {
@@ -128,24 +147,34 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={headerBg} />
 
-      {/* ── Stylised vehicle header (no real image — use make/model typography) ── */}
+      {/* ── Stylised vehicle header ── */}
       <View style={[styles.imageHeader, {backgroundColor: headerBg}]}>
-        {/* Subtle grid lines */}
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          {[0.25, 0.5, 0.75].map(f => (
-            <View key={f} style={[styles.gridLine, {top: `${Math.round(f * 100)}%` as any}]} />
-          ))}
-          {[0.33, 0.66].map(f => (
-            <View key={f} style={[styles.gridLineV, {left: `${Math.round(f * 100)}%` as any}]} />
-          ))}
-        </View>
-
-        {/* Large watermark make/model */}
-        <View style={styles.watermark} pointerEvents="none">
-          <Text style={styles.watermarkMake} numberOfLines={1}>{vehicle.make.toUpperCase()}</Text>
-          <Text style={styles.watermarkModel}>{vehicle.model.toUpperCase()}</Text>
-          <Text style={styles.watermarkYear}>{vehicle.year}</Text>
-        </View>
+        {/* Profile photo as header bg if available */}
+        {profilePhoto && resolvePhotoUrl(profilePhoto.url) ? (
+          <Image
+            source={{uri: resolvePhotoUrl(profilePhoto.url)!}}
+            style={[StyleSheet.absoluteFill, {opacity: 0.55}]}
+            resizeMode="cover"
+          />
+        ) : (
+          <>
+            {/* Subtle grid lines */}
+            <View style={StyleSheet.absoluteFill} pointerEvents="none">
+              {[0.25, 0.5, 0.75].map(f => (
+                <View key={f} style={[styles.gridLine, {top: `${Math.round(f * 100)}%` as any}]} />
+              ))}
+              {[0.33, 0.66].map(f => (
+                <View key={f} style={[styles.gridLineV, {left: `${Math.round(f * 100)}%` as any}]} />
+              ))}
+            </View>
+            {/* Large watermark make/model */}
+            <View style={styles.watermark} pointerEvents="none">
+              <Text style={styles.watermarkMake} numberOfLines={1}>{vehicle.make.toUpperCase()}</Text>
+              <Text style={styles.watermarkModel}>{vehicle.model.toUpperCase()}</Text>
+              <Text style={styles.watermarkYear}>{vehicle.year}</Text>
+            </View>
+          </>
+        )}
 
         {/* Top bar: back + plate */}
         <View style={[styles.topBar, {paddingTop: SB_H + 6}]}>
@@ -255,6 +284,60 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
           </View>
         </View>
 
+        {/* ── Assigned Drivers ── */}
+        {drivers.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, {marginTop: 8}]}>{isAr ? 'السائقون المعيّنون' : 'Assigned Drivers'}</Text>
+            {drivers.map((d, idx) => (
+              <View key={d.id} style={[styles.logRow, idx < drivers.length - 1 && {marginBottom: 6}]}>
+                <View style={styles.driverThumb}>
+                  {d.photoUrl && resolvePhotoUrl(d.photoUrl) ? (
+                    <Image source={{uri: resolvePhotoUrl(d.photoUrl)!}} style={styles.driverThumbImg} />
+                  ) : (
+                    <Text style={styles.driverThumbInitial}>{d.fullName.charAt(0)}</Text>
+                  )}
+                </View>
+                <View style={{flex: 1}}>
+                  <Text style={styles.logTitle}>{d.fullName}</Text>
+                  <Text style={styles.logDate}>{d.phone}</Text>
+                </View>
+                <AppIcon name="account-check-outline" size={18} color={Colors.primary} />
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* ── Vehicle Photos ── */}
+        {photos.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, {marginTop: 16}]}>{isAr ? 'صور المركبة' : 'Vehicle Photos'}</Text>
+            <FlatList
+              data={photos}
+              keyExtractor={p => p.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{marginBottom: 16}}
+              contentContainerStyle={{gap: 8, paddingRight: 4}}
+              renderItem={({item: photo}) => {
+                const uri = resolvePhotoUrl(photo.url);
+                if (!uri) return null;
+                return (
+                  <TouchableOpacity onPress={() => setActivePhoto(photo)} activeOpacity={0.85}>
+                    <View style={[styles.photoThumb, photo.isProfile && styles.photoThumbProfile]}>
+                      <Image source={{uri}} style={styles.photoThumbImg} resizeMode="cover" />
+                      {photo.isProfile && (
+                        <View style={styles.profileBadge}>
+                          <AppIcon name="star" size={10} color="#fff" />
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </>
+        )}
+
         {/* ── Recent Maintenance ── */}
         {vehicle.maintenanceLogs && vehicle.maintenanceLogs.length > 0 && (
           <>
@@ -286,9 +369,9 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
         {/* ── Document validity ── */}
         <Text style={[styles.sectionTitle, {marginTop: 8}]}>{isAr ? 'صلاحية الوثائق' : 'Document Validity'}</Text>
         <View style={styles.docsCard}>
-          <DocRow label={isAr ? 'حالة الفحص الدوري' : 'MVPI Status'} value={vehicle.mvpiStatus ?? '—'} />
-          <DocRow label={isAr ? 'انتهاء التأمين' : 'Insurance Expiry'} value={vehicle.insuranceExpiryDate ?? '—'} />
-          <DocRow label={isAr ? 'انتهاء الترخيص' : 'License Expiry'} value={vehicle.licenseExpiryDate ?? '—'} last />
+          <DocRow label={isAr ? 'حالة الفحص الدوري' : 'MVPI Status'} value={vehicle.mvpiStatus ?? '—'} warn={vehicle.mvpiStatus === 'Expired'} />
+          <DocRow label={isAr ? 'انتهاء التأمين' : 'Insurance Expiry'} value={vehicle.insuranceExpiryDate ?? '—'} warn={!!vehicle.insuranceExpiryDate && new Date(vehicle.insuranceExpiryDate) < new Date()} />
+          <DocRow label={isAr ? 'انتهاء الترخيص' : 'License Expiry'} value={vehicle.licenseExpiryDate ?? '—'} warn={!!vehicle.licenseExpiryDate && new Date(vehicle.licenseExpiryDate) < new Date()} last />
         </View>
 
         {/* ── Attached documents (downloadable) ── */}
@@ -308,6 +391,22 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
 
         <View style={{height: 32}} />
       </ScrollView>
+
+      {/* ── Photo lightbox ── */}
+      <Modal visible={!!activePhoto} transparent animationType="fade" onRequestClose={() => setActivePhoto(null)}>
+        <TouchableOpacity style={styles.lightboxOverlay} activeOpacity={1} onPress={() => setActivePhoto(null)}>
+          {activePhoto && resolvePhotoUrl(activePhoto.url) && (
+            <Image
+              source={{uri: resolvePhotoUrl(activePhoto.url)!}}
+              style={styles.lightboxImg}
+              resizeMode="contain"
+            />
+          )}
+          <TouchableOpacity style={styles.lightboxClose} onPress={() => setActivePhoto(null)}>
+            <AppIcon name="close" size={20} color="#fff" />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -335,11 +434,11 @@ function StatTile({icon, value, unit, color}: {icon: string; value: string; unit
   );
 }
 
-function DocRow({label, value, last}: {label: string; value: string; last?: boolean}) {
+function DocRow({label, value, last, warn}: {label: string; value: string; last?: boolean; warn?: boolean}) {
   return (
     <View style={[styles.docRow, !last && styles.docBorder]}>
       <Text style={styles.docLabel}>{label}</Text>
-      <Text style={styles.docValue}>{value}</Text>
+      <Text style={[styles.docValue, warn && {color: '#e74c3c'}]}>{value}</Text>
     </View>
   );
 }
@@ -572,5 +671,41 @@ const styles = StyleSheet.create({
     width: 34, height: 34, borderRadius: 10,
     backgroundColor: Colors.primaryLight,
     justifyContent: 'center', alignItems: 'center',
+  },
+
+  // Driver thumb
+  driverThumb: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center', alignItems: 'center',
+    overflow: 'hidden',
+  },
+  driverThumbImg: {width: 36, height: 36, borderRadius: 18},
+  driverThumbInitial: {fontSize: 14, fontWeight: '700' as const, color: Colors.primary},
+
+  // Photo gallery
+  photoThumb: {
+    width: 96, height: 80, borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 2, borderColor: Colors.borderLight,
+  },
+  photoThumbProfile: {borderColor: Colors.primary},
+  photoThumbImg: {width: '100%', height: '100%'},
+  profileBadge: {
+    position: 'absolute', top: 4, right: 4,
+    backgroundColor: Colors.primary, borderRadius: 10,
+    padding: 2,
+  },
+
+  // Lightbox
+  lightboxOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  lightboxImg: {width: '100%', height: '80%'},
+  lightboxClose: {
+    position: 'absolute', top: 50, right: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20, padding: 8,
   },
 });

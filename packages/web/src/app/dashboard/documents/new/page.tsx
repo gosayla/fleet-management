@@ -26,10 +26,11 @@ export default function NewDocumentPage() {
     fileUrl: '',
     issueDate: '',
     expiryDate: '',
-    vehicleId: prefilledVehicleId,
-    driverId: '',
+    vehicleIds: prefilledVehicleId ? [prefilledVehicleId] : [],
+    driverIds: [],
     issuingAuthority: '',
     referenceNumber: '',
+    notes: '',
   };
 
   const { data: vehiclesData } = useQuery<VehiclesResponse>({
@@ -59,10 +60,11 @@ export default function NewDocumentPage() {
         fileUrl,
         issueDate: values.issueDate,
         expiryDate: values.expiryDate,
-        vehicleId: values.vehicleId || undefined,
-        driverId: values.driverId || undefined,
+        vehicleIds: values.vehicleIds,
+        driverIds: values.driverIds,
         issuingAuthority: values.issuingAuthority || undefined,
         referenceNumber: values.referenceNumber || undefined,
+        notes: values.notes || undefined,
       }).then((r) => r.data);
     },
     onSuccess: () => {

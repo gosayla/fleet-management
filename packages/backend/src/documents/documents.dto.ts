@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
@@ -30,15 +31,17 @@ export class CreateDocumentDto {
   @IsDateString()
   expiryDate: string;
 
-  @ApiPropertyOptional({ example: 'vehicle-id' })
+  @ApiPropertyOptional({ type: [String], description: 'Vehicle IDs to link this document to' })
   @IsOptional()
-  @IsString()
-  vehicleId?: string;
+  @IsArray()
+  @IsString({ each: true })
+  vehicleIds?: string[];
 
-  @ApiPropertyOptional({ example: 'driver-id' })
+  @ApiPropertyOptional({ type: [String], description: 'Driver IDs to link this document to' })
   @IsOptional()
-  @IsString()
-  driverId?: string;
+  @IsArray()
+  @IsString({ each: true })
+  driverIds?: string[];
 
   @ApiPropertyOptional({ example: 'Traffic Department' })
   @IsOptional()
@@ -49,6 +52,11 @@ export class CreateDocumentDto {
   @IsOptional()
   @IsString()
   referenceNumber?: string;
+
+  @ApiPropertyOptional({ example: 'Shared insurance policy for multiple vehicles' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
 
 export class UpdateDocumentDto extends PartialType(CreateDocumentDto) {}

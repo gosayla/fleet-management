@@ -19,8 +19,9 @@ type DocumentDetail = {
   expiryDate: string;
   issuingAuthority?: string | null;
   referenceNumber?: string | null;
-  vehicle?: { id: string } | null;
-  driver?: { id: string } | null;
+  notes?: string | null;
+  vehicles?: { id: string }[];
+  drivers?: { id: string }[];
 };
 
 function toDateInput(value: string) {
@@ -72,10 +73,11 @@ export default function EditDocumentPage() {
         fileUrl,
         issueDate: values.issueDate,
         expiryDate: values.expiryDate,
-        vehicleId: values.vehicleId || null,
-        driverId: values.driverId || null,
+        vehicleIds: values.vehicleIds,
+        driverIds: values.driverIds,
         issuingAuthority: values.issuingAuthority || null,
         referenceNumber: values.referenceNumber || null,
+        notes: values.notes || null,
       }).then((r) => r.data);
     },
     onSuccess: () => {
@@ -105,10 +107,11 @@ export default function EditDocumentPage() {
     fileUrl: doc.fileUrl,
     issueDate: toDateInput(doc.issueDate),
     expiryDate: toDateInput(doc.expiryDate),
-    vehicleId: doc.vehicle?.id ?? '',
-    driverId: doc.driver?.id ?? '',
+    vehicleIds: doc.vehicles?.map((v) => v.id) ?? [],
+    driverIds: doc.drivers?.map((d) => d.id) ?? [],
     issuingAuthority: doc.issuingAuthority ?? '',
     referenceNumber: doc.referenceNumber ?? '',
+    notes: doc.notes ?? '',
   };
 
   return (

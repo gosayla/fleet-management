@@ -36,6 +36,8 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
   const watchId = useRef<number | null>(null);
   const broadcastRef = useRef<((u: any) => void) | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const locationBuffer = useRef<{lat: number; lng: number; speed?: number; heading?: number; recordedAt: string}[]>([]);
+  const batchTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     return () => {
@@ -72,10 +74,30 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
           heading: pos.coords.heading ?? undefined,
           timestamp: new Date(),
         });
+        // Buffer for batch persistence
+        locationBuffer.current.push({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          speed: pos.coords.speed ?? undefined,
+          heading: pos.coords.heading ?? undefined,
+          recordedAt: new Date().toISOString(),
+        });
       },
       err => console.warn('GPS error', err),
       {enableHighAccuracy: true, distanceFilter: 50, interval: 10_000},
     );
+
+    // Send buffered locations to server every 30 seconds
+    batchTimerRef.current = setInterval(async () => {
+      if (locationBuffer.current.length === 0) return;
+      const batch = locationBuffer.current.splice(0);
+      try {
+        await api.post(`/trips/${trip.id}/locations/batch`, { locations: batch });
+      } catch {
+        // Put back on failure so they're not lost
+        locationBuffer.current.unshift(...batch);
+      }
+    }, 30_000);
 
     // Elapsed timer
     timerRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
@@ -89,6 +111,15 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
+    }
+    if (batchTimerRef.current) {
+      clearInterval(batchTimerRef.current);
+      batchTimerRef.current = null;
+    }
+    // Flush remaining buffer
+    const batch = locationBuffer.current.splice(0);
+    if (batch.length > 0) {
+      api.post(`/trips/${trip.id}/locations/batch`, { locations: batch }).catch(() => {});
     }
     stopBroadcasting();
     setTracking(false);

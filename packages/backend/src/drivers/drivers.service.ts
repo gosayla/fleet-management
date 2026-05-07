@@ -20,7 +20,7 @@ export class DriversService {
             }
           : {}),
       },
-      include: { assignedVehicle: true },
+      include: { vehicles: { select: { id: true, plateNumber: true, make: true, model: true, status: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -29,13 +29,27 @@ export class DriversService {
     const driver = await this.prisma.driver.findFirst({
       where: { id, companyId },
       include: {
-        assignedVehicle: true,
+        vehicles: { select: { id: true, plateNumber: true, make: true, model: true, status: true } },
         trips: { orderBy: { scheduledStart: 'desc' }, take: 5 },
-        documents: true,
+        documents: {
+          include: {
+            vehicles: { select: { id: true, plateNumber: true } },
+            drivers: { select: { id: true, fullName: true } },
+          },
+        },
       },
     });
     if (!driver) throw new NotFoundException(`السائق ${id} غير موجود`);
     return driver;
+  }
+
+  async uploadPhoto(companyId: string, id: string, filename: string) {
+    await this.findOne(companyId, id);
+    return this.prisma.driver.update({
+      where: { id },
+      data: { photoUrl: `/photos/${filename}` },
+      select: { id: true, photoUrl: true },
+    });
   }
 
   async create(companyId: string, dto: CreateDriverDto) {

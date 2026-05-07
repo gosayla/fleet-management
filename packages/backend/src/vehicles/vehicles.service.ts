@@ -72,7 +72,7 @@ export class VehiclesService {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.vehicle.findMany({
         where,
-        include: { assignedDriver: true },
+        include: { drivers: { select: { id: true, fullName: true, phone: true, status: true, photoUrl: true } } },
         orderBy: { [sortBy]: sortOrder },
         skip,
         take: limit,
@@ -87,11 +87,17 @@ export class VehiclesService {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: { id, companyId },
       include: {
-        assignedDriver: true,
+        drivers: { select: { id: true, fullName: true, phone: true, status: true, photoUrl: true } },
         maintenanceLogs: { orderBy: { scheduledDate: 'desc' }, take: 5 },
         fuelLogs: { orderBy: { filledAt: 'desc' }, take: 5 },
-        documents: true,
+        documents: {
+          include: {
+            vehicles: { select: { id: true, plateNumber: true } },
+            drivers: { select: { id: true, fullName: true } },
+          },
+        },
         violations: true,
+        photos: { orderBy: { createdAt: 'asc' } },
       },
     });
     if (!vehicle) throw new NotFoundException(`المركبة ${id} غير موجودة`);
@@ -124,8 +130,9 @@ export class VehiclesService {
   ) {
     if (!dto.operationCardIssueDate || !dto.operationCardExpiryDate || !dto.operationCardFileUrl) return;
 
+    // Find existing OPERATION_CARD doc linked to this vehicle via many-to-many
     const existing = await this.prisma.fleetDocument.findFirst({
-      where: { companyId, vehicleId, type: 'OPERATION_CARD' },
+      where: { companyId, type: 'OPERATION_CARD', vehicles: { some: { id: vehicleId } } },
       select: { id: true },
     });
 
@@ -140,8 +147,39 @@ export class VehiclesService {
     if (existing) {
       await this.prisma.fleetDocument.update({ where: { id: existing.id }, data });
     } else {
-      await this.prisma.fleetDocument.create({ data: { ...data, companyId, vehicleId } });
+      await this.prisma.fleetDocument.create({
+        data: { ...data, companyId, vehicles: { connect: [{ id: vehicleId }] } },
+      });
     }
+  }
+
+  // ─── Photo management ─────────────────────────────────────────────────────
+
+  async addPhoto(companyId: string, vehicleId: string, filename: string, caption?: string) {
+    await this.findOne(companyId, vehicleId);
+    return this.prisma.vehiclePhoto.create({
+      data: { vehicleId, url: `/photos/${filename}`, isProfile: false, caption: caption ?? null },
+    });
+  }
+
+  async getPhotos(companyId: string, vehicleId: string) {
+    await this.findOne(companyId, vehicleId);
+    return this.prisma.vehiclePhoto.findMany({
+      where: { vehicleId },
+      orderBy: [{ isProfile: 'desc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async setProfilePhoto(companyId: string, vehicleId: string, photoId: string) {
+    await this.findOne(companyId, vehicleId);
+    // Unset all then set the chosen one
+    await this.prisma.vehiclePhoto.updateMany({ where: { vehicleId }, data: { isProfile: false } });
+    return this.prisma.vehiclePhoto.update({ where: { id: photoId }, data: { isProfile: true } });
+  }
+
+  async deletePhoto(companyId: string, vehicleId: string, photoId: string) {
+    await this.findOne(companyId, vehicleId);
+    return this.prisma.vehiclePhoto.delete({ where: { id: photoId } });
   }
 
   async remove(companyId: string, id: string) {
@@ -149,6 +187,29 @@ export class VehiclesService {
     return this.prisma.vehicle.update({
       where: { id },
       data: { status: 'RETIRED' },
+    });
+  }
+
+  // ─── Driver assignment ────────────────────────────────────────────────────
+
+  async assignDriver(companyId: string, vehicleId: string, driverId: string) {
+    await this.findOne(companyId, vehicleId);
+    // Verify driver belongs to same company
+    const driver = await this.prisma.driver.findFirst({ where: { id: driverId, companyId } });
+    if (!driver) throw new NotFoundException(`السائق ${driverId} غير موجود`);
+    return this.prisma.vehicle.update({
+      where: { id: vehicleId },
+      data: { drivers: { connect: { id: driverId } } },
+      include: { drivers: { select: { id: true, fullName: true, phone: true, status: true, photoUrl: true } } },
+    });
+  }
+
+  async removeDriver(companyId: string, vehicleId: string, driverId: string) {
+    await this.findOne(companyId, vehicleId);
+    return this.prisma.vehicle.update({
+      where: { id: vehicleId },
+      data: { drivers: { disconnect: { id: driverId } } },
+      include: { drivers: { select: { id: true, fullName: true, phone: true, status: true, photoUrl: true } } },
     });
   }
 

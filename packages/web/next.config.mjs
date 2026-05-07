@@ -13,6 +13,10 @@ const nextConfig = {
         source: '/documents/:path*',
         destination: `${backendUrl}/documents/:path*`,
       },
+      {
+        source: '/photos/:path*',
+        destination: `${backendUrl}/photos/:path*`,
+      },
     ];
   },
   webpack: (config, { dev }) => {

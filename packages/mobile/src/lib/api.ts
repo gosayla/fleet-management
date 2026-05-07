@@ -30,6 +30,14 @@ export function resolveApiAssetUrls(path: string): string[] {
   ]));
 }
 
+/** Resolve a photo URL (served at backend root, not under /api/v1) */
+export function resolvePhotoUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  const apiOrigin = trimTrailingSlash(API_BASE.replace(/\/api\/v1\/?$/, ''));
+  return `${apiOrigin}${normalizePath(path)}`;
+}
+
 export function resolveApiUrl(path: string): string {
   return resolveApiAssetUrls(path)[0];
 }
@@ -68,4 +76,24 @@ export const api = {
   post: <T>(path: string, body: unknown) => request<T>('POST', path, body),
   patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
   delete: <T>(path: string) => request<T>('DELETE', path),
+
+  /** Upload a file as multipart/form-data */
+  async upload<T>(path: string, formData: FormData): Promise<T> {
+    const token = await AsyncStorage.getItem('accessToken');
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const response = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API ${response.status}: ${errorText}`);
+    }
+
+    return response.json() as Promise<T>;
+  },
 };

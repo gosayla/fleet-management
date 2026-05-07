@@ -30,17 +30,8 @@ type DocumentRow = {
   expiryDate: string;
   issuingAuthority?: string | null;
   referenceNumber?: string | null;
-  vehicle?: {
-    id: string;
-    plateNumber: string;
-    make: string;
-    model: string;
-    year: number;
-  } | null;
-  driver?: {
-    id: string;
-    fullName: string;
-  } | null;
+  vehicles?: { id: string; plateNumber: string; make: string; model: string; year: number }[];
+  drivers?: { id: string; fullName: string }[];
 };
 
 type DocumentsResponse = {
@@ -277,11 +268,11 @@ export default function DocumentsPage() {
                         {formatEnumLabel('documentType', row.type, locale)}
                       </td>
                       <td className="px-4 py-3 text-gray-700">
-                        {row.vehicle
-                          ? `${row.vehicle.plateNumber} - ${row.vehicle.year} ${row.vehicle.make} ${row.vehicle.model}`
+                        {row.vehicles && row.vehicles.length > 0
+                          ? row.vehicles.map((v) => `${v.plateNumber} - ${v.year} ${v.make} ${v.model}`).join(', ')
                           : td.unknownVehicle}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">{row.driver?.fullName ?? td.unknownDriver}</td>
+                      <td className="px-4 py-3 text-gray-700">{row.drivers && row.drivers.length > 0 ? row.drivers.map((d) => d.fullName).join(', ') : td.unknownDriver}</td>
                       <td className="px-4 py-3 text-gray-700">{row.referenceNumber || tc.empty}</td>
                       <td className="px-4 py-3 text-gray-700">{row.issuingAuthority || tc.empty}</td>
                       <td className="px-4 py-3 text-gray-600">{formatDate(row.issueDate, locale)}</td>

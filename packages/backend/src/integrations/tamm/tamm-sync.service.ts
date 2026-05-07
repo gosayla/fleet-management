@@ -460,75 +460,33 @@ export class TammSyncService {
     vehicleId: string,
     driverId: string,
   ) {
-    await this.prisma.$transaction(async (tx) => {
-      const vehicle = await tx.vehicle.findFirst({
-        where: { id: vehicleId, companyId },
-        select: { assignedDriverId: true },
-      });
-      const driver = await tx.driver.findFirst({
-        where: { id: driverId, companyId },
-        select: { assignedVehicleId: true },
-      });
+    // Verify both belong to the company
+    const vehicle = await this.prisma.vehicle.findFirst({ where: { id: vehicleId, companyId }, select: { id: true } });
+    const driver = await this.prisma.driver.findFirst({ where: { id: driverId, companyId }, select: { id: true } });
+    if (!vehicle) throw new NotFoundException('Vehicle not found');
+    if (!driver) throw new NotFoundException('Driver not found');
 
-      if (!vehicle) throw new NotFoundException('Vehicle not found');
-      if (!driver) throw new NotFoundException('Driver not found');
-
-      if (vehicle.assignedDriverId && vehicle.assignedDriverId !== driverId) {
-        await tx.driver.update({
-          where: { id: vehicle.assignedDriverId },
-          data: { assignedVehicleId: null },
-        });
-      }
-
-      if (driver.assignedVehicleId && driver.assignedVehicleId !== vehicleId) {
-        await tx.vehicle.update({
-          where: { id: driver.assignedVehicleId },
-          data: { assignedDriverId: null },
-        });
-      }
-
-      await tx.vehicle.updateMany({
-        where: { companyId, assignedDriverId: driverId, NOT: { id: vehicleId } },
-        data: { assignedDriverId: null },
-      });
-      await tx.driver.updateMany({
-        where: { companyId, assignedVehicleId: vehicleId, NOT: { id: driverId } },
-        data: { assignedVehicleId: null },
-      });
-
-      await tx.vehicle.update({
-        where: { id: vehicleId },
-        data: { assignedDriverId: driverId },
-      });
-      await tx.driver.update({
-        where: { id: driverId },
-        data: { assignedVehicleId: vehicleId },
-      });
+    // Connect via many-to-many (idempotent)
+    await this.prisma.vehicle.update({
+      where: { id: vehicleId },
+      data: { drivers: { connect: { id: driverId } } },
     });
   }
 
   private async clearVehicleAssignment(companyId: string, vehicleId: string) {
-    await this.prisma.$transaction(async (tx) => {
-      const vehicle = await tx.vehicle.findFirst({
-        where: { id: vehicleId, companyId },
-        select: { assignedDriverId: true },
-      });
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: { id: vehicleId, companyId },
+      select: { id: true, drivers: { select: { id: true } } },
+    });
 
-      if (!vehicle) {
-        throw new NotFoundException('Vehicle not found');
-      }
+    if (!vehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
 
-      if (vehicle.assignedDriverId) {
-        await tx.driver.update({
-          where: { id: vehicle.assignedDriverId },
-          data: { assignedVehicleId: null },
-        });
-      }
-
-      await tx.vehicle.update({
-        where: { id: vehicleId },
-        data: { assignedDriverId: null },
-      });
+    // Disconnect all drivers from this vehicle
+    await this.prisma.vehicle.update({
+      where: { id: vehicleId },
+      data: { drivers: { disconnect: vehicle.drivers } },
     });
   }
 

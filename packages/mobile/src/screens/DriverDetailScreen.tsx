@@ -9,8 +9,10 @@ import {
   Platform,
   ActivityIndicator,
   Linking,
+  Image,
+  Modal,
 } from 'react-native';
-import {api} from '../lib/api';
+import {api, resolvePhotoUrl} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {Locale} from '../lib/i18n';
@@ -25,8 +27,9 @@ interface DriverDetail {
   licenseExpiry: string;
   bloodType?: string;
   status: string;
+  photoUrl?: string | null;
   createdAt: string;
-  assignedVehicle?: {id: string; plateNumber: string; make: string; model: string; type: string};
+  vehicles?: {id: string; plateNumber: string; make: string; model: string; type: string}[];
   trips?: {id: string; origin: string; destination: string; status: string; scheduledStart: string}[];
   documents?: {id: string; type: string; fileUrl: string; issueDate: string; expiryDate: string}[];
 }
@@ -67,6 +70,7 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
   const isAr = locale === 'ar';
   const [driver, setDriver] = useState<DriverDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPhoto, setShowPhoto] = useState(false);
 
   useEffect(() => {
     api.get<DriverDetail>(`/drivers/${driverId}`)
@@ -147,9 +151,22 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
 
         {/* Avatar + name */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+          <TouchableOpacity
+            activeOpacity={driver.photoUrl ? 0.8 : 1}
+            onPress={() => { if (driver.photoUrl) setShowPhoto(true); }}
+          >
+            <View style={styles.avatar}>
+              {driver.photoUrl && resolvePhotoUrl(driver.photoUrl) ? (
+                <Image
+                  source={{uri: resolvePhotoUrl(driver.photoUrl)!}}
+                  style={{width: 72, height: 72, borderRadius: 36}}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.avatarText}>{initials}</Text>
+              )}
+            </View>
+          </TouchableOpacity>
           <Text style={styles.driverName}>{driver.fullName}</Text>
           <View style={[styles.statusPill, {backgroundColor: statusCfg.bg}]}>
             <Text style={[styles.statusPillText, {color: statusCfg.color}]}>{statusLabel}</Text>
@@ -211,25 +228,23 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
           />
         </View>
 
-        {/* ── Assigned Vehicle ── */}
-        <Text style={styles.sectionTitle}>{isAr ? 'المركبة المعينة' : 'Assigned Vehicle'}</Text>
-        {driver.assignedVehicle ? (
-          <View style={styles.vehicleCard}>
-            <View style={styles.vehicleIcon}>
-              <AppIcon name="truck" size={24} color={Colors.primary} />
+        {/* ── Assigned Vehicles ── */}
+        <Text style={styles.sectionTitle}>{isAr ? 'المركبات المعيّنة' : 'Assigned Vehicles'}</Text>
+        {(driver.vehicles ?? []).length > 0 ? (
+          (driver.vehicles ?? []).map(v => (
+            <View key={v.id} style={styles.vehicleCard}>
+              <View style={styles.vehicleIcon}>
+                <AppIcon name="truck" size={24} color={Colors.primary} />
+              </View>
+              <View style={{flex: 1}}>
+                <Text style={styles.vehiclePlate}>{v.plateNumber}</Text>
+                <Text style={styles.vehicleSub}>{v.make} {v.model}</Text>
+              </View>
+              <View style={styles.vehicleTypePill}>
+                <Text style={styles.vehicleTypeText}>{v.type?.replace(/_/g, ' ')}</Text>
+              </View>
             </View>
-            <View style={{flex: 1}}>
-              <Text style={styles.vehiclePlate}>{driver.assignedVehicle.plateNumber}</Text>
-              <Text style={styles.vehicleSub}>
-                {driver.assignedVehicle.make} {driver.assignedVehicle.model}
-              </Text>
-            </View>
-            <View style={styles.vehicleTypePill}>
-              <Text style={styles.vehicleTypeText}>
-                {driver.assignedVehicle.type?.replace(/_/g, ' ')}
-              </Text>
-            </View>
-          </View>
+          ))
         ) : (
           <View style={styles.emptyCard}>
             <AppIcon name="truck-outline" size={20} color={Colors.textMuted} />
@@ -308,6 +323,22 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
 
         <View style={{height: 32}} />
       </ScrollView>
+
+      {/* ── Photo lightbox ── */}
+      <Modal visible={showPhoto} transparent animationType="fade" onRequestClose={() => setShowPhoto(false)}>
+        <TouchableOpacity style={styles.lightboxOverlay} activeOpacity={1} onPress={() => setShowPhoto(false)}>
+          {driver.photoUrl && resolvePhotoUrl(driver.photoUrl) && (
+            <Image
+              source={{uri: resolvePhotoUrl(driver.photoUrl)!}}
+              style={styles.lightboxImg}
+              resizeMode="contain"
+            />
+          )}
+          <TouchableOpacity style={styles.lightboxClose} onPress={() => setShowPhoto(false)}>
+            <AppIcon name="close" size={20} color="#fff" />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -511,4 +542,16 @@ const styles = StyleSheet.create({
   tripRoute: {fontSize: 13, fontWeight: '600' as const, color: Colors.textPrimary},
   tripDate: {fontSize: 11, color: Colors.textMuted, marginTop: 1},
   tripStatus: {fontSize: 10, fontWeight: '700' as const},
+
+  // Lightbox
+  lightboxOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  lightboxImg: {width: '100%', height: '80%'},
+  lightboxClose: {
+    position: 'absolute', top: 50, right: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20, padding: 8,
+  },
 });

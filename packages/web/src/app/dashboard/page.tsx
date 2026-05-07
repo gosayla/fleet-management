@@ -16,17 +16,36 @@ import {
 import { formatCurrencySar, formatNumber } from '@/lib/i18n';
 import { useLocale } from '@/providers/locale-provider';
 
+import { useRouter } from 'next/navigation';
+
 async function fetchStats(): Promise<FleetStats> {
   const res = await api.get('/dashboard/stats');
   return res.data as FleetStats;
 }
 
+type ExpiringSummary = {
+  expired: { id: string }[];
+  critical: { id: string }[];
+  warning: { id: string }[];
+};
+
+async function fetchExpiring(): Promise<ExpiringSummary> {
+  const res = await api.get('/documents/expiring');
+  return res.data as ExpiringSummary;
+}
+
 export default function DashboardPage() {
   const { locale, t } = useLocale();
+  const router = useRouter();
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: fetchStats,
     refetchInterval: 30_000,
+  });
+  const { data: expiring } = useQuery({
+    queryKey: ['documents-expiring'],
+    queryFn: fetchExpiring,
+    refetchInterval: 60_000,
   });
 
   if (isLoading) {
@@ -117,6 +136,45 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Document Expiry Widget */}
+      {expiring && (expiring.expired.length > 0 || expiring.critical.length > 0 || expiring.warning.length > 0) && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <FileWarning className="w-5 h-5 text-amber-600" />
+            <h2 className="text-sm font-semibold text-gray-800">{locale === 'ar' ? 'تنبيهات انتهاء الوثائق' : 'Document Expiry Alerts'}</h2>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {expiring.expired.length > 0 && (
+              <button
+                onClick={() => router.push(`/${locale}/dashboard/documents`)}
+                className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                {expiring.expired.length} {locale === 'ar' ? 'منتهية الصلاحية' : 'Expired'}
+              </button>
+            )}
+            {expiring.critical.length > 0 && (
+              <button
+                onClick={() => router.push(`/${locale}/dashboard/documents`)}
+                className="flex items-center gap-2 rounded-lg bg-orange-50 px-3 py-2 text-sm font-medium text-orange-700 hover:bg-orange-100"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                {expiring.critical.length} {locale === 'ar' ? 'تنتهي خلال 30 يومًا' : 'Expiring in ≤30 days'}
+              </button>
+            )}
+            {expiring.warning.length > 0 && (
+              <button
+                onClick={() => router.push(`/${locale}/dashboard/documents`)}
+                className="flex items-center gap-2 rounded-lg bg-yellow-50 px-3 py-2 text-sm font-medium text-yellow-700 hover:bg-yellow-100"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                {expiring.warning.length} {locale === 'ar' ? 'تنتهي خلال 60 يومًا' : 'Expiring in ≤60 days'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

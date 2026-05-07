@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, X } from 'lucide-react';
 import { DocumentType } from '@fleet/shared';
 import { useLocale } from '@/providers/locale-provider';
 import { formatEnumLabel } from '@/lib/i18n';
@@ -13,10 +13,11 @@ export type DocumentFormValues = {
   fileUrl: string;
   issueDate: string;
   expiryDate: string;
-  vehicleId: string;
-  driverId: string;
+  vehicleIds: string[];
+  driverIds: string[];
   issuingAuthority: string;
   referenceNumber: string;
+  notes: string;
 };
 
 export type VehicleOption = {
@@ -38,7 +39,6 @@ type DocumentFormProps = {
   drivers: DriverOption[];
   isSubmitting?: boolean;
   submitLabel: string;
-  /** When editing, show the current file link */
   currentFileUrl?: string;
   onSubmit: (values: DocumentFormValues, file: File | null) => void;
   onCancel: () => void;
@@ -50,32 +50,25 @@ function vehicleLabel(v: VehicleOption) {
   return `${v.plateNumber} - ${v.year} ${v.make} ${v.model}`;
 }
 
-/** Generic searchable combobox */
-function SearchableSelect({
+/** Multi-select combobox */
+function MultiSelect({
   label,
   placeholder,
-  value,
+  selectedIds,
   options,
-  getLabel,
   onChange,
   isRTL,
 }: {
   label: string;
   placeholder: string;
-  value: string;
+  selectedIds: string[];
   options: { id: string; label: string }[];
-  getLabel: (id: string) => string;
-  onChange: (id: string) => void;
+  onChange: (ids: string[]) => void;
   isRTL: boolean;
 }) {
-  const [query, setQuery] = useState(() => (value ? getLabel(value) : ''));
+  const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  // Sync when value changes externally (e.g. reset)
-  useEffect(() => {
-    setQuery(value ? getLabel(value) : '');
-  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return;
@@ -88,65 +81,59 @@ function SearchableSelect({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter((o) => o.label.toLowerCase().includes(q));
+    return q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
   }, [options, query]);
+
+  const toggle = (id: string) => {
+    onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]);
+  };
+
+  const selectedOptions = options.filter((o) => selectedIds.includes(o.id));
 
   return (
     <div>
       <label className={`mb-1 block text-sm font-medium text-gray-700 ${isRTL ? 'text-right' : 'text-left'}`}>{label}</label>
-      <div className="relative" ref={ref}>
-        <div className="relative">
-          <input
-            type="text"
-            value={query}
-            placeholder={placeholder}
-            autoComplete="off"
-            className={`w-full rounded-lg border border-gray-200 px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'text-right' : 'text-left'}`}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              onChange('');
-              setOpen(true);
-            }}
-            onFocus={() => setOpen(true)}
-          />
-          {value && (
-            <button
-              type="button"
-              tabIndex={-1}
-              onClick={() => { onChange(''); setQuery(''); setOpen(false); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        {open && (
-          <ul className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white text-sm shadow-lg">
-            <li>
-              <button
-                type="button"
-                className={`w-full px-3 py-2 text-gray-400 hover:bg-gray-50 ${isRTL ? 'text-right' : 'text-left'}`}
-                onClick={() => { onChange(''); setQuery(''); setOpen(false); }}
-              >
-                {placeholder}
+      {selectedOptions.length > 0 && (
+        <div className="mb-1 flex flex-wrap gap-1">
+          {selectedOptions.map((o) => (
+            <span key={o.id} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+              {o.label}
+              <button type="button" onClick={() => toggle(o.id)} className="hover:text-blue-900">
+                <X className="h-3 w-3" />
               </button>
-            </li>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="relative" ref={ref}>
+        <input
+          type="text"
+          value={query}
+          placeholder={placeholder}
+          autoComplete="off"
+          className={`w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'text-right' : 'text-left'}`}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+        />
+        {open && (
+          <ul className="absolute z-50 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white text-sm shadow-lg">
+            {filtered.length === 0 && (
+              <li className="px-3 py-2 text-gray-400">{isRTL ? 'لا توجد نتائج' : 'No results'}</li>
+            )}
             {filtered.map((o) => (
               <li key={o.id}>
                 <button
                   type="button"
-                  className={`w-full px-3 py-2 transition-colors hover:bg-blue-50 hover:text-blue-700 ${isRTL ? 'text-right' : 'text-left'} ${value === o.id ? 'bg-blue-50 font-medium text-blue-700' : 'text-gray-800'}`}
-                  onClick={() => { onChange(o.id); setQuery(o.label); setOpen(false); }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 transition-colors hover:bg-blue-50 ${isRTL ? 'text-right' : 'text-left'} ${selectedIds.includes(o.id) ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-800'}`}
+                  onClick={() => { toggle(o.id); setQuery(''); }}
                 >
+                  <span className={`h-4 w-4 flex-shrink-0 rounded border ${selectedIds.includes(o.id) ? 'border-blue-600 bg-blue-600' : 'border-gray-300'} flex items-center justify-center`}>
+                    {selectedIds.includes(o.id) && <span className="text-white text-xs">✓</span>}
+                  </span>
                   {o.label}
                 </button>
               </li>
             ))}
-            {filtered.length === 0 && query.trim() && (
-              <li className="px-3 py-2 text-gray-400">{isRTL ? 'لا توجد نتائج' : 'No results'}</li>
-            )}
           </ul>
         )}
       </div>
@@ -177,9 +164,6 @@ export function DocumentForm({
   const vehicleOptions = useMemo(() => vehicles.map((v) => ({ id: v.id, label: vehicleLabel(v) })), [vehicles]);
   const driverOptions = useMemo(() => drivers.map((d) => ({ id: d.id, label: d.fullName })), [drivers]);
 
-  const getVehicleLabel = (id: string) => vehicleOptions.find((v) => v.id === id)?.label ?? '';
-  const getDriverLabel = (id: string) => driverOptions.find((d) => d.id === id)?.label ?? '';
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setUploadError(null);
@@ -187,10 +171,7 @@ export function DocumentForm({
       setUploadError(isRTL ? 'يرجى اختيار ملف' : 'Please select a file');
       return;
     }
-    onSubmit(
-      { ...form, issueDate: issueDate ?? '', expiryDate: expiryDate ?? '' },
-      selectedFile,
-    );
+    onSubmit({ ...form, issueDate: issueDate ?? '', expiryDate: expiryDate ?? '' }, selectedFile);
   };
 
   return (
@@ -205,9 +186,7 @@ export function DocumentForm({
             className={`w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'text-right' : 'text-left'}`}
           >
             {docTypes.map((item) => (
-              <option key={item} value={item}>
-                {formatEnumLabel('documentType', item, locale)}
-              </option>
+              <option key={item} value={item}>{formatEnumLabel('documentType', item, locale)}</option>
             ))}
           </select>
         </div>
@@ -217,12 +196,7 @@ export function DocumentForm({
           <label className={`mb-1 block text-sm font-medium text-gray-700 ${isRTL ? 'text-right' : 'text-left'}`}>{td.fileUrl}</label>
           {currentFileUrl && !selectedFile && (
             <div className="mb-1 flex items-center gap-2">
-              <a
-                href={resolveDocumentFileUrl(currentFileUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-              >
+              <a href={resolveDocumentFileUrl(currentFileUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
                 <ExternalLink className="h-3 w-3" />
                 {td.uploadCurrentFile}
               </a>
@@ -262,61 +236,48 @@ export function DocumentForm({
         </div>
 
         {/* Issue Date */}
-        <DatePicker
-          label={td.issueDate}
-          value={issueDate}
-          onChange={setIssueDate}
-          placeholder={td.issueDate}
-          isRTL={isRTL}
-          outputCalendar="gregorian"
-        />
+        <DatePicker label={td.issueDate} value={issueDate} onChange={setIssueDate} placeholder={td.issueDate} isRTL={isRTL} outputCalendar="gregorian" />
 
         {/* Expiry Date */}
-        <DatePicker
-          label={td.expiryDate}
-          value={expiryDate}
-          onChange={setExpiryDate}
-          placeholder={td.expiryDate}
-          isRTL={isRTL}
-          outputCalendar="gregorian"
-        />
+        <DatePicker label={td.expiryDate} value={expiryDate} onChange={setExpiryDate} placeholder={td.expiryDate} isRTL={isRTL} outputCalendar="gregorian" />
+      </div>
 
-        {/* Vehicle — searchable */}
-        <SearchableSelect
-          label={td.vehicle}
-          placeholder={td.selectVehicle}
-          value={form.vehicleId}
-          options={vehicleOptions}
-          getLabel={getVehicleLabel}
-          onChange={(id) => setForm((prev) => ({ ...prev, vehicleId: id }))}
-          isRTL={isRTL}
-        />
+      {/* Vehicles multi-select — full width */}
+      <MultiSelect
+        label={isRTL ? 'المركبات المرتبطة' : 'Linked Vehicles'}
+        placeholder={isRTL ? 'ابحث عن مركبة...' : 'Search vehicles...'}
+        selectedIds={form.vehicleIds}
+        options={vehicleOptions}
+        onChange={(ids) => setForm((prev) => ({ ...prev, vehicleIds: ids }))}
+        isRTL={isRTL}
+      />
 
-        {/* Driver — searchable */}
-        <SearchableSelect
-          label={td.driver}
-          placeholder={td.selectDriver}
-          value={form.driverId}
-          options={driverOptions}
-          getLabel={getDriverLabel}
-          onChange={(id) => setForm((prev) => ({ ...prev, driverId: id }))}
-          isRTL={isRTL}
+      {/* Drivers multi-select — full width */}
+      <MultiSelect
+        label={isRTL ? 'السائقون المرتبطون' : 'Linked Drivers'}
+        placeholder={isRTL ? 'ابحث عن سائق...' : 'Search drivers...'}
+        selectedIds={form.driverIds}
+        options={driverOptions}
+        onChange={(ids) => setForm((prev) => ({ ...prev, driverIds: ids }))}
+        isRTL={isRTL}
+      />
+
+      {/* Notes */}
+      <div>
+        <label className={`mb-1 block text-sm font-medium text-gray-700 ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
+        <textarea
+          value={form.notes}
+          rows={2}
+          onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+          className={`w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'text-right' : 'text-left'}`}
         />
       </div>
 
       <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-        >
+        <button type="submit" disabled={isSubmitting} className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
           {isSubmitting ? (isRTL ? 'جارٍ الحفظ...' : 'Saving...') : submitLabel}
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-gray-200 bg-white px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
+        <button type="button" onClick={onCancel} className="rounded-lg border border-gray-200 bg-white px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
           {td.cancel}
         </button>
       </div>
