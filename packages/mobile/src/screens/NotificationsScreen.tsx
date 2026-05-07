@@ -31,7 +31,9 @@ interface Props {
   onUnreadCountChange?: (count: number) => void;
 }
 
-export function NotificationsScreen({locale, onToggleLocale, onUnreadCountChange}: Props) {
+
+
+export function NotificationsScreen({locale, onToggleLocale, onBack, onUnreadCountChange}: Props) {
   const i18n = t(locale);
   const isRTL = locale === 'ar';
   const [items, setItems] = useState<Notification[]>([]);
@@ -94,6 +96,9 @@ export function NotificationsScreen({locale, onToggleLocale, onUnreadCountChange
       <View style={styles.header}>
         <View style={{height: SB_HEIGHT}} />
         <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.closeBtn} onPress={onBack} activeOpacity={0.7}>
+            <AppIcon name="close" size={20} color="#fff" />
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>{i18n.notifications}</Text>
           <View style={styles.headerActions}>
             <TouchableOpacity
@@ -159,6 +164,11 @@ const styles = StyleSheet.create({
   headerTitle: {fontSize: 22, fontWeight: '700' as const, color: '#fff', letterSpacing: 0.3},
   headerSub: {fontSize: 13, color: 'rgba(255,255,255,0.7)', paddingHorizontal: Spacing.md, paddingBottom: 4},
   headerActions: {flexDirection: 'row', gap: 8},
+  closeBtn: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center',
+  },
   actionPill: {
     backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20,
     paddingHorizontal: 14, paddingVertical: 6,
