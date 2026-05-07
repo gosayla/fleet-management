@@ -1,5 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import * as admin from 'firebase-admin';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -9,10 +11,34 @@ import { PrismaService } from '../prisma/prisma.service';
  * - Checks for upcoming maintenance and fires alerts
  */
 @Injectable()
-export class NotificationsService {
+export class NotificationsService implements OnModuleInit {
   private readonly logger = new Logger(NotificationsService.name);
+  private fcmEnabled = false;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {}
+
+  onModuleInit() {
+    const projectId = this.config.get<string>('FIREBASE_PROJECT_ID');
+    const clientEmail = this.config.get<string>('FIREBASE_CLIENT_EMAIL');
+    const privateKey = this.config
+      .get<string>('FIREBASE_PRIVATE_KEY', '')
+      .replace(/\\n/g, '\n');
+
+    if (projectId && clientEmail && privateKey && !admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
+      });
+      this.fcmEnabled = true;
+      this.logger.log('Firebase Admin SDK initialised — FCM push enabled');
+    } else {
+      this.logger.warn(
+        'Firebase env vars missing — FCM push disabled (in-app notifications still work)',
+      );
+    }
+  }
 
   /** Check documents expiring within 30 days */
   @Cron(CronExpression.EVERY_DAY_AT_8AM)
@@ -89,7 +115,25 @@ export class NotificationsService {
     await this.prisma.notification.create({
       data: { userId, title, body, type: type as any, referenceId },
     });
-    // FCM push can be added here via firebase-admin
+
+    // Send FCM push if user has a token and Firebase is configured
+    if (this.fcmEnabled) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { fcmToken: true },
+      });
+      if (user?.fcmToken) {
+        try {
+          await admin.messaging().send({
+            token: user.fcmToken,
+            notification: { title, body },
+            android: { priority: 'high' },
+          });
+        } catch (err) {
+          this.logger.warn(`FCM send failed for user ${userId}: ${(err as Error).message}`);
+        }
+      }
+    }
   }
 
   async getUserNotifications(userId: string) {
@@ -105,5 +149,16 @@ export class NotificationsService {
       where: { id: notificationId, userId },
       data: { isRead: true },
     });
+  }
+
+  /** Sends a real FCM push + creates a DB notification — used for manual testing */
+  async sendTestNotification(userId: string) {
+    await this.createNotification(
+      userId,
+      '🚀 Test Notification',
+      'FCM push is working correctly!',
+      'TRIP_STARTED',
+    );
+    return { message: 'Test notification sent' };
   }
 }
