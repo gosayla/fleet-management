@@ -345,11 +345,18 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
           <View style={styles.personCard}>
             <View style={styles.personAvatar}>
               <Text style={styles.personInitials}>
-                {trip.driver.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                {String(trip.driver.fullName ?? '')
+                  .trim()
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .map(n => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase() || 'DR'}
               </Text>
             </View>
             <View style={{flex: 1}}>
-              <Text style={styles.personName}>{trip.driver.fullName}</Text>
+              <Text style={styles.personName}>{trip.driver.fullName || (isAr ? 'سائق' : 'Driver')}</Text>
               <Text style={styles.personSub}>{trip.driver.phone}</Text>
             </View>
             <View style={styles.licenseChip}>

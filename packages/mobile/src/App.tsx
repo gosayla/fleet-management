@@ -77,6 +77,15 @@ function Navigator() {
     }
   }
 
+  async function openDriverTripById(tripId: string) {
+    try {
+      const trip = await api.get<Trip>(`/trips/${tripId}`);
+      setActiveTrip(trip);
+    } catch {
+      // Keep UI stable if trip details cannot be fetched.
+    }
+  }
+
   useEffect(() => {
     if (!user) {
       setUnreadNotifications(0);
@@ -218,21 +227,7 @@ function Navigator() {
           onBack={() => setDriverViewTripId(null)}
           onStartTrip={trip => {
             setDriverViewTripId(null);
-            // Cast TripDetail → Trip shape expected by ActiveTripScreen
-            setActiveTrip({
-              id: trip.id,
-              origin: trip.origin,
-              destination: trip.destination,
-              status: trip.status as any,
-              tripType: trip.tripType as any,
-              scheduledStart: new Date(trip.scheduledStart),
-              scheduledEnd: new Date(trip.scheduledEnd),
-              vehicleId: trip.vehicle?.id ?? '',
-              driverId: trip.driver?.id ?? '',
-              companyId: '',
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            });
+            openDriverTripById(trip.id);
           }}
         />
       );
@@ -248,20 +243,7 @@ function Navigator() {
               onNotificationsPress={() => setNotificationsOpen(true)}
               unreadNotifications={unreadNotifications}
               onSelectTrip={setDriverViewTripId}
-              onStartTrip={trip => setActiveTrip({
-                id: trip.id,
-                origin: trip.origin,
-                destination: trip.destination,
-                status: trip.status as any,
-                tripType: 'ONE_TIME' as any,
-                scheduledStart: new Date(trip.scheduledStart),
-                scheduledEnd: new Date(trip.scheduledStart),
-                vehicleId: trip.vehicle?.id ?? '',
-                driverId: '',
-                companyId: '',
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              })}
+              onStartTrip={trip => openDriverTripById(trip.id)}
             />
           )}
           {driverTab === 'trips' && (
