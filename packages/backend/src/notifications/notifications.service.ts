@@ -124,14 +124,17 @@ export class NotificationsService implements OnModuleInit {
       });
       if (user?.fcmToken) {
         try {
-          await admin.messaging().send({
+          const msgId = await admin.messaging().send({
             token: user.fcmToken,
             notification: { title, body },
             android: { priority: 'high' },
           });
+          this.logger.log(`FCM push sent to user ${userId}: messageId=${msgId}`);
         } catch (err) {
-          this.logger.warn(`FCM send failed for user ${userId}: ${(err as Error).message}`);
+          this.logger.error(`FCM send failed for user ${userId}: ${(err as Error).message}`, (err as Error).stack);
         }
+      } else {
+        this.logger.warn(`FCM skipped for user ${userId}: no fcmToken stored`);
       }
     }
   }
