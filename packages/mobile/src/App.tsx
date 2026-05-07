@@ -26,13 +26,12 @@ import {Colors} from './lib/theme';
 import {BottomTabBar, TabItem} from './components/ui/BottomTabBar';
 import {api} from './lib/api';
 
-type DriverTab = 'trips' | 'notifications' | 'profile';
-type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'notifications' | 'profile';
+type DriverTab = 'trips' | 'profile';
+type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'profile';
 
 // ── Tab config ───────────────────────────────────────────────────────────────
 const DRIVER_TABS: TabItem[] = [
   {key: 'trips',         icon: 'truck-outline',      labelAr: 'رحلاتي',    labelEn: 'Trips'},
-  {key: 'notifications', icon: 'bell-outline',       labelAr: 'الإشعارات', labelEn: 'Alerts'},
   {key: 'profile',       icon: 'account-outline',    labelAr: 'حسابي',     labelEn: 'Profile'},
 ];
 
@@ -40,7 +39,6 @@ const ADMIN_TABS: TabItem[] = [
   {key: 'dashboard',     icon: 'view-grid-outline',    labelAr: 'الرئيسية',  labelEn: 'Home'},
   {key: 'fleet',         icon: 'truck-outline',         labelAr: 'الأسطول',   labelEn: 'Fleet'},
   {key: 'trips',         icon: 'map-marker-path',       labelAr: 'الرحلات',   labelEn: 'Trips'},
-  {key: 'notifications', icon: 'bell-outline',          labelAr: 'النشاط',    labelEn: 'Activity'},
   {key: 'profile',       icon: 'account-outline',       labelAr: 'حسابي',     labelEn: 'Profile'},
 ];
 
@@ -59,6 +57,7 @@ function Navigator() {
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [tripFormOpen, setTripFormOpen] = useState(false);
   const [tripFormId, setTripFormId] = useState<string | null>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   const toggleLocale = () => setLocale(l => (l === 'ar' ? 'en' : 'ar'));
@@ -102,6 +101,17 @@ function Navigator() {
         locale={locale}
         onToggleLocale={toggleLocale}
         onComplete={() => setActiveTrip(null)}
+      />
+    );
+  }
+
+  if (notificationsOpen) {
+    return (
+      <NotificationsScreen
+        locale={locale}
+        onToggleLocale={toggleLocale}
+        onBack={() => setNotificationsOpen(false)}
+        onUnreadCountChange={setUnreadNotifications}
       />
     );
   }
@@ -199,14 +209,12 @@ function Navigator() {
       <View style={styles.shell}>
         <View style={styles.screenArea}>
           {driverTab === 'trips' && (
-            <TripsListScreen locale={locale} onToggleLocale={toggleLocale} onSelectTrip={setActiveTrip} />
-          )}
-          {driverTab === 'notifications' && (
-            <NotificationsScreen
+            <TripsListScreen
               locale={locale}
               onToggleLocale={toggleLocale}
-              onBack={() => setDriverTab('trips')}
-              onUnreadCountChange={setUnreadNotifications}
+              onSelectTrip={setActiveTrip}
+              onNotificationsPress={() => setNotificationsOpen(true)}
+              unreadNotifications={unreadNotifications}
             />
           )}
           {driverTab === 'profile' && (
@@ -218,7 +226,6 @@ function Navigator() {
           activeKey={driverTab}
           locale={locale}
           onPress={k => setDriverTab(k as DriverTab)}
-          badgeByKey={{notifications: unreadNotifications}}
         />
       </View>
     );
@@ -228,17 +235,9 @@ function Navigator() {
   return (
     <View style={styles.shell}>
       <View style={styles.screenArea}>
-        {adminTab === 'dashboard'     && <AdminDashboardScreen locale={locale} onToggleLocale={toggleLocale} onSelectTrip={setSelectedTripId} />}
+        {adminTab === 'dashboard'     && <AdminDashboardScreen locale={locale} onToggleLocale={toggleLocale} onSelectTrip={setSelectedTripId} onNotificationsPress={() => setNotificationsOpen(true)} unreadNotifications={unreadNotifications} />}
         {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onToggleLocale={toggleLocale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} />}
         {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onToggleLocale={toggleLocale} onSelectTrip={setSelectedTripId} onAddTrip={() => { setTripFormId(null); setTripFormOpen(true); }} />}
-        {adminTab === 'notifications'  && (
-          <NotificationsScreen
-            locale={locale}
-            onToggleLocale={toggleLocale}
-            onBack={() => setAdminTab('dashboard')}
-            onUnreadCountChange={setUnreadNotifications}
-          />
-        )}
         {adminTab === 'profile'        && <ProfileScreen locale={locale} onToggleLocale={toggleLocale} onBack={() => setAdminTab('dashboard')} />}
       </View>
       <BottomTabBar
@@ -246,7 +245,6 @@ function Navigator() {
         activeKey={adminTab}
         locale={locale}
         onPress={k => setAdminTab(k as AdminTab)}
-        badgeByKey={{notifications: unreadNotifications}}
       />
     </View>
   );

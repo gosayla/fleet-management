@@ -99,8 +99,9 @@ export function LoginScreen({locale, onToggleLocale}: Props) {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
       enabled={Platform.OS === 'ios'}
     >
-      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+      <StatusBar barStyle="dark-content" backgroundColor="#eaf3f2" />
       <ScrollView 
+        style={styles.scrollView}
         contentContainerStyle={styles.scroll} 
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -112,14 +113,15 @@ export function LoginScreen({locale, onToggleLocale}: Props) {
         <View style={styles.hero}>
           {/* Gradient overlay effect */}
           <View style={styles.heroGradient} />
-          
-          {/* Logo */}
-          <View style={styles.logoCircle}>
-            <AppIcon name="truck" size={48} color={Colors.white} />
+
+          {/* Logo Row */}
+          <View style={styles.logoRow}>
+            <View style={styles.logoCircle}>
+              <AppIcon name="truck" size={22} color={Colors.primary} />
+            </View>
+            <Text style={styles.brand}>eLEET</Text>
           </View>
-          
-          {/* Branding */}
-          <Text style={styles.brand}>eLEET</Text>
+
           <Text style={[styles.welcome, isRTL && styles.rtl]}>
             {locale === 'ar' ? 'أهلا وسهلا' : 'Welcome!'}
           </Text>
@@ -147,7 +149,7 @@ export function LoginScreen({locale, onToggleLocale}: Props) {
               />
               <TextInput
                 style={[styles.input, isRTL && styles.rtl]}
-                placeholder={locale === 'ar' ? '+966 50 ...' : '+966 50 ...'}
+                placeholder={locale === 'ar' ? '05xxxxxxxx' : '05xxxxxxxx'}
                 placeholderTextColor={Colors.textMuted}
                 value={phone}
                 onChangeText={setPhone}
@@ -233,13 +235,22 @@ export function LoginScreen({locale, onToggleLocale}: Props) {
           </Text>
         </View>
 
+        <View style={styles.bottomSection}>
+          <Text style={[styles.bottomHeadline, isRTL && styles.rtl]}>
+            {locale === 'ar' ? 'إدارة الأساطيل' : 'Managing Fleets'}
+          </Text>
+          <Text style={[styles.bottomHeadline, isRTL && styles.rtl]}>
+            {locale === 'ar' ? 'يوماً بعد يوم' : 'Day To Day'}
+          </Text>
+        </View>
+
         {/* Language Toggle */}
         <TouchableOpacity 
           style={styles.langPill} 
           onPress={onToggleLocale} 
           activeOpacity={0.7}
         >
-          <AppIcon name="earth" size={16} color={Colors.white} />
+          <AppIcon name="earth" size={16} color="#2d8f87" />
           <Text style={styles.langText}>{locale === 'ar' ? 'English' : 'العربية'}</Text>
         </TouchableOpacity>
 
@@ -312,110 +323,107 @@ export function LoginScreen({locale, onToggleLocale}: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: {flex: 1, backgroundColor: Colors.primary},
-  scroll: {flexGrow: 1, justifyContent: 'flex-start', paddingTop: Spacing.xl, paddingBottom: Spacing.lg},
+  root: {flex: 1, backgroundColor: '#eaf3f2'},
+  scrollView: {flex: 1, backgroundColor: '#eaf3f2'},
+  scroll: {flexGrow: 1, minHeight: '100%', justifyContent: 'space-between', paddingTop: Spacing.lg, paddingBottom: Spacing.lg},
 
   /* Hero Section */
   hero: {
-    alignItems: 'center',
-    paddingVertical: Spacing.xxl,
+    alignItems: 'stretch',
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
     paddingHorizontal: Spacing.lg,
     position: 'relative',
     overflow: 'hidden',
   },
   heroGradient: {
     position: 'absolute',
-    top: -50,
-    right: -50,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    top: -36,
+    right: -36,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(31, 130, 120, 0.08)',
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center',
+  logoRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: Spacing.lg,
-    shadowColor: '#000',
+    gap: Spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  logoCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(31, 130, 120, 0.10)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#1f8278',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 4,
   },
   brand: {
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: '800' as const,
-    color: Colors.white,
-    letterSpacing: 3,
-    marginBottom: Spacing.sm,
+    color: '#2d8f87',
+    letterSpacing: 1.6,
     textTransform: 'uppercase',
   },
   welcome: {
     ...Typography.h2,
-    color: Colors.white,
-    textAlign: 'center',
-    marginBottom: Spacing.xs,
+    color: '#202a2a',
+    textAlign: 'left',
+    marginBottom: 2,
   },
   subtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'center',
-    marginTop: Spacing.sm,
+    color: '#46585a',
+    textAlign: 'left',
+    marginTop: 4,
+    marginBottom: Spacing.md,
   },
 
   /* Form Card */
   card: {
-    backgroundColor: Colors.white,
-    marginHorizontal: Spacing.md,
-    borderRadius: 24,
-    padding: Spacing.lg,
-    gap: Spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 12},
-    shadowOpacity: 0.15,
-    shadowRadius: 28,
-    elevation: 12,
+    backgroundColor: '#eef6f5',
+    marginHorizontal: 0,
+    borderRadius: 0,
+    padding: Spacing.md,
+    gap: Spacing.md,
   },
 
   /* Form Fields */
   fieldGroup: {gap: Spacing.sm},
   fieldLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600' as const,
-    color: Colors.textSecondary,
-    letterSpacing: 0.3,
-    textTransform: 'capitalize',
+    color: '#36494a',
+    letterSpacing: 0.2,
   },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1.5,
-    borderColor: '#e5e7eb',
-    borderRadius: 14,
+    backgroundColor: '#edf4f4',
+    borderWidth: 1.2,
+    borderColor: '#95cac4',
+    borderRadius: 12,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 14,
+    paddingVertical: 11,
   },
   inputWrapFocused: {
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(45, 156, 137, 0.04)',
-    shadowColor: Colors.primary,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderColor: '#4aa89f',
+    backgroundColor: '#f4fbfa',
   },
   inputWrapFilled: {
-    borderColor: 'rgba(45, 156, 137, 0.3)',
+    borderColor: '#7ec2ba',
   },
   input: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500' as const,
     color: Colors.textPrimary,
     padding: 0,
@@ -425,28 +433,28 @@ const styles = StyleSheet.create({
   /* Forgot Password */
   forgotBtn: {
     alignSelf: 'flex-end',
-    marginTop: Spacing.xs,
+    marginTop: 2,
   },
   forgotText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600' as const,
-    color: Colors.primary,
+    color: '#3d9690',
   },
 
   /* Login Button */
   btn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
+    backgroundColor: '#4ea6a0',
+    borderRadius: 26,
+    paddingVertical: 14,
     paddingHorizontal: Spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Spacing.sm,
-    shadowColor: Colors.primary,
-    shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
+    marginTop: Spacing.md,
+    shadowColor: '#4ea6a0',
+    shadowOffset: {width: 0, height: 10},
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    elevation: 8,
   },
   btnDisabled: {
     opacity: 0.6,
@@ -458,47 +466,65 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700' as const,
     color: Colors.white,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
 
   /* Divider */
   divider: {
     height: 1,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#d9e8e6',
     marginVertical: Spacing.xs,
   },
 
   /* Info Text */
   infoText: {
-    fontSize: 12,
-    color: Colors.textMuted,
+    fontSize: 11,
+    color: '#7f9496',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 16,
+  },
+
+  bottomSection: {
+    backgroundColor: 'transparent',
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomHeadline: {
+    fontSize: 34,
+    fontWeight: '700' as const,
+    color: '#2f3538',
+    lineHeight: 38,
   },
 
   /* Language Toggle */
   langPill: {
     alignSelf: 'center',
     marginTop: Spacing.xl,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: '#ffffff',
     borderRadius: 24,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: '#b7d8d4',
+    shadowColor: '#2d8f87',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2,
   },
   langText: {
     fontSize: 13,
     fontWeight: '600' as const,
-    color: Colors.white,
+    color: '#2d8f87',
   },
 
   modalBackdrop: {

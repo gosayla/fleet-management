@@ -20,6 +20,8 @@ interface Props {
   locale: Locale;
   onToggleLocale: () => void;
   onSelectTrip?: (id: string) => void;
+  onNotificationsPress?: () => void;
+  unreadNotifications?: number;
 }
 
 interface TripItem {
@@ -76,7 +78,7 @@ const DOC_LABELS_BRIEF: Record<string, {en: string; ar: string}> = {
   OPERATION_CARD:       {en: 'Operation Card',       ar: '\u0628\u0637\u0627\u0642\u0629 \u062a\u0634\u063a\u064a\u0644'},
 };
 
-export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip}: Props) {
+export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip, onNotificationsPress, unreadNotifications = 0}: Props) {
   const {user} = useAuth();
   const isAr = locale === 'ar';
   const [stats, setStats] = useState<FleetStats | null>(null);
@@ -134,8 +136,15 @@ export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip}: Pro
               <Text style={styles.userName}>{firstName}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.bellBtn} activeOpacity={0.8}>
-            <AppIcon name="bell-outline" size={20} color="#fff" />
+          <TouchableOpacity style={styles.bellBtn} activeOpacity={0.8} onPress={onNotificationsPress}>
+            <AppIcon name={unreadNotifications > 0 ? 'bell-badge-outline' : 'bell-outline'} size={20} color="#fff" />
+            {unreadNotifications > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>
+                  {unreadNotifications > 99 ? '99+' : String(unreadNotifications)}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -423,6 +432,13 @@ const styles = StyleSheet.create({
   welcomeText: {fontSize: 12, color: Colors.textMuted},
   userName: {fontSize: 18, fontWeight: '800' as const, color: Colors.primary},
   bellBtn: {width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center'},
+  bellBadge: {
+    position: 'absolute', top: -4, right: -4,
+    minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8,
+    backgroundColor: Colors.danger, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: Colors.primary,
+  },
+  bellBadgeText: {color: '#fff', fontSize: 9, fontWeight: '700' as const, lineHeight: 12},
 
   // Scroll
   scroll: {paddingHorizontal: Spacing.md, paddingTop: 4},

@@ -7,21 +7,25 @@ import {
   StyleSheet,
   RefreshControl,
   StatusBar,
+  Platform,
 } from 'react-native';
 import {api} from '../lib/api';
 import {Trip} from '@fleet/shared';
 import {Locale, t} from '../lib/i18n';
 import {Colors, Spacing, Typography} from '../lib/theme';
-import {ScreenHeader} from '../components/ui/ScreenHeader';
-import {TripCard} from '../components/ui/cards/TripCard';
+import {AppIcon} from '../components/ui/AppIcon';
+
+const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
 interface Props {
   onSelectTrip: (trip: Trip) => void;
   locale: Locale;
   onToggleLocale: () => void;
+  onNotificationsPress?: () => void;
+  unreadNotifications?: number;
 }
 
-export function TripsListScreen({onSelectTrip, locale, onToggleLocale}: Props) {
+export function TripsListScreen({onSelectTrip, locale, onToggleLocale, onNotificationsPress, unreadNotifications = 0}: Props) {
   const i18n = t(locale);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -43,13 +47,32 @@ export function TripsListScreen({onSelectTrip, locale, onToggleLocale}: Props) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
-      <ScreenHeader
-        locale={locale}
-        title={i18n.myTrips}
-        subtitle={`${trips.length} ${locale === 'ar' ? 'رحلة' : 'trips'}`}
-        languageLabel={i18n.languageLabel}
-        onToggleLocale={onToggleLocale}
-      />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={{height: SB_HEIGHT}} />
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.headerTitle}>{i18n.myTrips}</Text>
+            <Text style={styles.headerSub}>{trips.length} {locale === 'ar' ? 'رحلة' : 'trips'}</Text>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.bellBtn} activeOpacity={0.8} onPress={onNotificationsPress}>
+              <AppIcon name={unreadNotifications > 0 ? 'bell-badge-outline' : 'bell-outline'} size={20} color="#fff" />
+              {unreadNotifications > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>
+                    {unreadNotifications > 99 ? '99+' : String(unreadNotifications)}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.langPill} onPress={onToggleLocale} activeOpacity={0.7}>
+              <Text style={styles.langText}>{i18n.languageLabel}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
 
       <FlatList
         data={trips}
@@ -89,6 +112,31 @@ export function TripsListScreen({onSelectTrip, locale, onToggleLocale}: Props) {
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: Colors.bg},
+  header: {backgroundColor: Colors.primary, paddingBottom: 20},
+  headerRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md, paddingTop: 10,
+  },
+  headerTitle: {fontSize: 22, fontWeight: '700' as const, color: '#fff'},
+  headerSub: {fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2},
+  headerRight: {flexDirection: 'row', alignItems: 'center', gap: 10},
+  bellBtn: {
+    width: 38, height: 38, borderRadius: 11,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  bellBadge: {
+    position: 'absolute', top: -4, right: -4,
+    minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8,
+    backgroundColor: Colors.danger, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: Colors.primary,
+  },
+  bellBadgeText: {color: '#fff', fontSize: 9, fontWeight: '700' as const, lineHeight: 12},
+  langPill: {
+    backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 6,
+  },
+  langText: {fontSize: 12, fontWeight: '600' as const, color: '#fff'},
   list: {padding: Spacing.md, gap: Spacing.sm},
   itemWrap: {gap: 6},
   cardDisabled: {opacity: 0.55},

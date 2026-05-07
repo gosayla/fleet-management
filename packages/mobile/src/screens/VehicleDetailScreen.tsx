@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   Image,
   FlatList,
   Modal,
+  Animated,
 } from 'react-native';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import {api, resolveApiAssetUrls, resolvePhotoUrl} from '../lib/api';
@@ -55,6 +56,7 @@ interface VehiclePhoto {
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 const HEADER_H = 240;
+const HEADER_MIN_H = 118;
 
 const STATUS_LABELS: Record<string, {en: string; ar: string}> = {
   ACTIVE:      {en: 'In Use',      ar: 'نشطة'},
@@ -83,6 +85,7 @@ interface Props {
 
 export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) {
   const isAr = locale === 'ar';
+  const scrollY = useRef(new Animated.Value(0)).current;
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
   const [photos, setPhotos] = useState<VehiclePhoto[]>([]);
   const [activePhoto, setActivePhoto] = useState<VehiclePhoto | null>(null);
@@ -225,13 +228,38 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
     : '—';
 
   const headerBg = TYPE_BG[vehicle.type] ?? '#1a5276';
+  const collapseDistance = HEADER_H - HEADER_MIN_H;
+
+  const animatedHeaderHeight = scrollY.interpolate({
+    inputRange: [0, collapseDistance],
+    outputRange: [HEADER_H, HEADER_MIN_H],
+    extrapolate: 'clamp',
+  });
+
+  const animatedTopPadding = scrollY.interpolate({
+    inputRange: [0, collapseDistance],
+    outputRange: [SB_H + 6, SB_H + 2],
+    extrapolate: 'clamp',
+  });
+
+  const animatedPlateSize = scrollY.interpolate({
+    inputRange: [0, collapseDistance],
+    outputRange: [18, 15],
+    extrapolate: 'clamp',
+  });
+
+  const animatedWatermarkOpacity = scrollY.interpolate({
+    inputRange: [0, collapseDistance * 0.8],
+    outputRange: [0.25, 0.08],
+    extrapolate: 'clamp',
+  });
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={headerBg} />
 
       {/* ── Stylised vehicle header ── */}
-      <View style={[styles.imageHeader, {backgroundColor: headerBg}]}>
+      <Animated.View style={[styles.imageHeader, {backgroundColor: headerBg, height: animatedHeaderHeight}]}>
         {/* Profile photo as header bg if available */}
         {profilePhoto && resolvePhotoUrl(profilePhoto.url) ? (
           <Image
@@ -251,20 +279,20 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
               ))}
             </View>
             {/* Large watermark make/model */}
-            <View style={styles.watermark} pointerEvents="none">
+            <Animated.View style={[styles.watermark, {opacity: animatedWatermarkOpacity}]} pointerEvents="none">
               <Text style={styles.watermarkMake} numberOfLines={1}>{vehicle.make.toUpperCase()}</Text>
               <Text style={styles.watermarkModel}>{vehicle.model.toUpperCase()}</Text>
               <Text style={styles.watermarkYear}>{vehicle.year}</Text>
-            </View>
+            </Animated.View>
           </>
         )}
 
         {/* Top bar: back + plate */}
-        <View style={[styles.topBar, {paddingTop: SB_H + 6}]}>
+        <Animated.View style={[styles.topBar, {paddingTop: animatedTopPadding}]}> 
           <TouchableOpacity style={styles.closeBtn} onPress={onBack} activeOpacity={0.8}>
             <AppIcon name="close" size={20} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.plateOverlay}>{vehicle.plateNumber}</Text>
+          <Animated.Text style={[styles.plateOverlay, {fontSize: animatedPlateSize}]}>{vehicle.plateNumber}</Animated.Text>
           {onEdit ? (
             <TouchableOpacity style={styles.closeBtn} onPress={onEdit} activeOpacity={0.8}>
               <AppIcon name="pencil" size={18} color="#fff" />
@@ -272,14 +300,19 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
           ) : (
             <View style={{width: 36}} />
           )}
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
 
       {/* ── White curved panel ── */}
-      <ScrollView
+      <Animated.ScrollView
         style={styles.panel}
         contentContainerStyle={styles.panelContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{nativeEvent: {contentOffset: {y: scrollY}}}],
+          {useNativeDriver: false},
+        )}>
 
         {/* 3-column info strip */}
         <View style={styles.infoStrip}>
@@ -489,7 +522,7 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
         )}
 
         <View style={{height: 32}} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* ── Photo lightbox ── */}
       <Modal visible={!!activePhoto} transparent animationType="fade" onRequestClose={() => setActivePhoto(null)}>

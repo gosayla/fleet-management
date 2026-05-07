@@ -36,7 +36,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
     // Register FCM token with backend (best-effort, silently skip if Firebase not configured)
     initNotifications().then(fcmToken => {
       if (fcmToken) {
-        api.post('/notifications/register', {token: fcmToken}).catch(() => {});
+        api.patch('/auth/fcm-token', {fcmToken}).catch(() => {});
       }
     }).catch(() => {});
   }

@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Image,
   Modal,
   Alert,
+  Animated,
 } from 'react-native';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import {api, resolvePhotoUrl} from '../lib/api';
@@ -38,6 +39,7 @@ interface DriverDetail {
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 const HEADER_H = 220;
+const HEADER_MIN_H = 116;
 
 const STATUS_CONFIG: Record<string, {label: {en: string; ar: string}; color: string; bg: string}> = {
   ACTIVE:     {label: {en: 'Active',      ar: 'نشط'},         color: '#fff',            bg: Colors.primary},
@@ -70,6 +72,7 @@ interface Props {
 
 export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
   const isAr = locale === 'ar';
+  const scrollY = useRef(new Animated.Value(0)).current;
   const [driver, setDriver] = useState<DriverDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPhoto, setShowPhoto] = useState(false);
@@ -166,13 +169,38 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
   const totalTrips = driver.trips?.length ?? 0;
   const completedTrips = driver.trips?.filter(t => t.status === 'COMPLETED').length ?? 0;
   const bloodTypeLabel = driver.bloodType ? (BLOOD_TYPE_LABELS[driver.bloodType] ?? driver.bloodType) : '—';
+  const collapseDistance = HEADER_H - HEADER_MIN_H;
+
+  const animatedHeaderHeight = scrollY.interpolate({
+    inputRange: [0, collapseDistance],
+    outputRange: [HEADER_H, HEADER_MIN_H],
+    extrapolate: 'clamp',
+  });
+
+  const animatedTopPadding = scrollY.interpolate({
+    inputRange: [0, collapseDistance],
+    outputRange: [SB_H + 6, SB_H + 2],
+    extrapolate: 'clamp',
+  });
+
+  const animatedAvatarScale = scrollY.interpolate({
+    inputRange: [0, collapseDistance],
+    outputRange: [1, 0.82],
+    extrapolate: 'clamp',
+  });
+
+  const animatedAvatarOpacity = scrollY.interpolate({
+    inputRange: [0, collapseDistance * 0.8],
+    outputRange: [1, 0.88],
+    extrapolate: 'clamp',
+  });
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
       {/* ── Teal header with avatar ── */}
-      <View style={[styles.header, {height: HEADER_H}]}>
+      <Animated.View style={[styles.header, {height: animatedHeaderHeight}]}>
         {/* Subtle grid */}
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {[0.3, 0.6].map(f => (
@@ -184,7 +212,7 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
         </View>
 
         {/* Top bar */}
-        <View style={[styles.topBar, {paddingTop: SB_H + 6}]}>
+        <Animated.View style={[styles.topBar, {paddingTop: animatedTopPadding}]}> 
           <TouchableOpacity style={styles.circleBtn} onPress={onBack} activeOpacity={0.8}>
             <AppIcon name="close" size={20} color="#fff" />
           </TouchableOpacity>
@@ -196,10 +224,18 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
           ) : (
             <View style={{width: 36}} />
           )}
-        </View>
+        </Animated.View>
 
         {/* Avatar + name */}
-        <View style={styles.avatarSection}>
+        <Animated.View
+          style={[
+            styles.avatarSection,
+            {
+              opacity: animatedAvatarOpacity,
+              transform: [{scale: animatedAvatarScale}],
+            },
+          ]}
+        >
           <View style={{position: 'relative'}}>
             <TouchableOpacity
               activeOpacity={0.85}
@@ -233,14 +269,20 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
           <View style={[styles.statusPill, {backgroundColor: statusCfg.bg}]}>
             <Text style={[styles.statusPillText, {color: statusCfg.color}]}>{statusLabel}</Text>
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
 
       {/* ── White curved panel ── */}
-      <ScrollView
+      <Animated.ScrollView
         style={styles.panel}
         contentContainerStyle={styles.panelContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{nativeEvent: {contentOffset: {y: scrollY}}}],
+          {useNativeDriver: false},
+        )}
+      >
 
         {/* 3-column info strip */}
         <View style={styles.infoStrip}>
@@ -373,7 +415,7 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
         )}
 
         <View style={{height: 32}} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* ── Photo lightbox ── */}
       <Modal visible={showPhoto} transparent animationType="fade" onRequestClose={() => setShowPhoto(false)}>
@@ -478,6 +520,8 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.md, paddingBottom: 10,
+    zIndex: 30,
+    elevation: 30,
   },
   circleBtn: {
     width: 36, height: 36, borderRadius: 18,

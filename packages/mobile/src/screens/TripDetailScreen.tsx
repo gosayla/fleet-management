@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StatusBar,
   Platform,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import MapView, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
 import {api} from '../lib/api';
@@ -44,6 +45,8 @@ interface TripLocationPoint {
 }
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
+const HEADER_H = 220;
+const HEADER_MIN_H = 116;
 
 const STATUS_CONFIG: Record<string, {label: {en: string; ar: string}; color: string; bg: string; icon: string}> = {
   SCHEDULED:   {label: {en: 'Scheduled',  ar: 'مجدولة'},   color: Colors.info,      bg: Colors.infoLight,    icon: 'clock-outline'},
@@ -79,6 +82,7 @@ interface Props {
 
 export function TripDetailScreen({tripId, locale, onBack, onEdit}: Props) {
   const isAr = locale === 'ar';
+  const scrollY = useRef(new Animated.Value(0)).current;
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [locations, setLocations] = useState<TripLocationPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,13 +146,38 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit}: Props) {
   const durationHrs = durationMs > 0 ? (durationMs / 3_600_000).toFixed(1) : '—';
   const latestLocation = locations.length > 0 ? locations[locations.length - 1] : null;
   const routeCoords = locations.map(p => ({latitude: p.lat, longitude: p.lng}));
+  const collapseDistance = HEADER_H - HEADER_MIN_H;
+
+  const animatedHeaderHeight = scrollY.interpolate({
+    inputRange: [0, collapseDistance],
+    outputRange: [HEADER_H, HEADER_MIN_H],
+    extrapolate: 'clamp',
+  });
+
+  const animatedTopPadding = scrollY.interpolate({
+    inputRange: [0, collapseDistance],
+    outputRange: [SB_H + 6, SB_H + 2],
+    extrapolate: 'clamp',
+  });
+
+  const animatedRouteScale = scrollY.interpolate({
+    inputRange: [0, collapseDistance],
+    outputRange: [1, 0.86],
+    extrapolate: 'clamp',
+  });
+
+  const animatedRouteOpacity = scrollY.interpolate({
+    inputRange: [0, collapseDistance * 0.8],
+    outputRange: [1, 0.86],
+    extrapolate: 'clamp',
+  });
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
       {/* Teal header */}
-      <View style={styles.header}>
+      <Animated.View style={[styles.header, {height: animatedHeaderHeight}]}> 
         {/* Grid decoration */}
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {[0.3, 0.65].map(f => (
@@ -160,7 +189,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit}: Props) {
         </View>
 
         {/* Top bar */}
-        <View style={[styles.topBar, {paddingTop: SB_H + 6}]}>
+        <Animated.View style={[styles.topBar, {paddingTop: animatedTopPadding}]}> 
           <TouchableOpacity style={styles.circleBtn} onPress={onBack} activeOpacity={0.8}>
             <AppIcon name="close" size={20} color="#fff" />
           </TouchableOpacity>
@@ -172,10 +201,18 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit}: Props) {
           ) : (
             <View style={{width: 36}} />
           )}
-        </View>
+        </Animated.View>
 
         {/* Route display */}
-        <View style={styles.routeSection}>
+        <Animated.View
+          style={[
+            styles.routeSection,
+            {
+              opacity: animatedRouteOpacity,
+              transform: [{scale: animatedRouteScale}],
+            },
+          ]}
+        >
           <Text style={styles.tripNameText} numberOfLines={2}>{displayName}</Text>
           {trip.name && (
             <Text style={styles.routeSubText}>{trip.origin} → {trip.destination}</Text>
@@ -186,14 +223,20 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit}: Props) {
               {statusCfg.label[isAr ? 'ar' : 'en']}
             </Text>
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
 
       {/* White curved panel */}
-      <ScrollView
+      <Animated.ScrollView
         style={styles.panel}
         contentContainerStyle={styles.panelContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{nativeEvent: {contentOffset: {y: scrollY}}}],
+          {useNativeDriver: false},
+        )}
+      >
 
         {/* 3-col info strip */}
         <View style={styles.infoStrip}>
@@ -369,7 +412,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit}: Props) {
         )}
 
         <View style={{height: 32}} />
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -424,6 +467,8 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.md, paddingBottom: 12,
+    zIndex: 30,
+    elevation: 30,
   },
   circleBtn: {
     width: 36, height: 36, borderRadius: 18,
