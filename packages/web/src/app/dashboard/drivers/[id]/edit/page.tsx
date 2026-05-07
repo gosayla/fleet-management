@@ -160,7 +160,6 @@ export default function EditDriverPage() {
     const payload: UpdateDriverDto = {
       fullName: String(fd.get('fullName') ?? '').trim(),
       phone: String(fd.get('phone') ?? '').trim(),
-      email: String(fd.get('email') ?? '').trim() || undefined,
       nationalId: String(fd.get('nationalId') ?? '').trim(),
       licenseExpiry: parsedLicenseExpiry,
       status: String(fd.get('status') ?? DriverStatus.ACTIVE) as DriverStatus,
