@@ -188,7 +188,7 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
           <TouchableOpacity style={styles.circleBtn} onPress={onBack} activeOpacity={0.8}>
             <AppIcon name="close" size={20} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerLabel}>{isAr ? 'بطاقة السائق' : 'Driver Profile'}</Text>
+          <View style={{width: 36}} />
           {onEdit ? (
             <TouchableOpacity style={styles.circleBtn} onPress={onEdit} activeOpacity={0.8}>
               <AppIcon name="pencil" size={18} color="#fff" />
