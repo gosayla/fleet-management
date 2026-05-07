@@ -18,19 +18,19 @@ export function LoginScreen({locale, onToggleLocale}: Props) {
   const {login} = useAuth();
   const i18n = t(locale);
   const isRTL = locale === 'ar';
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
+  const [focusedField, setFocusedField] = useState<'phone' | 'password' | null>(null);
 
   async function handleLogin() {
-    if (!email || !password) {
+    if (!phone || !password) {
       Alert.alert(i18n.formErrorTitle, i18n.formErrorMessage);
       return;
     }
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(phone.trim(), password);
     } catch {
       Alert.alert(i18n.loginErrorTitle, i18n.loginErrorMessage);
     } finally {
@@ -59,21 +59,21 @@ export function LoginScreen({locale, onToggleLocale}: Props) {
 
         {/* Form card */}
         <View style={styles.card}>
-          {/* Email */}
+          {/* Phone */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, isRTL && styles.rtl]}>{i18n.email}</Text>
-            <View style={[styles.inputWrap, focusedField === 'email' && styles.inputWrapFocused]}>
-              <AppIcon name="email-outline" size={18} color={focusedField === 'email' ? Colors.primary : Colors.textMuted} />
+            <Text style={[styles.fieldLabel, isRTL && styles.rtl]}>{i18n.phone}</Text>
+            <View style={[styles.inputWrap, focusedField === 'phone' && styles.inputWrapFocused]}>
+              <AppIcon name="phone-outline" size={18} color={focusedField === 'phone' ? Colors.primary : Colors.textMuted} />
               <TextInput
                 style={[styles.input, isRTL && styles.rtl]}
-                placeholder={i18n.email}
+                placeholder={i18n.phone}
                 placeholderTextColor={Colors.textMuted}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
                 autoCapitalize="none"
                 textAlign={isRTL ? 'right' : 'left'}
-                onFocus={() => setFocusedField('email')}
+                onFocus={() => setFocusedField('phone')}
                 onBlur={() => setFocusedField(null)}
               />
             </View>

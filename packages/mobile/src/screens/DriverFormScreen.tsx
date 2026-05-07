@@ -63,7 +63,6 @@ interface Props {
 interface FormState {
   fullName: string;
   phone: string;
-  email: string;
   accountPassword: string;
   nationalId: string;
   licenseNumber: string;
@@ -75,7 +74,6 @@ interface FormState {
 const EMPTY: FormState = {
   fullName: '',
   phone: '',
-  email: '',
   accountPassword: '',
   nationalId: '',
   licenseNumber: '',
@@ -103,7 +101,6 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
         setForm({
           fullName: d.fullName ?? '',
           phone: d.phone ?? '',
-          email: d.email ?? '',
           accountPassword: '',
           nationalId: d.nationalId ?? '',
           licenseNumber: d.licenseNumber ?? '',
@@ -129,7 +126,6 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
       [form.nationalId, isAr ? 'رقم الهوية' : 'National ID'],
       [form.licenseNumber, isAr ? 'رقم الرخصة' : 'License Number'],
       [form.licenseExpiry, isAr ? 'انتهاء الرخصة' : 'License Expiry'],
-      [form.email, isAr ? 'البريد الإلكتروني' : 'Email'],
       ...(isEdit ? [] : [[form.accountPassword, isAr ? 'كلمة المرور' : 'Password'] as [string, string]]),
     ];
 
@@ -156,7 +152,6 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
       const basePayload: Record<string, any> = {
         fullName: form.fullName.trim(),
         phone: form.phone.trim(),
-        email: form.email.trim().toLowerCase(),
         nationalId: form.nationalId.trim(),
         licenseNumber: form.licenseNumber.trim(),
         licenseExpiry: parsedExpiry.toISOString(),
@@ -229,10 +224,6 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
             <Divider />
             <Field label={isAr ? 'رقم الجوال' : 'Phone'} required>
               <TextInput style={styles.input} value={form.phone} onChangeText={v => set('phone', v)} keyboardType="phone-pad" placeholder="+966501234567" placeholderTextColor={Colors.textMuted} />
-            </Field>
-            <Divider />
-            <Field label={isAr ? 'البريد الإلكتروني' : 'Email'} required>
-              <TextInput style={styles.input} value={form.email} onChangeText={v => set('email', v)} keyboardType="email-address" autoCapitalize="none" placeholder="driver@fleet.com" placeholderTextColor={Colors.textMuted} />
             </Field>
             {!isEdit && (
               <>

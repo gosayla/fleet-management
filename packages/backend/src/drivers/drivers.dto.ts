@@ -1,6 +1,5 @@
 import {
   IsDateString,
-  IsEmail,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -21,10 +20,6 @@ export class CreateDriverDto {
   @IsString()
   @IsNotEmpty()
   phone: string;
-
-  @ApiProperty({ example: 'driver@fleet.com' })
-  @IsEmail()
-  email: string;
 
   @ApiProperty({ example: 'Driver@1234' })
   @IsString()

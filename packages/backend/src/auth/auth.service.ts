@@ -46,7 +46,7 @@ export class AuthService {
       },
     });
 
-    const token = await this.signToken(user.id, user.email, user.role, user.companyId);
+    const token = await this.signToken(user.id, user.email ?? '', user.role, user.companyId);
 
     return {
       accessToken: token,
@@ -63,7 +63,7 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { phone: dto.phone },
     });
     if (!user) {
       throw new UnauthorizedException('بيانات تسجيل الدخول غير صحيحة');
@@ -74,7 +74,7 @@ export class AuthService {
       throw new UnauthorizedException('بيانات تسجيل الدخول غير صحيحة');
     }
 
-    const token = await this.signToken(user.id, user.email, user.role, user.companyId);
+    const token = await this.signToken(user.id, user.email ?? '', user.role, user.companyId);
 
     return {
       accessToken: token,

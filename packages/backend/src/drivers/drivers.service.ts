@@ -59,7 +59,6 @@ export class DriversService {
         const user = await tx.user.create({
           data: {
             companyId,
-            email: dto.email.trim().toLowerCase(),
             password: await argon2.hash(dto.accountPassword),
             fullName: dto.fullName,
             phone: dto.phone,
@@ -73,7 +72,6 @@ export class DriversService {
             userId: user.id,
             fullName: dto.fullName,
             phone: dto.phone,
-            email: dto.email.trim().toLowerCase(),
             nationalId: dto.nationalId,
             licenseNumber: dto.licenseNumber,
             licenseExpiry: new Date(dto.licenseExpiry),
@@ -84,8 +82,8 @@ export class DriversService {
     } catch (e: any) {
       if (e?.code === 'P2002') {
         const target = Array.isArray(e?.meta?.target) ? e.meta.target.join(',') : String(e?.meta?.target ?? '');
-        if (target.includes('email')) {
-          throw new ConflictException('البريد الإلكتروني مسجل مسبقاً');
+        if (target.includes('phone')) {
+          throw new ConflictException('رقم الجوال مسجل مسبقاً');
         }
         if (target.includes('companyId') && target.includes('nationalId')) {
           throw new ConflictException('رقم الهوية مسجل مسبقاً لهذه الشركة');

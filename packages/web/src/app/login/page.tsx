@@ -9,7 +9,7 @@ import { useLocale } from '@/providers/locale-provider';
 export default function LoginPage() {
   const router = useRouter();
   const { locale, isRTL, toggleLocale, t } = useLocale();
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await api.post<{ accessToken: string; user: { role: string; fullName: string } }>('/auth/login', { email, password });
+      const res = await api.post<{ accessToken: string; user: { role: string; fullName: string } }>('/auth/login', { phone, password });
       localStorage.setItem('accessToken', res.data.accessToken);
       localStorage.setItem('userRole', res.data.user?.role ?? '');
       localStorage.setItem('userName', res.data.user?.fullName ?? '');
@@ -61,15 +61,15 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t.login.email}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.login.phone}</label>
             <input
-              type="email"
+              type="tel"
               dir="ltr"
               required
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder={t.login.emailPlaceholder}
+              placeholder={t.login.phonePlaceholder}
             />
           </div>
           <div>

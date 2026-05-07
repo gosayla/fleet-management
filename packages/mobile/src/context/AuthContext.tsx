@@ -7,7 +7,7 @@ import {initNotifications} from '../lib/notifications';
 interface AuthContextType {
   user: AuthTokenPayload | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (phone: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -25,10 +25,10 @@ export function AuthProvider({children}: {children: ReactNode}) {
     });
   }, []);
 
-  async function login(email: string, password: string) {
+  async function login(phone: string, password: string) {
     const res = await api.post<{accessToken: string; user: AuthTokenPayload}>(
       '/auth/login',
-      {email, password},
+      {phone, password},
     );
     await AsyncStorage.setItem('accessToken', res.accessToken);
     await AsyncStorage.setItem('user', JSON.stringify(res.user));

@@ -91,7 +91,7 @@ export enum BloodType {
 
 export interface User {
   id: string;
-  email: string;
+  email?: string;
   fullName: string;
   phone: string;
   role: UserRole;
@@ -103,13 +103,13 @@ export interface User {
 
 export interface AuthTokenPayload {
   sub: string; // user id
-  email: string;
+  email?: string;
   role: UserRole;
   companyId: string;
 }
 
 export interface LoginDto {
-  email: string;
+  phone: string;
   password: string;
 }
 
@@ -214,7 +214,6 @@ export interface Driver {
 export interface CreateDriverDto {
   fullName: string;
   phone: string;
-  email: string;
   accountPassword: string;
   nationalId: string;
   licenseNumber: string;

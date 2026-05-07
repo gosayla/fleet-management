@@ -134,10 +134,10 @@ model Company {
 model User {
   id        String   @id @default(uuid())
   companyId String
-  email     String   @unique
+  email     String?  @unique
   password  String
   fullName  String
-  phone     String
+  phone     String   @unique
   role      UserRole @default(FLEET_MANAGER)
   fcmToken  String?
   createdAt DateTime @default(now())
