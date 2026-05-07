@@ -19,6 +19,7 @@ import {AppIcon} from '../components/ui/AppIcon';
 interface Props {
   locale: Locale;
   onToggleLocale: () => void;
+  onSelectTrip?: (id: string) => void;
 }
 
 interface TripItem {
@@ -75,7 +76,7 @@ const DOC_LABELS_BRIEF: Record<string, {en: string; ar: string}> = {
   OPERATION_CARD:       {en: 'Operation Card',       ar: '\u0628\u0637\u0627\u0642\u0629 \u062a\u0634\u063a\u064a\u0644'},
 };
 
-export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
+export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip}: Props) {
   const {user} = useAuth();
   const isAr = locale === 'ar';
   const [stats, setStats] = useState<FleetStats | null>(null);
@@ -165,7 +166,7 @@ export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
                 ? new Date(trip.vehicle.lastLocationAt).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})
                 : null;
               return (
-                <View key={trip.id} style={styles.tripCard}>
+                <TouchableOpacity key={trip.id} style={styles.tripCard} onPress={() => onSelectTrip?.(trip.id)} activeOpacity={0.7}>
                   {/* GPS pulse indicator */}
                   <View style={[styles.gpsDot, hasGps && styles.gpsDotActive]}>
                     <AppIcon name={hasGps ? 'map-marker' : 'map-marker-outline'} size={16} color={hasGps ? '#fff' : Colors.textMuted} />
@@ -184,7 +185,7 @@ export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
                     )}
                   </View>
                   {hasGps && <View style={styles.gpsLiveBadge}><Text style={styles.gpsLiveText}>LIVE</Text></View>}
-                </View>
+                </TouchableOpacity>
               );
             })
           )}
@@ -222,7 +223,7 @@ export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
               const dateStr = date.toLocaleDateString(isAr ? 'ar-SA' : 'en-US', {weekday: 'short', month: 'short', day: 'numeric'});
               const timeStr = date.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
               return (
-                <View key={trip.id} style={[styles.deadlineRow, highlighted && styles.deadlineRowHL]}>
+                <TouchableOpacity key={trip.id} style={[styles.deadlineRow, highlighted && styles.deadlineRowHL]} onPress={() => onSelectTrip?.(trip.id)} activeOpacity={0.7}>
                   <View style={[styles.deadlineIcon, highlighted && styles.deadlineIconHL]}>
                     <AppIcon name="truck-outline" size={20} color={highlighted ? '#fff' : Colors.primary} />
                   </View>
@@ -238,7 +239,7 @@ export function AdminDashboardScreen({locale, onToggleLocale}: Props) {
                     </Text>
                   </View>
                   <AppIcon name="arrow-right" size={20} color={highlighted ? '#fff' : Colors.primary} />
-                </View>
+                </TouchableOpacity>
               );
             })
           )}

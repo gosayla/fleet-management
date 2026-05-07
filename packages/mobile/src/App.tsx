@@ -202,7 +202,7 @@ function Navigator() {
   return (
     <View style={styles.shell}>
       <View style={styles.screenArea}>
-        {adminTab === 'dashboard'     && <AdminDashboardScreen locale={locale} onToggleLocale={toggleLocale} />}
+        {adminTab === 'dashboard'     && <AdminDashboardScreen locale={locale} onToggleLocale={toggleLocale} onSelectTrip={setSelectedTripId} />}
         {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onToggleLocale={toggleLocale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} />}
         {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onToggleLocale={toggleLocale} onSelectTrip={setSelectedTripId} onAddTrip={() => { setTripFormId(null); setTripFormOpen(true); }} />}
         {adminTab === 'notifications'  && <NotificationsScreen   locale={locale} onToggleLocale={toggleLocale} onBack={() => setAdminTab('dashboard')} />}
