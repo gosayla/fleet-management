@@ -92,7 +92,7 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
       if (locationBuffer.current.length === 0) return;
       const batch = locationBuffer.current.splice(0);
       try {
-        await api.post(`/trips/${trip.id}/locations/batch`, { locations: batch });
+        await api.post(`/trips/${trip.id}/locations/batch`, batch);
       } catch {
         // Put back on failure so they're not lost
         locationBuffer.current.unshift(...batch);
@@ -119,7 +119,7 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
     // Flush remaining buffer
     const batch = locationBuffer.current.splice(0);
     if (batch.length > 0) {
-      api.post(`/trips/${trip.id}/locations/batch`, { locations: batch }).catch(() => {});
+      api.post(`/trips/${trip.id}/locations/batch`, batch).catch(() => {});
     }
     stopBroadcasting();
     setTracking(false);
