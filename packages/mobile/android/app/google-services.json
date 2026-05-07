@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "831023453619",
+    "project_id": "fleetmobile-66839",
+    "storage_bucket": "fleetmobile-66839.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:831023453619:android:00360e6de43e8e6847e7c6",
+        "android_client_info": {
+          "package_name": "com.fleetmobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjpDQTahDogrJnn0eM1X_ugR14y-yE7gU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
