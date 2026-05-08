@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
-import MapView, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
+import MapView, {Marker, Polyline} from 'react-native-maps';
 import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
@@ -310,7 +310,6 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
             {ENABLE_MAPS ? (
               <View style={styles.mapWrap}>
                 <MapView
-                  provider={PROVIDER_GOOGLE}
                   style={styles.map}
                   region={{
                     latitude: latestLocation.lat,

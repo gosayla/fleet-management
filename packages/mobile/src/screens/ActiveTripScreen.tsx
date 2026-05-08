@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import MapView, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
+import MapView, {Marker, Polyline} from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
 import {useAuth} from '../context/AuthContext';
 import {startBroadcastingLocation, stopBroadcasting} from '../lib/socket';
@@ -153,7 +153,6 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
       {/* Map */}
       {ENABLE_MAPS ? (
         <MapView
-          provider={PROVIDER_GOOGLE}
           style={styles.map}
           region={
             currentLocation

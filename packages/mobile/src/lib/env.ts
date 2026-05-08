@@ -9,7 +9,5 @@ export const SOCKET_URL =
   (globalThis as { process?: { env?: Record<string, string | undefined> } })
     .process?.env?.SOCKET_URL ?? 'https://fleet.starfishumluj.com';
 
-// Temporary safe mode: keep maps disabled unless explicitly enabled.
-export const ENABLE_MAPS =
-  (globalThis as { process?: { env?: Record<string, string | undefined> } })
-    .process?.env?.ENABLE_MAPS === 'true';
+// Maps enabled by default (OpenStreetMap — no API key required).
+export const ENABLE_MAPS = true;
