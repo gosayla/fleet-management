@@ -6,8 +6,11 @@ import { Roles } from '../../auth/roles.decorator';
 import { CurrentUser } from '../../auth/current-user.decorator';
 import { AuthTokenPayload } from '@fleet/shared';
 import { PilotSyncService } from './pilot-sync.service';
+import { IsOptional, IsString } from 'class-validator';
 
 class PilotTokenDto {
+  @IsOptional()
+  @IsString()
   token?: string;
 }
 

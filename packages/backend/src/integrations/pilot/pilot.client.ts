@@ -3,6 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
 interface RawPilotDevice {
+  '0'?: {
+    id?: number;
+    name?: string;
+    veh_id?: number;
+    active?: number;
+    on?: number;
+  };
   id?: string;
   name?: string;
   veh?: string;
@@ -63,7 +70,8 @@ export class PilotClient {
   }
 
   private toDevice(item: RawPilotDevice): PilotDevice | null {
-    const plateNumber = String(item.veh ?? item.name ?? item.id ?? '').trim();
+    const nested = item['0'];
+    const plateNumber = String(item.veh ?? item.name ?? nested?.name ?? item.id ?? nested?.id ?? '').trim();
     if (!plateNumber) return null;
 
     const latRaw = item.lat ?? item.latitude;
@@ -78,14 +86,14 @@ export class PilotClient {
 
     return {
       plateNumber,
-      providerVehicleId: item.veh_id,
+      providerVehicleId: item.veh_id ?? nested?.veh_id,
       lat,
       lng,
       speed: Number.isFinite(speed) ? speed : 0,
       heading: Number.isFinite(heading) ? heading : 0,
       recordedAt: ts > 0 ? new Date(ts * 1000) : new Date(),
-      isOnline: Number(item.active ?? 0) === 1,
-      isEngineOn: Number(item.on ?? 0) === 1,
+      isOnline: Number(item.active ?? nested?.active ?? 0) === 1,
+      isEngineOn: Number(item.on ?? nested?.on ?? 0) === 1,
       sourceState: item.wasl_state,
     };
   }
