@@ -20,22 +20,52 @@ export class NotificationsService implements OnModuleInit {
     private readonly config: ConfigService,
   ) {}
 
+  private normalizePrivateKey(raw: string): string {
+    let key = String(raw ?? '').trim();
+
+    // Allow wrapping quotes from .env values: "-----BEGIN...-----"
+    if (
+      (key.startsWith('"') && key.endsWith('"')) ||
+      (key.startsWith("'") && key.endsWith("'"))
+    ) {
+      key = key.slice(1, -1);
+    }
+
+    // Common .env format keeps newlines escaped.
+    key = key.replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
+
+    // Ensure PEM ends with newline for strict parsers.
+    if (key.includes('-----BEGIN PRIVATE KEY-----') && !key.endsWith('\n')) {
+      key += '\n';
+    }
+
+    return key;
+  }
+
   onModuleInit() {
     const projectId = this.config.get<string>('FIREBASE_PROJECT_ID');
     const clientEmail = this.config.get<string>('FIREBASE_CLIENT_EMAIL');
-    const privateKey = this.config
-      .get<string>('FIREBASE_PRIVATE_KEY', '')
-      .replace(/\\n/g, '\n');
+    const privateKey = this.normalizePrivateKey(
+      this.config.get<string>('FIREBASE_PRIVATE_KEY', ''),
+    );
 
-    if (projectId && clientEmail && privateKey && !admin.apps.length) {
+    if (!projectId || !clientEmail || !privateKey || admin.apps.length) {
+      this.logger.warn(
+        'Firebase env vars missing — FCM push disabled (in-app notifications still work)',
+      );
+      return;
+    }
+
+    try {
       admin.initializeApp({
         credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
       });
       this.fcmEnabled = true;
       this.logger.log('Firebase Admin SDK initialised — FCM push enabled');
-    } else {
-      this.logger.warn(
-        'Firebase env vars missing — FCM push disabled (in-app notifications still work)',
+    } catch (err) {
+      this.fcmEnabled = false;
+      this.logger.error(
+        `Firebase init failed — FCM push disabled: ${(err as Error).message}`,
       );
     }
   }
