@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PilotClient, PilotDevice } from './pilot.client';
+import { FleetGateway } from '../../gateway/fleet.gateway';
+import { VehicleLocationUpdate } from '@fleet/shared';
 
 function normalizePlate(input: string): string {
   return String(input ?? '')
@@ -15,6 +17,7 @@ export class PilotSyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pilotClient: PilotClient,
+    private readonly fleetGateway: FleetGateway,
   ) {}
 
   async getDevices(token?: string) {
@@ -52,6 +55,18 @@ export class PilotSyncService {
           lastLocationAt: match.recordedAt,
         },
       });
+
+      const eventPayload: VehicleLocationUpdate = {
+        vehicleId: vehicle.id,
+        driverId: '',
+        location: { lat: match.lat, lng: match.lng },
+        speed: match.speed,
+        heading: match.heading,
+        timestamp: match.recordedAt,
+      };
+
+      this.fleetGateway.server?.emit('vehicle:location', eventPayload);
+
       updated += 1;
     }
 
