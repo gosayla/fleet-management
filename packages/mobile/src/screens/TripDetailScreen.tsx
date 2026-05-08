@@ -10,12 +10,12 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
-import MapView, {Marker, Polyline, UrlTile} from 'react-native-maps';
 import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {Locale} from '../lib/i18n';
 import {ENABLE_MAPS} from '../lib/env';
+import {OsmMapView} from '../components/maps/OsmMapView';
 
 interface TripDetail {
   id: string;
@@ -308,35 +308,14 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
               />
             </View>
             {ENABLE_MAPS ? (
-              <View style={styles.mapWrap}>
-                <MapView
-                  style={styles.map}
-                  mapType={Platform.OS === 'android' ? 'none' : 'standard'}
-                  region={{
-                    latitude: latestLocation.lat,
-                    longitude: latestLocation.lng,
-                    latitudeDelta: 0.03,
-                    longitudeDelta: 0.03,
-                  }}
-                  scrollEnabled={false}
-                  zoomEnabled={false}
-                  rotateEnabled={false}
-                  pitchEnabled={false}>
-                  <UrlTile
-                    urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    maximumZ={19}
-                    flipY={false}
-                  />
-                  {routeCoords.length > 1 && (
-                    <Polyline coordinates={routeCoords} strokeColor={Colors.primary} strokeWidth={4} />
-                  )}
-                  <Marker
-                    coordinate={{latitude: latestLocation.lat, longitude: latestLocation.lng}}
-                    title={isAr ? 'آخر موقع' : 'Latest Location'}
-                    description={fmtDateTime(latestLocation.recordedAt)}
-                  />
-                </MapView>
-              </View>
+              <OsmMapView
+                style={styles.mapWrap}
+                center={{latitude: latestLocation.lat, longitude: latestLocation.lng}}
+                marker={{latitude: latestLocation.lat, longitude: latestLocation.lng}}
+                route={routeCoords}
+                zoom={14}
+                interactive={false}
+              />
             ) : (
               <EmptyCard
                 isAr={isAr}

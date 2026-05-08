@@ -12,7 +12,6 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-import MapView, {Marker, Polyline, UrlTile} from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
 import {useAuth} from '../context/AuthContext';
 import {startBroadcastingLocation, stopBroadcasting} from '../lib/socket';
@@ -20,6 +19,7 @@ import {api} from '../lib/api';
 import {Trip} from '@fleet/shared';
 import {Locale, t} from '../lib/i18n';
 import {ENABLE_MAPS} from '../lib/env';
+import {OsmMapView} from '../components/maps/OsmMapView';
 
 const {height} = Dimensions.get('window');
 
@@ -232,37 +232,17 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
 
       {/* Map */}
       {ENABLE_MAPS ? (
-        <MapView
+        <OsmMapView
           style={styles.map}
-          mapType={Platform.OS === 'android' ? 'none' : 'standard'}
-          region={
-            currentLocation
-              ? {
-                  latitude: currentLocation.lat,
-                  longitude: currentLocation.lng,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }
-              : {latitude: 24.7136, longitude: 46.6753, latitudeDelta: 1, longitudeDelta: 1}
-          }
-          showsUserLocation
-          showsMyLocationButton>
-          <UrlTile
-            urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maximumZ={19}
-            flipY={false}
-          />
-          {routeCoords.length > 1 && (
-            <Polyline coordinates={routeCoords} strokeColor="#2563eb" strokeWidth={4} />
-          )}
-          {currentLocation && (
-            <Marker
-              coordinate={{latitude: currentLocation.lat, longitude: currentLocation.lng}}
-              title={i18n.vehicle}
-              description={vehicleLabel}
-            />
-          )}
-        </MapView>
+          center={currentLocation
+            ? {latitude: currentLocation.lat, longitude: currentLocation.lng}
+            : {latitude: 24.7136, longitude: 46.6753}}
+          marker={currentLocation
+            ? {latitude: currentLocation.lat, longitude: currentLocation.lng}
+            : undefined}
+          route={routeCoords}
+          zoom={currentLocation ? 15 : 10}
+        />
       ) : (
         <View style={styles.mapDisabledWrap}>
           <Text style={styles.mapDisabledTitle}>{locale === 'ar' ? 'الخريطة غير مفعلة حالياً' : 'Map is temporarily disabled'}</Text>
