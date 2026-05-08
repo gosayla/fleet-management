@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
   BackHandler,
+  PermissionsAndroid,
   Platform,
   StatusBar,
 } from 'react-native';
@@ -50,6 +51,19 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
     };
   }, []);
 
+  useEffect(() => {
+    ensureLocationPermission().then(granted => {
+      if (!granted) return;
+      Geolocation.getCurrentPosition(
+        pos => {
+          setCurrentLocation({lat: pos.coords.latitude, lng: pos.coords.longitude});
+        },
+        () => {},
+        {enableHighAccuracy: true, timeout: 10000, maximumAge: 30000},
+      );
+    });
+  }, []);
+
   // Hardware back button — ask confirmation if tracking is active
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -74,8 +88,42 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
     }
   }
 
+  async function ensureLocationPermission() {
+    if (Platform.OS !== 'android') return true;
+
+    const fine = PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION;
+    const coarse = PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION;
+
+    const hasFine = await PermissionsAndroid.check(fine);
+    const hasCoarse = await PermissionsAndroid.check(coarse);
+    if (hasFine || hasCoarse) return true;
+
+    const status = await PermissionsAndroid.request(fine, {
+      title: locale === 'ar' ? 'صلاحية الموقع' : 'Location Permission',
+      message: locale === 'ar'
+        ? 'التطبيق يحتاج صلاحية الموقع لتتبع الرحلة مباشرة.'
+        : 'This app needs location permission to track trips live.',
+      buttonPositive: locale === 'ar' ? 'سماح' : 'Allow',
+      buttonNegative: locale === 'ar' ? 'رفض' : 'Deny',
+      buttonNeutral: locale === 'ar' ? 'لاحقاً' : 'Later',
+    });
+
+    return status === PermissionsAndroid.RESULTS.GRANTED;
+  }
+
   async function startTracking() {
     if (!user) return;
+
+    const granted = await ensureLocationPermission();
+    if (!granted) {
+      Alert.alert(
+        locale === 'ar' ? 'الموقع مطلوب' : 'Location Required',
+        locale === 'ar'
+          ? 'فعّل صلاحية الموقع لبدء تتبع الرحلة.'
+          : 'Please enable location permission to start trip tracking.',
+      );
+      return;
+    }
 
     // Start trip on server
     await api.patch(`/trips/${trip.id}`, {status: 'IN_PROGRESS'});
