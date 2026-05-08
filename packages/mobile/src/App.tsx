@@ -114,6 +114,7 @@ function Navigator() {
         locale={locale}
         onToggleLocale={toggleLocale}
         onComplete={() => setActiveTrip(null)}
+        onBack={() => setActiveTrip(null)}
       />
     );
   }

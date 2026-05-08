@@ -7,6 +7,9 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
+  BackHandler,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import MapView, {Marker, Polyline} from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
@@ -22,11 +25,12 @@ const {height} = Dimensions.get('window');
 interface Props {
   trip: Trip;
   onComplete: () => void;
+  onBack: () => void;
   locale: Locale;
   onToggleLocale: () => void;
 }
 
-export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Props) {
+export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLocale}: Props) {
   const {user} = useAuth();
   const i18n = t(locale);
   const isRTL = locale === 'ar';
@@ -45,6 +49,30 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
       stopTracking();
     };
   }, []);
+
+  // Hardware back button — ask confirmation if tracking is active
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [tracking]);
+
+  function handleBack() {
+    if (tracking) {
+      Alert.alert(
+        locale === 'ar' ? 'تنبيه' : 'Warning',
+        locale === 'ar' ? 'الرحلة قيد التشغيل. هل تريد الخروج مع إيقاف التتبع؟' : 'Trip is active. Exit and stop tracking?',
+        [
+          {text: locale === 'ar' ? 'إلغاء' : 'Cancel', style: 'cancel'},
+          {text: locale === 'ar' ? 'خروج' : 'Exit', style: 'destructive', onPress: () => { stopTracking(); onBack(); }},
+        ],
+      );
+    } else {
+      onBack();
+    }
+  }
 
   async function startTracking() {
     if (!user) return;
@@ -150,6 +178,8 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1e3a5f" />
+
       {/* Map */}
       {ENABLE_MAPS ? (
         <MapView
@@ -190,7 +220,10 @@ export function ActiveTripScreen({trip, onComplete, locale, onToggleLocale}: Pro
       {/* Info card */}
       <View style={styles.bottomSheet}>
         <View style={[styles.topBar, isRTL && styles.topBarRtl]}>
-          <Text style={[styles.route, isRTL && styles.rtlText]}>
+          <TouchableOpacity style={styles.closeBtn} onPress={handleBack} activeOpacity={0.7}>
+            <Text style={styles.closeBtnText}>✕</Text>
+          </TouchableOpacity>
+          <Text style={[styles.route, isRTL && styles.rtlText]} numberOfLines={2}>
             {trip.origin} → {trip.destination}
           </Text>
           <TouchableOpacity style={styles.langBtn} onPress={onToggleLocale}>
@@ -251,9 +284,17 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: 8,
   },
   topBarRtl: {flexDirection: 'row-reverse'},
+  closeBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center', alignItems: 'center',
+    flexShrink: 0,
+  },
+  closeBtnText: {fontSize: 14, fontWeight: '700' as const, color: '#374151'},
   langBtn: {
     borderWidth: 1,
     borderColor: '#d1d5db',
