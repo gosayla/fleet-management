@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
-import MapView, {Marker, Polyline} from 'react-native-maps';
+import MapView, {Marker, Polyline, UrlTile} from 'react-native-maps';
 import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
@@ -311,6 +311,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
               <View style={styles.mapWrap}>
                 <MapView
                   style={styles.map}
+                  mapType={Platform.OS === 'android' ? 'none' : 'standard'}
                   region={{
                     latitude: latestLocation.lat,
                     longitude: latestLocation.lng,
@@ -321,6 +322,11 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
                   zoomEnabled={false}
                   rotateEnabled={false}
                   pitchEnabled={false}>
+                  <UrlTile
+                    urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    maximumZ={19}
+                    flipY={false}
+                  />
                   {routeCoords.length > 1 && (
                     <Polyline coordinates={routeCoords} strokeColor={Colors.primary} strokeWidth={4} />
                   )}
@@ -335,7 +341,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
               <EmptyCard
                 isAr={isAr}
                 icon="map-outline"
-                text={isAr ? 'الخريطة غير مفعلة حتى يتم إضافة المفتاح' : 'Map is disabled until API key is added'}
+                text={isAr ? 'الخريطة غير مفعلة حالياً' : 'Map is currently disabled'}
               />
             )}
           </>

@@ -12,7 +12,7 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-import MapView, {Marker, Polyline} from 'react-native-maps';
+import MapView, {Marker, Polyline, UrlTile} from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
 import {useAuth} from '../context/AuthContext';
 import {startBroadcastingLocation, stopBroadcasting} from '../lib/socket';
@@ -44,6 +44,8 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationBuffer = useRef<{lat: number; lng: number; speed?: number; heading?: number; recordedAt: string}[]>([]);
   const batchTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tripVehicle = (trip as Trip & {vehicle?: {plateNumber?: string}}).vehicle;
+  const vehicleLabel = tripVehicle?.plateNumber || trip.vehicleId;
 
   useEffect(() => {
     return () => {
@@ -232,6 +234,7 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
       {ENABLE_MAPS ? (
         <MapView
           style={styles.map}
+          mapType={Platform.OS === 'android' ? 'none' : 'standard'}
           region={
             currentLocation
               ? {
@@ -244,6 +247,11 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
           }
           showsUserLocation
           showsMyLocationButton>
+          <UrlTile
+            urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maximumZ={19}
+            flipY={false}
+          />
           {routeCoords.length > 1 && (
             <Polyline coordinates={routeCoords} strokeColor="#2563eb" strokeWidth={4} />
           )}
@@ -251,7 +259,7 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
             <Marker
               coordinate={{latitude: currentLocation.lat, longitude: currentLocation.lng}}
               title={i18n.vehicle}
-              description={trip.vehicleId}
+              description={vehicleLabel}
             />
           )}
         </MapView>
@@ -279,7 +287,7 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.vehicle, isRTL && styles.rtlText]}>{i18n.vehicle}: {trip.vehicleId}</Text>
+        <Text style={[styles.vehicle, isRTL && styles.rtlText]}>{i18n.vehicle}: {vehicleLabel}</Text>
 
         {tracking && (
           <View style={styles.trackingBadge}>
