@@ -184,6 +184,15 @@ model Vehicle {
   operationCardRenewDate String?
   operationCardFileUrl String?
   restrictionStatus String?      // Unrestricted / etc.
+  // Pilot GPS provider telemetry fields
+  pilotImei            String?   // Device IMEI (uniqid)
+  pilotMotorHours      Float?    // Engine run-time in hours
+  pilotLastStop        DateTime? // When vehicle last stopped (from provider)
+  pilotLastMove        DateTime? // When vehicle last moved (from provider)
+  pilotBatteryVoltage  Float?    // External power supply voltage (volts)
+  pilotIgnitionOn      Boolean?  // Ignition sensor state
+  pilotLoadWeight      Float?    // Sensor weight reading (kg, if equipped)
+  pilotProviderMileage Float?    // Accumulated device mileage (km) — NOT true odometer
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 

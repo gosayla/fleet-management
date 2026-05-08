@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api, resolveDocumentFileUrl, resolveUploadedAssetUrl } from '@/lib/api';
+import { subscribeToVehicleLocation } from '@/lib/socket';
 import { useLocale } from '@/providers/locale-provider';
 import { formatDate, formatEnumLabel, formatCurrencySar, formatNumber } from '@/lib/i18n';
 import { DocumentType, Vehicle } from '@fleet/shared';
@@ -13,6 +14,9 @@ import { ArrowLeft, ArrowRight, Camera, Droplet, ExternalLink, FileText, Fuel, G
 type DriverBrief = { id: string; fullName: string; phone: string; status: string; photoUrl?: string | null };
 
 type VehicleDetails = Vehicle & {
+  lastLocationLat?: number | null;
+  lastLocationLng?: number | null;
+  lastLocationAt?: string | null;
   drivers?: DriverBrief[];
   maintenanceLogs?: Array<{
     id: string;
@@ -51,6 +55,15 @@ type VehicleDetails = Vehicle & {
   insuranceStatus?: string | null;
   insuranceExpiryDate?: string | null;
   restrictionStatus?: string | null;
+  // Pilot GPS telemetry
+  pilotImei?: string | null;
+  pilotMotorHours?: number | null;
+  pilotLastStop?: string | null;
+  pilotLastMove?: string | null;
+  pilotBatteryVoltage?: number | null;
+  pilotIgnitionOn?: boolean | null;
+  pilotLoadWeight?: number | null;
+  pilotProviderMileage?: number | null;
 };
 
 type VehiclePhoto = {
@@ -102,6 +115,7 @@ export default function VehicleDashboardPage() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [driverSearch, setDriverSearch] = useState('');
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [liveLocation, setLiveLocation] = useState<{lat: number; lng: number; timestamp?: string} | null>(null);
 
   const { data: allDrivers } = useQuery<DriverBrief[]>({
     queryKey: ['drivers-list'],
@@ -163,6 +177,35 @@ export default function VehicleDashboardPage() {
     const nextIndex = (activePhotoIndex + 1) % photos.length;
     setActivePhoto(photos[nextIndex]);
   };
+
+  useEffect(() => {
+    if (vehicle?.lastLocationLat == null || vehicle?.lastLocationLng == null) return;
+    setLiveLocation({
+      lat: vehicle.lastLocationLat,
+      lng: vehicle.lastLocationLng,
+      timestamp: vehicle.lastLocationAt ? String(vehicle.lastLocationAt) : undefined,
+    });
+  }, [vehicle?.lastLocationAt, vehicle?.lastLocationLat, vehicle?.lastLocationLng]);
+
+  useEffect(() => {
+    if (!vehicleId) return;
+
+    const unsubscribe = subscribeToVehicleLocation(vehicleId, (update) => {
+      setLiveLocation({
+        lat: update.location.lat,
+        lng: update.location.lng,
+        timestamp: new Date(update.timestamp).toISOString(),
+      });
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, [vehicleId]);
+
+  const mapSrc = liveLocation
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${liveLocation.lng - 0.02}%2C${liveLocation.lat - 0.02}%2C${liveLocation.lng + 0.02}%2C${liveLocation.lat + 0.02}&layer=mapnik&marker=${liveLocation.lat}%2C${liveLocation.lng}`
+    : null;
 
   useEffect(() => {
     if (!activePhoto) return;
@@ -297,6 +340,72 @@ export default function VehicleDashboardPage() {
           <InfoRow label={tv.operationCardExpiryDate} value={vehicle.operationCardExpiryDate} />
           <InfoRow label={tv.operationCardRenewDate} value={vehicle.operationCardRenewDate} />
         </InfoCard>
+
+        <InfoCard title={isRTL ? 'الموقع الحي' : 'Live Location'}>
+          <InfoRow label={isRTL ? 'خط العرض' : 'Latitude'} value={liveLocation ? String(liveLocation.lat.toFixed(6)) : '—'} />
+          <InfoRow label={isRTL ? 'خط الطول' : 'Longitude'} value={liveLocation ? String(liveLocation.lng.toFixed(6)) : '—'} />
+          <InfoRow label={isRTL ? 'آخر تحديث' : 'Last Update'} value={liveLocation?.timestamp ? formatDate(liveLocation.timestamp, locale) : '—'} />
+          {liveLocation && (
+            <a
+              href={`https://www.openstreetmap.org/?mlat=${liveLocation.lat}&mlon=${liveLocation.lng}#map=14/${liveLocation.lat}/${liveLocation.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50"
+            >
+              <ExternalLink className="w-4 h-4" />
+              {isRTL ? 'فتح الخريطة' : 'Open Map'}
+            </a>
+          )}
+        </InfoCard>
+
+        <InfoCard title={isRTL ? 'بيانات جهاز التتبع' : 'GPS Telemetry'}>
+          <InfoRow
+            label={isRTL ? 'ساعات التشغيل' : 'Engine Hours'}
+            value={vehicle.pilotMotorHours != null && vehicle.pilotMotorHours > 0 ? `${formatNumber(Math.round(vehicle.pilotMotorHours * 10) / 10, locale)} h` : undefined}
+          />
+          <InfoRow
+            label={isRTL ? 'آخر توقف' : 'Last Stop'}
+            value={vehicle.pilotLastStop ? formatDate(vehicle.pilotLastStop, locale) : undefined}
+          />
+          <InfoRow
+            label={isRTL ? 'آخر حركة' : 'Last Move'}
+            value={vehicle.pilotLastMove ? formatDate(vehicle.pilotLastMove, locale) : undefined}
+          />
+          <InfoRow
+            label={isRTL ? 'جهد البطارية' : 'Battery Voltage'}
+            value={vehicle.pilotBatteryVoltage != null && vehicle.pilotBatteryVoltage > 0 ? `${formatNumber(Math.round(vehicle.pilotBatteryVoltage * 100) / 100, locale)} V` : undefined}
+          />
+          <InfoRow
+            label={isRTL ? 'حالة المحرك' : 'Ignition'}
+            value={vehicle.pilotIgnitionOn != null ? (vehicle.pilotIgnitionOn ? (isRTL ? 'تشغيل' : 'On') : (isRTL ? 'إيقاف' : 'Off')) : undefined}
+          />
+          <InfoRow
+            label={isRTL ? 'الحمولة' : 'Load Weight'}
+            value={vehicle.pilotLoadWeight != null && vehicle.pilotLoadWeight > 0 ? `${formatNumber(Math.round(vehicle.pilotLoadWeight * 10) / 10, locale)} kg` : undefined}
+          />
+          <InfoRow
+            label={isRTL ? 'المسافة (الجهاز)' : 'Device Mileage'}
+            value={vehicle.pilotProviderMileage != null && vehicle.pilotProviderMileage > 0 ? `${formatNumber(Math.round(vehicle.pilotProviderMileage * 10) / 10, locale)} km` : undefined}
+          />
+          <InfoRow label={isRTL ? 'رقم الجهاز (IMEI)' : 'Device IMEI'} value={vehicle.pilotImei} mono />
+        </InfoCard>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Truck className="w-4 h-4 text-blue-600" />
+          <h2 className="text-sm font-semibold text-gray-900">{isRTL ? 'موقع المركبة' : 'Vehicle Location'}</h2>
+        </div>
+        {!mapSrc ? (
+          <Empty>{isRTL ? 'لا يوجد موقع حي لهذه المركبة حالياً' : 'No live location available for this vehicle yet'}</Empty>
+        ) : (
+          <iframe
+            title="vehicle-location-map"
+            src={mapSrc}
+            className="h-[320px] w-full rounded-xl border border-gray-100"
+            loading="lazy"
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">

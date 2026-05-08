@@ -23,9 +23,15 @@ export function subscribeToVehicleLocation(
   const s = getSocket();
   if (!s.connected) s.connect();
   s.emit('subscribe:vehicle', vehicleId);
-  s.on('vehicle:location', (data: VehicleLocationUpdate) => {
+  const handler = (data: VehicleLocationUpdate) => {
     if (data.vehicleId === vehicleId) onUpdate(data);
-  });
+  };
+  s.on('vehicle:location', handler);
+
+  return () => {
+    s.off('vehicle:location', handler);
+    s.emit('unsubscribe:vehicle', vehicleId);
+  };
 }
 
 export function subscribeToAllLocations(

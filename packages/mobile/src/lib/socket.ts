@@ -37,6 +37,26 @@ export async function startBroadcastingLocation(
   };
 }
 
+export async function subscribeToVehicleLocation(
+  vehicleId: string,
+  onUpdate: (update: VehicleLocationUpdate) => void,
+) {
+  const s = await getSocket();
+  if (!s.connected) s.connect();
+
+  const handler = (data: VehicleLocationUpdate) => {
+    if (data.vehicleId === vehicleId) onUpdate(data);
+  };
+
+  s.emit('subscribe:vehicle', vehicleId);
+  s.on('vehicle:location', handler);
+
+  return () => {
+    s.off('vehicle:location', handler);
+    s.emit('unsubscribe:vehicle', vehicleId);
+  };
+}
+
 export async function stopBroadcasting() {
   socket?.disconnect();
   socket = null;

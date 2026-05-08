@@ -20,6 +20,8 @@ import {api, resolveApiAssetUrls, resolvePhotoUrl} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {Locale} from '../lib/i18n';
+import {subscribeToVehicleLocation} from '../lib/socket';
+import {OsmMapView} from '../components/maps/OsmMapView';
 
 interface VehicleDetail {
   id: string;
@@ -45,6 +47,14 @@ interface VehicleDetail {
   maintenanceLogs?: {id: string; type: string; status: string; scheduledDate: string; description?: string}[];
   fuelLogs?: {id: string; liters: number; cost: number; filledAt: string}[];
   documents?: {id: string; type: string; fileUrl: string; issueDate: string; expiryDate: string; issuingAuthority?: string; referenceNumber?: string}[];
+  pilotImei?: string | null;
+  pilotMotorHours?: number | null;
+  pilotLastStop?: string | null;
+  pilotLastMove?: string | null;
+  pilotBatteryVoltage?: number | null;
+  pilotIgnitionOn?: boolean | null;
+  pilotLoadWeight?: number | null;
+  pilotProviderMileage?: number | null;
 }
 
 interface VehiclePhoto {
@@ -106,6 +116,23 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
       .then(([v, p]) => { setVehicle(v); setPhotos(Array.isArray(p) ? p : []); })
       .catch(() => {})
       .finally(() => setLoading(false));
+  }, [vehicleId]);
+
+  useEffect(() => {
+    let cleanup: undefined | (() => void);
+
+    subscribeToVehicleLocation(vehicleId, (update) => {
+      setVehicle((current) => current ? {
+        ...current,
+        lastLocationLat: update.location.lat,
+        lastLocationLng: update.location.lng,
+        lastLocationAt: new Date(update.timestamp).toISOString(),
+      } : current);
+    }).then((dispose) => {
+      cleanup = dispose;
+    }).catch(() => {});
+
+    return () => cleanup?.();
   }, [vehicleId]);
 
   async function uploadPhoto(uri: string, fileName: string, type: string) {
@@ -364,41 +391,105 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
         {/* ── Live GPS ── */}
         <Text style={styles.sectionTitle}>{isAr ? 'الموقع الحي' : 'Live GPS'}</Text>
         <View style={styles.mapCard}>
-          {/* Tinted grid map placeholder */}
           <View style={styles.mapBg}>
-            {[1,2,3,4].map(i => (
-              <View key={`h${i}`} style={[styles.mapGridH, {top: `${i * 20}%` as any}]} />
-            ))}
-            {[1,2,3,4].map(i => (
-              <View key={`v${i}`} style={[styles.mapGridV2, {left: `${i * 20}%` as any}]} />
-            ))}
+            {vehicle.lastLocationLat != null && vehicle.lastLocationLng != null ? (
+              <OsmMapView
+                style={styles.mapCanvas}
+                center={{latitude: vehicle.lastLocationLat, longitude: vehicle.lastLocationLng}}
+                marker={{latitude: vehicle.lastLocationLat, longitude: vehicle.lastLocationLng}}
+                zoom={14}
+                interactive={false}
+              />
+            ) : (
+              <View style={styles.mapEmptyState}>
+                <AppIcon name="map-marker-off-outline" size={22} color={Colors.textMuted} />
+                <Text style={styles.mapEmptyText}>{isAr ? 'لا يوجد بيانات موقع بعد' : 'No live location yet'}</Text>
+              </View>
+            )}
 
-            {/* Simulated road lines */}
-            <View style={styles.roadH} />
-            <View style={styles.roadV} />
-
-            {/* Vehicle pin */}
-            <View style={styles.mapPin}>
-              <AppIcon name="truck" size={16} color="#fff" />
-            </View>
-
-            {/* Speed chip */}
             <View style={styles.speedChip}>
               <Text style={styles.speedText}>
                 {vehicle.lastLocationAt
-                  ? (isAr ? 'السرعة 50 ك/س' : 'Speed 50km/hr')
+                  ? `${isAr ? 'آخر تحديث' : 'Updated'}: ${new Date(vehicle.lastLocationAt).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})}`
                   : (isAr ? 'لا يوجد بيانات GPS' : 'No GPS data')}
               </Text>
             </View>
 
-            {/* Coords if available */}
-            {vehicle.lastLocationLat != null && (
+            {vehicle.lastLocationLat != null && vehicle.lastLocationLng != null && (
               <Text style={styles.coordsText}>
-                {vehicle.lastLocationLat.toFixed(4)}, {vehicle.lastLocationLng?.toFixed(4)}
+                {vehicle.lastLocationLat.toFixed(4)}, {vehicle.lastLocationLng.toFixed(4)}
               </Text>
             )}
           </View>
         </View>
+
+        {/* ── GPS Telemetry ── */}
+        {(vehicle.pilotMotorHours != null || vehicle.pilotImei) && (
+          <>
+            <Text style={[styles.sectionTitle, {marginTop: 4}]}>{isAr ? 'بيانات GPS' : 'GPS Telemetry'}</Text>
+            <View style={styles.telemetryCard}>
+              {vehicle.pilotMotorHours != null && vehicle.pilotMotorHours > 0 && (
+                <TelemetryRow
+                  icon="engine-outline"
+                  label={isAr ? 'ساعات المحرك' : 'Engine Hours'}
+                  value={`${(vehicle.pilotMotorHours).toFixed(1)} h`}
+                />
+              )}
+              {vehicle.pilotProviderMileage != null && vehicle.pilotProviderMileage > 0 && (
+                <TelemetryRow
+                  icon="map-marker-distance"
+                  label={isAr ? 'مسافة الجهاز' : 'Device Mileage'}
+                  value={`${vehicle.pilotProviderMileage.toFixed(1)} km`}
+                />
+              )}
+              {vehicle.pilotBatteryVoltage != null && vehicle.pilotBatteryVoltage > 0 && (
+                <TelemetryRow
+                  icon="car-battery"
+                  label={isAr ? 'فولتية البطارية' : 'Battery Voltage'}
+                  value={`${vehicle.pilotBatteryVoltage.toFixed(2)} V`}
+                />
+              )}
+              {vehicle.pilotIgnitionOn != null && (
+                <TelemetryRow
+                  icon={vehicle.pilotIgnitionOn ? 'key' : 'key-outline'}
+                  label={isAr ? 'المحرك' : 'Ignition'}
+                  value={vehicle.pilotIgnitionOn ? (isAr ? 'تشغيل' : 'On') : (isAr ? 'إيقاف' : 'Off')}
+                  valueColor={vehicle.pilotIgnitionOn ? '#27ae60' : undefined}
+                />
+              )}
+              {vehicle.pilotLoadWeight != null && vehicle.pilotLoadWeight > 0 && (
+                <TelemetryRow
+                  icon="weight"
+                  label={isAr ? 'الحمولة' : 'Load Weight'}
+                  value={`${vehicle.pilotLoadWeight.toFixed(0)} kg`}
+                />
+              )}
+              {vehicle.pilotLastStop && (
+                <TelemetryRow
+                  icon="map-marker-check-outline"
+                  label={isAr ? 'آخر توقف' : 'Last Stop'}
+                  value={new Date(vehicle.pilotLastStop).toLocaleDateString()}
+                />
+              )}
+              {vehicle.pilotLastMove && (
+                <TelemetryRow
+                  icon="map-marker-path"
+                  label={isAr ? 'آخر حركة' : 'Last Move'}
+                  value={new Date(vehicle.pilotLastMove).toLocaleDateString()}
+                />
+              )}
+              {vehicle.pilotImei && (
+                <TelemetryRow
+                  icon="chip"
+                  label="IMEI"
+                  value={vehicle.pilotImei}
+                  mono
+                  last
+                />
+              )}
+            </View>
+          </>
+        )}
 
         {/* ── Assigned Drivers ── */}
         {drivers.length > 0 && (
@@ -589,6 +680,27 @@ function StatTile({icon, value, unit, color}: {icon: string; value: string; unit
   );
 }
 
+function TelemetryRow({
+  icon, label, value, valueColor, mono, last,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  valueColor?: string;
+  mono?: boolean;
+  last?: boolean;
+}) {
+  return (
+    <View style={[styles.telemetryRow, !last && styles.telemetryBorder]}>
+      <AppIcon name={icon} size={16} color={Colors.primary} />
+      <Text style={styles.telemetryLabel}>{label}</Text>
+      <Text style={[styles.telemetryValue, valueColor ? {color: valueColor} : {}, mono ? {fontFamily: 'monospace', fontSize: 11} : {}]}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 function DocRow({label, value, last, warn}: {label: string; value: string; last?: boolean; warn?: boolean}) {
   return (
     <View style={[styles.docRow, !last && styles.docBorder]}>
@@ -758,6 +870,9 @@ const styles = StyleSheet.create({
   // Map
   mapCard: {borderRadius: 14, overflow: 'hidden', marginBottom: 20, borderWidth: 1, borderColor: Colors.borderLight},
   mapBg: {height: 175, backgroundColor: '#e8f2f0', justifyContent: 'center', alignItems: 'center'},
+  mapCanvas: {height: '100%', width: '100%'},
+  mapEmptyState: {flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center', gap: 8},
+  mapEmptyText: {fontSize: 12, color: Colors.textMuted},
   mapGridH: {position: 'absolute', width: '100%', height: 1, backgroundColor: 'rgba(36,124,118,0.1)'},
   mapGridV2: {position: 'absolute', height: '100%', width: 1, backgroundColor: 'rgba(36,124,118,0.1)'},
   roadH: {position: 'absolute', top: '55%', width: '100%', height: 6, backgroundColor: 'rgba(36,124,118,0.22)'},
@@ -776,6 +891,20 @@ const styles = StyleSheet.create({
   },
   speedText: {fontSize: 11, color: '#fff', fontWeight: '600' as const},
   coordsText: {position: 'absolute', bottom: 8, fontSize: 10, color: Colors.textMuted},
+
+  // GPS Telemetry card
+  telemetryCard: {
+    backgroundColor: '#fff', borderRadius: 14,
+    borderWidth: 1, borderColor: Colors.borderLight,
+    paddingHorizontal: 14, marginBottom: 20,
+  },
+  telemetryRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 11, gap: 10,
+  },
+  telemetryBorder: {borderBottomWidth: 1, borderBottomColor: Colors.borderLight},
+  telemetryLabel: {flex: 1, fontSize: 13, color: Colors.textMuted},
+  telemetryValue: {fontSize: 13, fontWeight: '600' as const, color: Colors.textPrimary},
 
   // Maintenance log rows
   logRow: {
