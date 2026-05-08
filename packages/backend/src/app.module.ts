@@ -11,6 +11,7 @@ import { FuelModule } from './fuel/fuel.module';
 import { DocumentsModule } from './documents/documents.module';
 import { TammModule } from './integrations/tamm/tamm.module';
 import { NaqlModule } from './integrations/naql/naql.module';
+import { PilotModule } from './integrations/pilot/pilot.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -31,6 +32,7 @@ import { SettingsModule } from './settings/settings.module';
     DocumentsModule,
     TammModule,
     NaqlModule,
+    PilotModule,
     NotificationsModule,
     GatewayModule,
     DashboardModule,
