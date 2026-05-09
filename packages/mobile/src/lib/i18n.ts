@@ -125,6 +125,7 @@ const messages = {
     driversUnit: 'سائق', vehiclesUnit: 'مركبة',
     searchDrivers: 'ابحث في السائقين...', searchVehicles: 'ابحث في المركبات...',
     noDrivers: 'لا يوجد سائقون', noVehicles: 'لا توجد مركبات', allLoaded: 'تم عرض الكل',
+    gpsAll: 'الكل', gpsHas: 'بتتبع GPS', gpsNone: 'بدون تتبع',
     // status badges
     statusInUse: 'نشطة', statusMaintenance: 'صيانة', statusInactive: 'غير نشطة', statusRetired: 'متقاعدة',
     statusActive: 'نشط', statusOffDuty: 'خارج الخدمة', statusOnLeave: 'إجازة',
@@ -310,6 +311,7 @@ const messages = {
     driversUnit: 'drivers', vehiclesUnit: 'vehicles',
     searchDrivers: 'Search drivers...', searchVehicles: 'Search vehicles...',
     noDrivers: 'No drivers', noVehicles: 'No vehicles', allLoaded: 'All loaded',
+    gpsAll: 'All', gpsHas: 'With GPS', gpsNone: 'No GPS',
     // status badges
     statusInUse: 'In Use', statusMaintenance: 'Maintenance', statusInactive: 'Inactive', statusRetired: 'Retired',
     statusActive: 'Active', statusOffDuty: 'Off Duty', statusOnLeave: 'On Leave',
@@ -495,6 +497,7 @@ const messages = {
     driversUnit: 'चालक', vehiclesUnit: 'वाहन',
     searchDrivers: 'चालक खोजें...', searchVehicles: 'वाहन खोजें...',
     noDrivers: 'कोई चालक नहीं', noVehicles: 'कोई वाहन नहीं', allLoaded: 'सभी लोड हो गए',
+    gpsAll: 'सभी', gpsHas: 'GPS के साथ', gpsNone: 'GPS नहीं',
     // status badges
     statusInUse: 'उपयोग में', statusMaintenance: 'रखरखाव', statusInactive: 'निष्क्रिय', statusRetired: 'सेवानिवृत्त',
     statusActive: 'सक्रिय', statusOffDuty: 'ड्यूटी से बाहर', statusOnLeave: 'छुट्टी पर',
@@ -680,6 +683,7 @@ const messages = {
     driversUnit: 'চালক', vehiclesUnit: 'যানবাহন',
     searchDrivers: 'চালক খুঁজুন...', searchVehicles: 'যানবাহন খুঁজুন...',
     noDrivers: 'কোনো চালক নেই', noVehicles: 'কোনো যানবাহন নেই', allLoaded: 'সব লোড হয়েছে',
+    gpsAll: 'সব', gpsHas: 'GPS সহ', gpsNone: 'GPS নেই',
     // status badges
     statusInUse: 'ব্যবহারে', statusMaintenance: 'রক্ষণাবেক্ষণ', statusInactive: 'নিষ্ক্রিয়', statusRetired: 'অবসরপ্রাপ্ত',
     statusActive: 'সক্রিয়', statusOffDuty: 'ড্যুটি থেকে বাইরে', statusOnLeave: 'ছুটিতে',
@@ -865,6 +869,7 @@ const messages = {
     driversUnit: 'ڈرائیور', vehiclesUnit: 'گاڑی',
     searchDrivers: 'ڈرائیور تلاش کریں...', searchVehicles: 'گاڑی تلاش کریں...',
     noDrivers: 'کوئی ڈرائیور نہیں', noVehicles: 'کوئی گاڑی نہیں', allLoaded: 'سب لوڈ ہو گئے',
+    gpsAll: 'سب', gpsHas: 'GPS کے ساتھ', gpsNone: 'GPS نہیں',
     // status badges
     statusInUse: 'استعمال میں', statusMaintenance: 'دیکھ بھال', statusInactive: 'غیر فعال', statusRetired: 'ریٹائرڈ',
     statusActive: 'فعال', statusOffDuty: 'ڈیوٹی سے باہر', statusOnLeave: 'چھٹی پر',

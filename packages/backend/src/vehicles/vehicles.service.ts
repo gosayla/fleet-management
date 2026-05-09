@@ -44,6 +44,7 @@ export class VehiclesService {
       sortBy = 'createdAt',
       sortOrder = 'desc',
       operationCard = 'all',
+      gpsFilter = 'all',
     } = query;
     const skip = (page - 1) * limit;
 
@@ -69,6 +70,12 @@ export class VehiclesService {
       conditions.push({
         OR: [{ operationCardNumber: null }, { operationCardNumber: '' }],
       });
+    }
+
+    if (gpsFilter === 'has') {
+      conditions.push({ pilotImei: { not: null } });
+    } else if (gpsFilter === 'none') {
+      conditions.push({ pilotImei: null });
     }
 
     const where = conditions.length === 1 ? conditions[0] : { AND: conditions };

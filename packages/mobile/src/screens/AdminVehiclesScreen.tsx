@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   StyleSheet,
   RefreshControl,
   StatusBar,
+  TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import {api} from '../lib/api';
 import {Locale, t} from '../lib/i18n';
@@ -18,13 +20,29 @@ interface Props {
   locale: Locale;
 }
 
+type GpsFilter = 'all' | 'has' | 'none';
+
 export function AdminVehiclesScreen({locale}: Props) {
   const i18n = t(locale);
+  const [gpsFilter, setGpsFilter] = useState<GpsFilter>('all');
+
   const {data: raw, refreshing, refresh: load} = useCachedFetch(
     'admin:vehicles',
     () => api.get<VehicleCardData[] | {data: VehicleCardData[]}>('/vehicles'),
   );
-  const vehicles: VehicleCardData[] = raw == null ? [] : Array.isArray(raw) ? raw : (raw as any).data ?? [];
+  const all: VehicleCardData[] = raw == null ? [] : Array.isArray(raw) ? raw : (raw as any).data ?? [];
+
+  const vehicles = gpsFilter === 'has'
+    ? all.filter(v => v.pilotImei != null)
+    : gpsFilter === 'none'
+    ? all.filter(v => v.pilotImei == null)
+    : all;
+
+  const chips: {key: GpsFilter; label: string}[] = [
+    {key: 'all',  label: (i18n as any).gpsAll  ?? 'All'},
+    {key: 'has',  label: (i18n as any).gpsHas  ?? 'With GPS'},
+    {key: 'none', label: (i18n as any).gpsNone ?? 'No GPS'},
+  ];
 
   return (
     <View style={styles.container}>
@@ -32,8 +50,28 @@ export function AdminVehiclesScreen({locale}: Props) {
       <ScreenHeader
         locale={locale}
         title={i18n.vehiclesSegment}
-        subtitle={`${vehicles.length} ${i18n.vehiclesUnit}`}
+        subtitle={`${vehicles.length} / ${all.length} ${i18n.vehiclesUnit}`}
       />
+
+      {/* GPS filter chips */}
+      <View style={styles.filterWrap}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+          {chips.map(chip => {
+            const active = gpsFilter === chip.key;
+            const chipColor = chip.key === 'has' ? '#047857' : chip.key === 'none' ? '#6b7280' : Colors.primary;
+            return (
+              <TouchableOpacity
+                key={chip.key}
+                onPress={() => setGpsFilter(chip.key)}
+                style={[styles.chip, active && {backgroundColor: chipColor, borderColor: chipColor}]}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{chip.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       <FlatList
         data={vehicles}
@@ -55,6 +93,18 @@ export function AdminVehiclesScreen({locale}: Props) {
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: Colors.bg},
+  filterWrap: {paddingHorizontal: Spacing.md, paddingTop: 10, paddingBottom: 4},
+  filterScroll: {gap: 8, flexDirection: 'row'},
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.white,
+  },
+  chipText: {fontSize: 13, fontWeight: '600' as const, color: Colors.textMuted},
+  chipTextActive: {color: '#fff'},
   list: {padding: Spacing.md, gap: Spacing.sm},
   emptyWrap: {alignItems: 'center', paddingTop: Spacing.xxl},
   emptyIcon: {fontSize: 48, marginBottom: Spacing.md},

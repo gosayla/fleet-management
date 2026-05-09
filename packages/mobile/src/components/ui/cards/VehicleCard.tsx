@@ -21,6 +21,8 @@ export interface VehicleCardData {
   pilotSpeed?: number | null;
   pilotHeading?: number | null;
   pilotIsOnline?: boolean | null;
+  /** GPS device IMEI — present when vehicle has a GPS tracker */
+  pilotImei?: string | null;
 }
 
 interface Props {
@@ -92,7 +94,14 @@ export function VehicleCard({vehicle, locale, onPress}: Props) {
         )}
       </View>
       <View style={styles.body}>
-        <Text style={styles.plate}>{vehicle.plateNumber}</Text>
+        <View style={styles.plateRow}>
+          <Text style={styles.plate}>{vehicle.plateNumber}</Text>
+          {vehicle.pilotImei && (
+            <View style={styles.gpsPill}>
+              <Text style={styles.gpsPillText}>GPS</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
       </View>
       <View style={[styles.badge, {backgroundColor: badge.bg}]}>
@@ -143,6 +152,9 @@ const styles = StyleSheet.create({
   },
   photo: {width: 48, height: 48, borderRadius: 24},
   body: {flex: 1},
+  plateRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
+  gpsPill: {backgroundColor: '#d1fae5', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1, borderWidth: 1, borderColor: '#6ee7b7'},
+  gpsPillText: {fontSize: 9, fontWeight: '700' as const, color: '#047857', letterSpacing: 0.3},
   plateAbbr: {fontSize: 12, fontWeight: '800' as const, color: Colors.primary, textAlign: 'center', letterSpacing: 0.3},
   plate: {fontSize: 15, fontWeight: '700' as const, color: Colors.textPrimary, letterSpacing: 0.5},
   subtitle: {fontSize: 13, color: Colors.textMuted, marginTop: 2},

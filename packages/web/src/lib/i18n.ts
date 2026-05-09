@@ -176,6 +176,11 @@ export const messages = {
       cardExpiringSoon: 'تنتهي قريباً',
       cardValid: 'سارية',
       exportNoCardCsv: 'تصدير المركبات بدون بطاقة (CSV)',
+      gpsTrackerFilter: 'تتبع GPS',
+      allVehiclesGps: 'الكل',
+      withGps: 'بتتبع GPS',
+      withoutGps: 'بدون تتبع',
+      gpsTrackerBadge: 'GPS',
     },
     drivers: {
       title: 'السائقون',
@@ -536,6 +541,11 @@ export const messages = {
       colMvpi: 'MVPI Status',
       colInsurance: 'Insurance',
       backToList: 'Back to Vehicles',
+      gpsTrackerFilter: 'GPS Tracker',
+      allVehiclesGps: 'All',
+      withGps: 'With GPS',
+      withoutGps: 'No GPS',
+      gpsTrackerBadge: 'GPS',
     },
     drivers: {
       title: 'Drivers',

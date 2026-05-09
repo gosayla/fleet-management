@@ -140,4 +140,9 @@ export class VehiclesQueryDto {
   @IsOptional()
   @IsEnum(['all', 'has', 'none'])
   operationCard?: 'all' | 'has' | 'none';
+
+  @ApiPropertyOptional({ enum: ['all', 'has', 'none'], default: 'all', description: 'Filter by GPS tracker: has = pilotImei assigned, none = no GPS device' })
+  @IsOptional()
+  @IsEnum(['all', 'has', 'none'])
+  gpsFilter?: 'all' | 'has' | 'none';
 }

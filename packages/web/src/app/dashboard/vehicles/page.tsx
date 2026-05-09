@@ -3,8 +3,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Vehicle } from '@fleet/shared';
-import { Truck, Plus, Search, Upload, ChevronUp, ChevronDown, AlertCircle, CheckCircle } from 'lucide-react';
-import { useState } from 'react';
+import { Truck, Plus, Search, Upload, ChevronUp, ChevronDown, AlertCircle, CheckCircle, Satellite } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useLocale } from '@/providers/locale-provider';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -153,13 +153,30 @@ export default function VehiclesPage() {
   const { isRTL, locale, t } = useLocale();
   const tc = t.common;
   const base = `/${locale}`;
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_DEFAULT);
+
+  // Restore state from sessionStorage on first mount (set when navigating into a vehicle)
+  const SS_KEY = 'vehicles_list_state';
+  const restored = useRef(false);
+  const getSaved = () => {
+    if (typeof window === 'undefined') return null;
+    try { return JSON.parse(sessionStorage.getItem(SS_KEY) ?? 'null'); } catch { return null; }
+  };
+  const saved = !restored.current ? getSaved() : null;
+  restored.current = true;
+
+  const [search,    setSearch]    = useState<string>(saved?.search    ?? '');
+  const [page,      setPage]      = useState<number>(saved?.page      ?? 1);
+  const [pageSize,  setPageSize]  = useState<number>(saved?.pageSize  ?? PAGE_SIZE_DEFAULT);
+  const [sortBy,    setSortBy]    = useState<SortBy>(saved?.sortBy    ?? null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(saved?.sortOrder ?? 'asc');
+  const [gpsFilter, setGpsFilter] = useState<'all' | 'has' | 'none'>(saved?.gpsFilter ?? 'all');
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
-  const [sortBy, setSortBy] = useState<SortBy>(null);
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const queryClient = useQueryClient();
+
+  // Keep sessionStorage in sync whenever state changes
+  useEffect(() => {
+    sessionStorage.setItem(SS_KEY, JSON.stringify({ search, page, pageSize, sortBy, sortOrder, gpsFilter }));
+  }, [search, page, pageSize, sortBy, sortOrder, gpsFilter]);
 
   const sortFieldMap: Record<NonNullable<SortBy>, string> = {
     insuranceExpiry: 'insuranceExpiryDate',
@@ -169,7 +186,7 @@ export default function VehiclesPage() {
   };
 
   const { data: response, isLoading } = useQuery({
-    queryKey: ['vehicles', search, page, pageSize, sortBy, sortOrder],
+    queryKey: ['vehicles', search, page, pageSize, sortBy, sortOrder, gpsFilter],
     queryFn: async () => {
       const res = await api.get('/vehicles', {
         params: {
@@ -178,6 +195,7 @@ export default function VehiclesPage() {
           limit: pageSize,
           sortBy: sortBy ? sortFieldMap[sortBy] : undefined,
           sortOrder: sortBy ? sortOrder : undefined,
+          gpsFilter: gpsFilter !== 'all' ? gpsFilter : undefined,
         },
       });
       return res.data as { data: Vehicle[]; total: number; page: number; limit: number; totalPages: number };
@@ -261,6 +279,33 @@ export default function VehiclesPage() {
         />
       </div>
 
+      {/* GPS filter chips */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Satellite className="w-4 h-4 text-gray-400 shrink-0" />
+        <span className="text-sm text-gray-500 shrink-0">{t.vehicles.gpsTrackerFilter}:</span>
+        {(['all', 'has', 'none'] as const).map((opt) => {
+          const labels = { all: t.vehicles.allVehiclesGps, has: t.vehicles.withGps, none: t.vehicles.withoutGps };
+          const active = gpsFilter === opt;
+          return (
+            <button
+              key={opt}
+              onClick={() => { setGpsFilter(opt); setPage(1); }}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                active
+                  ? opt === 'has'
+                    ? 'bg-emerald-600 text-white border-emerald-600'
+                    : opt === 'none'
+                    ? 'bg-gray-500 text-white border-gray-500'
+                    : 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              {labels[opt]}
+            </button>
+          );
+        })}
+      </div>
+
       {isLoading ? (
         <div className="flex justify-center py-16">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -291,7 +336,17 @@ export default function VehiclesPage() {
             <tbody className="divide-y divide-gray-50">
               {vehicles.map((v) => (
                 <tr key={v.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-mono font-semibold text-blue-700">{v.plateNumber}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-semibold text-blue-700">{v.plateNumber}</span>
+                      {(v as any).pilotImei && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200" title={(v as any).pilotImei}>
+                          <Satellite className="w-2.5 h-2.5" />
+                          {t.vehicles.gpsTrackerBadge}
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-500">{(v as any).sequenceNumber ?? tc.empty}</td>
                   <td className="px-4 py-3">{v.year} {v.make} {v.model}</td>
                   <td className="px-4 py-3">
@@ -335,7 +390,7 @@ export default function VehiclesPage() {
                       total={totalVehicles}
                       page={page}
                       pageSize={pageSize}
-                      onPageChange={setPage}
+                      onPageChange={(p) => setPage(p)}
                       onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
                     />
                   </div>
