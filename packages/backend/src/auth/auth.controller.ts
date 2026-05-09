@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto, ResetPasswordDto, UpdateFcmTokenDto } from './auth.dto';
+import { LoginDto, RegisterDto, ResetPasswordDto, UpdateFcmTokenDto, UpdateLanguageDto } from './auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { Public } from './public.decorator';
 import { CurrentUser } from './current-user.decorator';
@@ -41,7 +41,7 @@ export class AuthController {
   @ApiBearerAuth()
   @Get('me')
   me(@CurrentUser() user: AuthTokenPayload) {
-    return user;
+    return this.authService.getCurrentUser(user.sub);
   }
 
   @ApiBearerAuth()
@@ -51,5 +51,14 @@ export class AuthController {
     @Body() dto: UpdateFcmTokenDto,
   ) {
     return this.authService.updateFcmToken(user.sub, dto.fcmToken);
+  }
+
+  @ApiBearerAuth()
+  @Patch('language')
+  updateLanguage(
+    @CurrentUser() user: AuthTokenPayload,
+    @Body() dto: UpdateLanguageDto,
+  ) {
+    return this.authService.updateLanguage(user.sub, dto.language);
   }
 }

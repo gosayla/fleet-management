@@ -12,13 +12,20 @@ import {
 import {api} from '../lib/api';
 import {FleetStats} from '@fleet/shared';
 import {useAuth} from '../context/AuthContext';
-import {Locale} from '../lib/i18n';
+import {Locale, t, isRTL} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
+import {useCachedFetch} from '../hooks/useCachedFetch';
+
+interface DashboardPayload {
+  stats: FleetStats;
+  trips: TripItem[];
+  fuel: FuelLog[];
+  docs: {expired: ExpiryDoc[]; critical: ExpiryDoc[]; warning: ExpiryDoc[]};
+}
 
 interface Props {
   locale: Locale;
-  onToggleLocale: () => void;
   onSelectTrip?: (id: string) => void;
   onNotificationsPress?: () => void;
   unreadNotifications?: number;
@@ -52,10 +59,9 @@ interface ExpiryDoc {
 
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
-const MONTH_NAMES_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const MONTH_NAMES_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const LOCALE_CODE: Record<Locale, string> = {ar: 'ar-SA', en: 'en-US', hi: 'hi-IN', bn: 'bn-BD', ur: 'ur-PK'};
 
-function buildMonthlyFuel(logs: FuelLog[], numMonths = 6): {label: string; labelAr: string; value: number}[] {
+function buildMonthlyFuel(logs: FuelLog[], locale: Locale, numMonths = 6): {label: string; value: number}[] {
   const now = new Date();
   return Array.from({length: numMonths}, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (numMonths - 1 - i), 1);
@@ -64,56 +70,48 @@ function buildMonthlyFuel(logs: FuelLog[], numMonths = 6): {label: string; label
     const total = logs
       .filter(l => { const ld = new Date(l.filledAt); return ld.getMonth() === m && ld.getFullYear() === y; })
       .reduce((s, l) => s + (l.costSar ?? 0), 0);
-    return {label: MONTH_NAMES_EN[m], labelAr: MONTH_NAMES_AR[m], value: total};
+    const label = new Intl.DateTimeFormat(LOCALE_CODE[locale], {month: 'short'}).format(d);
+    return {label, value: total};
   });
 }
 
-const DOC_LABELS_BRIEF: Record<string, {en: string; ar: string}> = {
-  VEHICLE_REGISTRATION: {en: 'Vehicle Registration', ar: '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u0645\u0631\u0643\u0628\u0629'},
-  VEHICLE_INSURANCE:    {en: 'Vehicle Insurance',    ar: '\u062a\u0623\u0645\u064a\u0646 \u0627\u0644\u0645\u0631\u0643\u0628\u0629'},
-  PERIODIC_INSPECTION:  {en: 'Periodic Inspection',  ar: '\u0627\u0644\u0641\u062d\u0635 \u0627\u0644\u062f\u0648\u0631\u064a'},
-  DRIVER_LICENSE:       {en: 'Driving License',      ar: '\u0631\u062e\u0635\u0629 \u0627\u0644\u0642\u064a\u0627\u062f\u0629'},
-  TRANSPORT_PERMIT:     {en: 'Transport Permit',     ar: '\u062a\u0635\u0631\u064a\u062d \u0646\u0642\u0644'},
-  OWNERSHIP_DEED:       {en: 'Ownership Deed',       ar: '\u0639\u0642\u062f \u0627\u0644\u0645\u0644\u0643\u064a\u0629'},
-  OPERATION_CARD:       {en: 'Operation Card',       ar: '\u0628\u0637\u0627\u0642\u0629 \u062a\u0634\u063a\u064a\u0644'},
+const DOC_LABELS_BRIEF: Record<string, Record<string, string>> = {
+  VEHICLE_REGISTRATION: {en: 'Vehicle Registration', ar: '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u0645\u0631\u0643\u0628\u0629', hi: '\u0935\u093e\u0939\u0928 \u092a\u0902\u091c\u0940\u0643\u0930\u0923', bn: '\u0997\u09be\u09a1\u09bc\u09bf \u09a8\u09bf\u09ac\u09a8\u09cd\u09a7\u09a8', ur: '\u06af\u0627\u0691\u06cc \u0631\u062c\u0633\u0679\u0631\u06cc\u0634\u0646'},
+  VEHICLE_INSURANCE:    {en: 'Vehicle Insurance',    ar: '\u062a\u0623\u0645\u064a\u0646 \u0627\u0644\u0645\u0631\u0643\u0628\u0629', hi: '\u0935\u093e\u0939\u0928 \u092c\u0940\u092e\u093e', bn: '\u0997\u09be\u09a1\u09bc\u09bf\u09b0 \u09ac\u09c0\u09ae\u09be', ur: '\u06af\u0627\u0691\u06cc \u0627\u0646\u0634\u0648\u0631\u0646\u0633'},
+  PERIODIC_INSPECTION:  {en: 'Periodic Inspection',  ar: '\u0627\u0644\u0641\u062d\u0635 \u0627\u0644\u062f\u0648\u0631\u064a', hi: '\u0906\u0935\u0927\u093f\u0915 \u0928\u093f\u0930\u0940\u0915\u094d\u0937\u0923', bn: '\u09aa\u09b0\u09cd\u09af\u09be\u09af\u09bc\u0995\u09cd\u09b0\u09ae\u09bf\u0995 \u09aa\u09b0\u09bf\u09a6\u09b0\u09cd\u09b6\u09a8', ur: '\u0648\u0642\u062a\u0627\u064b \u0641\u0648\u0642\u062a\u0627\u064b \u0645\u0639\u0627\u0626\u0646\u06c1'},
+  DRIVER_LICENSE:       {en: 'Driving License',      ar: '\u0631\u062e\u0635\u0629 \u0627\u0644\u0642\u064a\u0627\u062f\u0629', hi: '\u0921\u094d\u0930\u093e\u0907\u0935\u093f\u0902\u0917 \u0932\u093e\u0907\u0938\u0947\u0902\u0938', bn: '\u09a1\u09cd\u09b0\u09be\u0987\u09ad\u09bf\u0982 \u09b2\u09be\u0987\u09b8\u09c7\u09a8\u09cd\u09b8', ur: '\u0688\u0631\u0627\u0626\u06cc\u0648\u0646\u06af \u0644\u0627\u0626\u0633\u0646\u0633'},
+  TRANSPORT_PERMIT:     {en: 'Transport Permit',     ar: '\u062a\u0635\u0631\u064a\u062d \u0646\u0642\u0644', hi: '\u092a\u0930\u093f\u0935\u0939\u0928 \u092a\u0930\u092e\u093f\u091f', bn: '\u09aa\u09b0\u09bf\u09ac\u09b9\u09a8 \u09aa\u09be\u09b0\u09ae\u09bf\u099f', ur: '\u0679\u0631\u0627\u0646\u0633\u067e\u0648\u0631\u0679 \u067e\u0631\u0645\u0679'},
+  OWNERSHIP_DEED:       {en: 'Ownership Deed',       ar: '\u0639\u0642\u062f \u0627\u0644\u0645\u0644\u0643\u064a\u0629', hi: '\u0938\u094d\u0935\u093e\u092e\u093f\u0924\u094d\u0935 \u0935\u093f\u0932\u0947\u0916', bn: '\u09ae\u09be\u09b2\u09bf\u0995\u09be\u09a8\u09be \u09a6\u09b2\u09bf\u09b2', ur: '\u0645\u0644\u06a9\u06cc\u062a \u062f\u0633\u062a\u0627\u0648\u06cc\u0632'},
+  OPERATION_CARD:       {en: 'Operation Card',       ar: '\u0628\u0637\u0627\u0642\u0629 \u062a\u0634\u063a\u064a\u0644', hi: '\u0911\u092a\u0631\u0947\u0936\u0928 \u0915\u093e\u0930\u094d\u0921', bn: '\u0985\u09aa\u09be\u09b0\u09c7\u09b6\u09a8 \u0995\u09be\u09b0\u09cd\u09a1', ur: '\u0622\u067e\u0631\u06cc\u0634\u0646 \u06a9\u0627\u0631\u0688'},
 };
 
-export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip, onNotificationsPress, unreadNotifications = 0}: Props) {
+export function AdminDashboardScreen({locale, onSelectTrip, onNotificationsPress, unreadNotifications = 0}: Props) {
   const {user} = useAuth();
-  const isAr = locale === 'ar';
-  const [stats, setStats] = useState<FleetStats | null>(null);
-  const [activeTrips, setActiveTrips] = useState<TripItem[]>([]);
-  const [scheduledTrips, setScheduledTrips] = useState<TripItem[]>([]);
-  const [monthlyFuel, setMonthlyFuel] = useState<{label: string; labelAr: string; value: number}[]>([]);
-  const [expiringDocs, setExpiringDocs] = useState<ExpiryDoc[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
+  const i18n = t(locale);
+  const rtl = isRTL(locale);
 
-  async function load() {
-    setRefreshing(true);
-    try {
+  const {data: payload, refreshing, refresh: load} = useCachedFetch<DashboardPayload>(
+    'admin:dashboard',
+    async () => {
       const [s, trips, fuel, docs] = await Promise.all([
         api.get<FleetStats>('/dashboard/stats'),
         api.get<TripItem[]>('/trips'),
         api.get<FuelLog[]>('/fuel'),
         api.get<{expired: ExpiryDoc[]; critical: ExpiryDoc[]; warning: ExpiryDoc[]}>('/documents/expiring'),
       ]);
-      setStats(s);
-      const allTrips = Array.isArray(trips) ? trips : [];
-      setActiveTrips(allTrips.filter(t => t.status === 'IN_PROGRESS').slice(0, 5));
-      setScheduledTrips(
-        allTrips
-          .filter(t => t.status === 'SCHEDULED')
-          .sort((a, b) => new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime())
-          .slice(0, 3),
-      );
-      setMonthlyFuel(buildMonthlyFuel(Array.isArray(fuel) ? fuel : []));
-      const urgent = [...(docs.expired ?? []), ...(docs.critical ?? [])].slice(0, 5);
-      setExpiringDocs(urgent);
-    } catch {}
-    finally {setRefreshing(false);}
-  }
+      return {stats: s, trips: Array.isArray(trips) ? trips : [], fuel: Array.isArray(fuel) ? fuel : [], docs};
+    },
+  );
 
-  useEffect(() => {load();}, []);
+  const stats        = payload?.stats ?? null;
+  const allTrips     = payload?.trips ?? [];
+  const activeTrips  = allTrips.filter(t => t.status === 'IN_PROGRESS').slice(0, 5);
+  const scheduledTrips = allTrips
+    .filter(t => t.status === 'SCHEDULED')
+    .sort((a, b) => new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime())
+    .slice(0, 3);
+  const monthlyFuel  = buildMonthlyFuel(payload?.fuel ?? [], locale);
+  const expiringDocs = [...(payload?.docs.expired ?? []), ...(payload?.docs.critical ?? [])].slice(0, 5);
 
   const fullName = (user as any)?.fullName ?? (user as any)?.name ?? user?.email ?? 'Admin';
   const firstName = fullName.split(' ')[0];
@@ -132,7 +130,7 @@ export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip, onNo
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
             <View>
-              <Text style={styles.welcomeText}>{isAr ? 'أهلاً!' : 'Welcome!'}</Text>
+              <Text style={styles.welcomeText}>{i18n.welcomeAdmin}</Text>
               <Text style={styles.userName}>{firstName}</Text>
             </View>
           </View>
@@ -157,16 +155,16 @@ export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip, onNo
         {/* ── Live GPS section ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{isAr ? 'GPS مباشر' : 'Live GPS'}</Text>
+            <Text style={styles.sectionTitle}>{i18n.liveGPS}</Text>
             <View style={styles.mapStat}>
               <AppIcon name="truck-outline" size={13} color={Colors.primary} />
-              <Text style={styles.mapStatText}>{stats?.tripsInProgress ?? 0} {isAr ? 'رحلة نشطة' : 'active'}</Text>
+              <Text style={styles.mapStatText}>{stats?.tripsInProgress ?? 0} {i18n.activeCount}</Text>
             </View>
           </View>
           {activeTrips.length === 0 ? (
             <View style={styles.emptyDeadline}>
               <AppIcon name="map-marker-off-outline" size={32} color={Colors.border} />
-              <Text style={styles.emptyDeadlineText}>{isAr ? 'لا توجد رحلات نشطة' : 'No active trips'}</Text>
+              <Text style={styles.emptyDeadlineText}>{i18n.noActiveTrips}</Text>
             </View>
           ) : (
             activeTrips.map(trip => {
@@ -189,7 +187,7 @@ export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip, onNo
                     </Text>
                     {lastUpdate && (
                       <Text style={styles.tripGpsTime}>
-                        {isAr ? `آخر تحديث ${lastUpdate}` : `Last GPS ${lastUpdate}`}
+                        {i18n.lastGPS} {lastUpdate}
                       </Text>
                     )}
                   </View>
@@ -203,33 +201,33 @@ export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip, onNo
         {/* ── Spending section ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{isAr ? 'الإنفاق على الوقود' : 'Fuel Spending'}</Text>
+            <Text style={styles.sectionTitle}>{i18n.fuelSpending}</Text>
             {stats && stats.fuelCostThisMonth > 0 && (
               <Text style={styles.seeAll}>
-                {Math.round(stats.fuelCostThisMonth).toLocaleString()} {isAr ? 'ريال' : 'SAR'}
+                {Math.round(stats.fuelCostThisMonth).toLocaleString()} {i18n.sarUnit}
               </Text>
             )}
           </View>
           <View style={styles.spendingBox}>
-            <SpendingLineChart monthlyData={monthlyFuel} isAr={isAr} />
+            <SpendingLineChart monthlyData={monthlyFuel} locale={locale} />
           </View>
         </View>
 
         {/* ── Upcoming Trips ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{isAr ? 'الرحلات القادمة' : 'Upcoming Trips'}</Text>
+            <Text style={styles.sectionTitle}>{i18n.upcomingTrips}</Text>
           </View>
           {scheduledTrips.length === 0 ? (
             <View style={styles.emptyDeadline}>
               <AppIcon name="calendar-check-outline" size={32} color={Colors.border} />
-              <Text style={styles.emptyDeadlineText}>{isAr ? 'لا توجد رحلات مجدولة' : 'No upcoming trips'}</Text>
+              <Text style={styles.emptyDeadlineText}>{i18n.noUpcomingTrips}</Text>
             </View>
           ) : (
             scheduledTrips.map((trip, i) => {
               const highlighted = i === scheduledTrips.length - 1;
               const date = new Date(trip.scheduledStart);
-              const dateStr = date.toLocaleDateString(isAr ? 'ar-SA' : 'en-US', {weekday: 'short', month: 'short', day: 'numeric'});
+              const dateStr = date.toLocaleDateString(LOCALE_CODE[locale], {weekday: 'short', month: 'short', day: 'numeric'});
               const timeStr = date.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
               return (
                 <TouchableOpacity key={trip.id} style={[styles.deadlineRow, highlighted && styles.deadlineRowHL]} onPress={() => onSelectTrip?.(trip.id)} activeOpacity={0.7}>
@@ -257,13 +255,13 @@ export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip, onNo
         {/* ── Stat pills ── */}
         {stats && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{isAr ? 'نظرة عامة' : 'Overview'}</Text>
+            <Text style={styles.sectionTitle}>{i18n.overview}</Text>
             <View style={styles.pills}>
               {[
-                {icon:'truck-outline',         label: isAr?'مركبات':'Vehicles',  value: stats.totalVehicles,      color: Colors.primary},
-                {icon:'account-group-outline', label: isAr?'سائقون':'Drivers',   value: stats.totalDrivers,       color: Colors.success},
-                {icon:'map-marker-path',       label: isAr?'رحلات اليوم':'Today', value: stats.tripsToday,         color: Colors.purple},
-                {icon:'wrench-outline',        label: isAr?'صيانة':'Maintenance', value: stats.pendingMaintenance, color: Colors.warning},
+                {icon:'truck-outline',         label: i18n.vehiclesLabel,      value: stats.totalVehicles,      color: Colors.primary},
+                {icon:'account-group-outline', label: i18n.driversLabel,       value: stats.totalDrivers,       color: Colors.success},
+                {icon:'map-marker-path',       label: i18n.todayLabel,         value: stats.tripsToday,         color: Colors.purple},
+                {icon:'wrench-outline',        label: i18n.maintenanceLabel,   value: stats.pendingMaintenance, color: Colors.warning},
               ].map((p, i) => (
                 <View key={i} style={styles.pill}>
                   <View style={[styles.pillIcon, {backgroundColor: p.color + '18'}]}>
@@ -281,7 +279,7 @@ export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip, onNo
         {expiringDocs.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{isAr ? 'وثائق منتهية / قريبة الانتهاء' : 'Expiring Documents'}</Text>
+              <Text style={styles.sectionTitle}>{i18n.expiringDocs}</Text>
             </View>
             {expiringDocs.map((doc, idx) => {
               const now = new Date();
@@ -297,12 +295,12 @@ export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip, onNo
                   </View>
                   <View style={styles.deadlineBody}>
                     <Text style={styles.deadlineTitle} numberOfLines={1}>
-                      {(DOC_LABELS_BRIEF[doc.type]?.[isAr ? 'ar' : 'en']) ?? doc.type.replace(/_/g,' ')} — {subject}
+                      {(DOC_LABELS_BRIEF[doc.type]?.[locale] ?? DOC_LABELS_BRIEF[doc.type]?.en ?? doc.type.replace(/_/g,' '))} — {subject}
                     </Text>
                     <Text style={[styles.deadlineDate, {color: isExpired ? '#e74c3c' : '#e67e22'}]}>
                       {isExpired
-                        ? (isAr ? `منتهية منذ ${Math.abs(daysLeft)} يوم` : `Expired ${Math.abs(daysLeft)}d ago`)
-                        : (isAr ? `تنتهي خلال ${daysLeft} يوم` : `Expires in ${daysLeft}d`)}
+                        ? `${i18n.expiringDocs} -${Math.abs(daysLeft)}d`
+                        : `+${daysLeft}d`}
                       {' · '}{expiryStr}
                     </Text>
                   </View>
@@ -319,12 +317,13 @@ export function AdminDashboardScreen({locale, onToggleLocale, onSelectTrip, onNo
 }
 
 // ─── Spending line chart (pure RN, no SVG) ──────────────────────────────────
-function SpendingLineChart({monthlyData, isAr}: {monthlyData: {label: string; labelAr: string; value: number}[]; isAr: boolean}) {
+function SpendingLineChart({monthlyData, locale}: {monthlyData: {label: string; value: number}[]; locale: Locale}) {
+  const i18n = t(locale);
   const [w, setW] = useState(0);
   const H = 90;
   const PAD_Y = 16;
 
-  const data = monthlyData.length > 0 ? monthlyData : [{label:'—', labelAr:'—', value:0}];
+  const data = monthlyData.length > 0 ? monthlyData : [{label:'—', value:0}];
   const maxVal = Math.max(...data.map(d => d.value), 1);
   // Current month is last entry
   const activeIdx = data.length - 1;
@@ -346,8 +345,8 @@ function SpendingLineChart({monthlyData, isAr}: {monthlyData: {label: string; la
   const peak = pts[activeIdx] ?? pts[0];
   const currentVal = data[activeIdx]?.value ?? 0;
   const peakLabel = currentVal > 0
-    ? `${Math.round(currentVal).toLocaleString()} ${isAr ? 'ريال' : 'SAR'}`
-    : (isAr ? 'لا توجد بيانات' : 'No data');
+    ? `${Math.round(currentVal).toLocaleString()} ${i18n.sarUnit}`
+    : i18n.noChartData;
 
   return (
     <View onLayout={e => setW(e.nativeEvent.layout.width)}>
@@ -393,7 +392,7 @@ function SpendingLineChart({monthlyData, isAr}: {monthlyData: {label: string; la
           <Text
             key={i}
             style={[lcStyles.axisLabel, i === activeIdx && lcStyles.axisLabelActive]}>
-            {isAr ? d.labelAr : d.label}
+            {d.label}
           </Text>
         ))}
       </View>

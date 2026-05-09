@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import {api} from '../lib/api';
 import {useAuth} from '../context/AuthContext';
-import {Locale} from '../lib/i18n';
+import {Locale, t, tripStatusLabel} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
+import {useCachedFetch} from '../hooks/useCachedFetch';
 
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
@@ -29,7 +30,7 @@ interface TripItem {
 
 interface Props {
   locale: Locale;
-  onToggleLocale: () => void;
+
   onNotificationsPress?: () => void;
   unreadNotifications?: number;
   onSelectTrip?: (tripId: string) => void;
@@ -78,32 +79,18 @@ function isToday(iso: string) {
 
 export function DriverDashboardScreen({
   locale,
-  onToggleLocale,
   onNotificationsPress,
   unreadNotifications = 0,
   onSelectTrip,
   onStartTrip,
 }: Props) {
   const {user} = useAuth();
-  const isAr = locale === 'ar';
-  const [trips, setTrips] = useState<TripItem[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-
-  async function load() {
-    setRefreshing(true);
-    try {
-      const data = await api.get<TripItem[]>('/trips');
-      setTrips(Array.isArray(data) ? data : []);
-    } catch {
-      // silent
-    } finally {
-      setRefreshing(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
+  const i18n = t(locale);
+  const {data: raw, refreshing, refresh: load} = useCachedFetch(
+    'driver:trips',
+    () => api.get<TripItem[]>('/trips'),
+  );
+  const trips: TripItem[] = raw ?? [];
 
   const activeTrip = trips.find(t => t.status === 'IN_PROGRESS');
   const todayTrips = trips.filter(t => t.status === 'SCHEDULED' && isToday(t.scheduledStart));
@@ -113,9 +100,7 @@ export function DriverDashboardScreen({
   const completedCount = trips.filter(t => t.status === 'COMPLETED').length;
   const scheduledCount = trips.filter(t => t.status === 'SCHEDULED').length;
 
-  const greeting = isAr
-    ? `مرحباً، ${user?.fullName ?? 'سائق'}`
-    : `Hello, ${user?.fullName ?? 'Driver'}`;
+  const greeting = `${i18n.hello}, ${user?.fullName ?? i18n.driverSection}`;
 
   return (
     <View style={styles.container}>
@@ -128,7 +113,7 @@ export function DriverDashboardScreen({
           <View>
             <Text style={styles.greeting}>{greeting}</Text>
             <Text style={styles.headerSub}>
-              {isAr ? 'لوحة تحكم السائق' : 'Driver Dashboard'}
+              {i18n.driverDashboard}
             </Text>
           </View>
           <View style={styles.headerActions}>
@@ -149,12 +134,6 @@ export function DriverDashboardScreen({
                 </View>
               )}
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.langPill}
-              onPress={onToggleLocale}
-              activeOpacity={0.7}>
-              <Text style={styles.langText}>{locale === 'ar' ? 'EN' : 'AR'}</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -174,19 +153,19 @@ export function DriverDashboardScreen({
         <View style={styles.statsRow}>
           <StatCard
             value={completedCount}
-            label={isAr ? 'مكتملة' : 'Completed'}
+            label={i18n.completedStat}
             accent={Colors.success}
             icon="check-circle-outline"
           />
           <StatCard
             value={scheduledCount}
-            label={isAr ? 'مجدولة' : 'Scheduled'}
+            label={i18n.scheduledStat}
             accent={Colors.info}
             icon="clock-outline"
           />
           <StatCard
             value={activeTrip ? 1 : 0}
-            label={isAr ? 'جارية' : 'Active'}
+            label={i18n.activeStat}
             accent={activeTrip ? Colors.warning ?? '#f59e0b' : Colors.borderLight}
             icon="truck-fast-outline"
           />
@@ -203,7 +182,7 @@ export function DriverDashboardScreen({
             </View>
             <View style={styles.activeBannerInfo}>
               <Text style={styles.activeBannerTitle}>
-                {isAr ? 'رحلة جارية — اضغط للمتابعة' : 'Active Trip — Tap to resume'}
+                {i18n.activeTripBanner}
               </Text>
               <Text style={styles.activeBannerRoute} numberOfLines={1}>
                 {activeTrip.origin} → {activeTrip.destination}
@@ -215,7 +194,7 @@ export function DriverDashboardScreen({
 
         {/* Today's trips */}
         <Text style={styles.sectionTitle}>
-          {isAr ? "رحلات اليوم" : "Today's Trips"}
+          {i18n.todaysTrips}
           {todayTrips.length > 0 && (
             <Text style={styles.sectionCount}> ({todayTrips.length})</Text>
           )}
@@ -224,7 +203,7 @@ export function DriverDashboardScreen({
           <View style={styles.emptyBox}>
             <AppIcon name="calendar-check-outline" size={20} color={Colors.textMuted} />
             <Text style={styles.emptyText}>
-              {isAr ? 'لا رحلات مجدولة اليوم' : 'No trips scheduled today'}
+              {i18n.noTripsToday}
             </Text>
           </View>
         ) : (
@@ -232,7 +211,7 @@ export function DriverDashboardScreen({
             <TripRow
               key={trip.id}
               trip={trip}
-              isAr={isAr}
+              locale={locale}
               onPress={() => onSelectTrip?.(trip.id)}
             />
           ))
@@ -242,13 +221,13 @@ export function DriverDashboardScreen({
         {upcomingTrips.length > 0 && (
           <>
             <Text style={[styles.sectionTitle, {marginTop: 20}]}>
-              {isAr ? 'الرحلات القادمة' : 'Upcoming Trips'}
+              {i18n.upcomingTrips}
             </Text>
             {upcomingTrips.map(trip => (
               <TripRow
                 key={trip.id}
                 trip={trip}
-                isAr={isAr}
+                locale={locale}
                 onPress={() => onSelectTrip?.(trip.id)}
               />
             ))}
@@ -259,7 +238,7 @@ export function DriverDashboardScreen({
           <View style={styles.emptyBox}>
             <AppIcon name="map-outline" size={28} color={Colors.textMuted} />
             <Text style={styles.emptyText}>
-              {isAr ? 'لا توجد رحلات مسندة إليك' : 'No trips assigned to you'}
+              {i18n.noAssignedTrips}
             </Text>
           </View>
         )}
@@ -284,10 +263,10 @@ function StatCard({value, label, accent, icon}: {
   );
 }
 
-function TripRow({trip, isAr, onPress}: {trip: TripItem; isAr: boolean; onPress: () => void}) {
+function TripRow({trip, locale, onPress}: {trip: TripItem; locale: Locale; onPress: () => void}) {
   const color = STATUS_COLORS[trip.status] ?? Colors.textMuted;
   const bg = STATUS_BG[trip.status] ?? Colors.borderLight;
-  const statusLabel = STATUS_LABELS[trip.status]?.[isAr ? 'ar' : 'en'] ?? trip.status;
+  const statusLabel = tripStatusLabel(trip.status, locale);
 
   return (
     <TouchableOpacity style={styles.tripRow} onPress={onPress} activeOpacity={0.8}>
@@ -335,11 +314,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: Colors.primary,
   },
   bellBadgeText: {color: '#fff', fontSize: 9, fontWeight: '700' as const, lineHeight: 12},
-  langPill: {
-    backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 6,
-  },
-  langText: {fontSize: 12, fontWeight: '600' as const, color: '#fff'},
 
   scroll: {padding: Spacing.md, gap: 12},
 

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { AuthTokenPayload } from '@fleet/shared';
 import { CreateVehicleDto, UpdateVehicleDto, VehiclesQueryDto } from './vehicles.dto';
 import * as xlsx from 'xlsx';
@@ -30,7 +31,10 @@ export interface TammVehicleRow {
 
 @Injectable()
 export class VehiclesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async findAll(companyId: string, query: VehiclesQueryDto) {
     const {
@@ -196,15 +200,17 @@ export class VehiclesService {
   // ─── Driver assignment ────────────────────────────────────────────────────
 
   async assignDriver(companyId: string, vehicleId: string, driverId: string) {
-    await this.findOne(companyId, vehicleId);
+    const vehicle = await this.findOne(companyId, vehicleId);
     // Verify driver belongs to same company
     const driver = await this.prisma.driver.findFirst({ where: { id: driverId, companyId } });
     if (!driver) throw new NotFoundException(`السائق ${driverId} غير موجود`);
-    return this.prisma.vehicle.update({
+    const updated = await this.prisma.vehicle.update({
       where: { id: vehicleId },
       data: { drivers: { connect: { id: driverId } } },
       include: { drivers: { select: { id: true, fullName: true, phone: true, status: true, photoUrl: true } } },
     });
+    await this.notificationsService.notifyVehicleAssigned(companyId, driverId, vehicle.plateNumber);
+    return updated;
   }
 
   async removeDriver(companyId: string, vehicleId: string, driverId: string) {

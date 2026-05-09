@@ -1,6 +1,7 @@
 import {
   IsEmail,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -15,6 +16,8 @@ export enum ManageableRole {
   DRIVER = 'DRIVER',
   VIEWER = 'VIEWER',
 }
+
+const SUPPORTED_LANGUAGES = ['ar', 'en', 'hi', 'bn', 'ur'] as const;
 
 export class CreateUserDto {
   @ApiProperty({ example: 'user@company.com' })
@@ -39,6 +42,12 @@ export class CreateUserDto {
   @ApiProperty({ enum: ManageableRole })
   @IsEnum(ManageableRole)
   role: ManageableRole;
+
+  @ApiPropertyOptional({ enum: SUPPORTED_LANGUAGES })
+  @IsOptional()
+  @IsString()
+  @IsIn(SUPPORTED_LANGUAGES)
+  language?: (typeof SUPPORTED_LANGUAGES)[number];
 }
 
 export class UpdateUserDto {
@@ -64,4 +73,10 @@ export class UpdateUserDto {
   @IsString()
   @MinLength(8)
   password?: string;
+
+  @ApiPropertyOptional({ enum: SUPPORTED_LANGUAGES })
+  @IsOptional()
+  @IsString()
+  @IsIn(SUPPORTED_LANGUAGES)
+  language?: (typeof SUPPORTED_LANGUAGES)[number];
 }

@@ -69,6 +69,8 @@ export enum UserRole {
   VIEWER = 'VIEWER',
 }
 
+export type PreferredLanguage = 'ar' | 'en' | 'hi' | 'bn' | 'ur';
+
 export enum PermitStatus {
   PENDING = 'PENDING',
   ACTIVE = 'ACTIVE',
@@ -96,6 +98,7 @@ export interface User {
   phone: string;
   role: UserRole;
   companyId: string;
+  language?: PreferredLanguage;
   fcmToken?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -104,8 +107,11 @@ export interface User {
 export interface AuthTokenPayload {
   sub: string; // user id
   email?: string;
+  fullName?: string;
+  phone?: string;
   role: UserRole;
   companyId: string;
+  language?: PreferredLanguage;
 }
 
 export interface LoginDto {
@@ -548,5 +554,8 @@ export enum NotificationType {
   TRIP_STARTED = 'TRIP_STARTED',
   TRIP_COMPLETED = 'TRIP_COMPLETED',
   DRIVER_ASSIGNED = 'DRIVER_ASSIGNED',
+  VEHICLE_ASSIGNED = 'VEHICLE_ASSIGNED',
+  TRIP_ASSIGNED = 'TRIP_ASSIGNED',
+  ACCOUNT_UPDATED = 'ACCOUNT_UPDATED',
   FUEL_LOW = 'FUEL_LOW',
 }

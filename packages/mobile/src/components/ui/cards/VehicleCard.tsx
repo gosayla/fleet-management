@@ -25,11 +25,11 @@ interface Props {
   onPress?: () => void;
 }
 
-const STATUS_BADGE: Record<string, {bg: string; text: string; label: {en: string; ar: string}}> = {
-  ACTIVE:      {bg: Colors.primary,     text: '#fff',           label: {en: 'In Use',      ar: 'نشطة'}},
-  MAINTENANCE: {bg: Colors.warningLight,text: Colors.warning,   label: {en: 'Maintenance', ar: 'صيانة'}},
-  INACTIVE:    {bg: Colors.borderLight, text: Colors.textMuted, label: {en: 'Inactive',    ar: 'غير نشطة'}},
-  RETIRED:     {bg: Colors.dangerLight, text: Colors.danger,    label: {en: 'Retired',     ar: 'متقاعدة'}},
+const STATUS_BADGE: Record<string, {bg: string; text: string; label: Record<Locale, string>}> = {
+  ACTIVE:      {bg: Colors.primary,     text: '#fff',           label: {en: 'In Use',      ar: 'نشطة',      hi: 'उपयोग में',  bn: 'ব্যবহারে',  ur: 'استعمال میں'}},
+  MAINTENANCE: {bg: Colors.warningLight,text: Colors.warning,   label: {en: 'Maintenance', ar: 'صيانة',     hi: 'रखरखाव',     bn: 'রক্ষণাবেক্ষণ', ur: 'دیکھ بھال'}},
+  INACTIVE:    {bg: Colors.borderLight, text: Colors.textMuted, label: {en: 'Inactive',    ar: 'غير نشطة',  hi: 'निष्क्रिय',  bn: 'নিষ্ক্রিয়',  ur: 'غیر فعال'}},
+  RETIRED:     {bg: Colors.dangerLight, text: Colors.danger,    label: {en: 'Retired',     ar: 'متقاعدة',   hi: 'सेवानिवृत्त', bn: 'অবসরপ্রাপ্ত', ur: 'ریٹائرڈ'}},
 };
 
 const TYPE_ICONS: Record<string, string> = {
@@ -45,7 +45,7 @@ const TYPE_ICONS: Record<string, string> = {
 export function VehicleCard({vehicle, locale, onPress}: Props) {
   const badge = STATUS_BADGE[vehicle.status] ?? STATUS_BADGE.INACTIVE;
   const subtitle = `${vehicle.make}-${vehicle.model}`;
-  const label = badge.label[locale === 'ar' ? 'ar' : 'en'];
+  const label = badge.label[locale];
 
   // Abbreviate plate: take up to 4 chars (handles both Arabic & alphanumeric plates)
   const plateAbbr = vehicle.plateNumber.replace(/\s+/g, '').slice(-4);

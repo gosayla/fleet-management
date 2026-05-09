@@ -18,7 +18,7 @@ import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import {api, resolvePhotoUrl} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
-import {Locale} from '../lib/i18n';
+import {Locale, t} from '../lib/i18n';
 
 interface DriverDetail {
   id: string;
@@ -41,12 +41,12 @@ const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 const HEADER_H = 220;
 const HEADER_MIN_H = 116;
 
-const STATUS_CONFIG: Record<string, {label: {en: string; ar: string}; color: string; bg: string}> = {
-  ACTIVE:     {label: {en: 'Active',      ar: 'نشط'},         color: '#fff',            bg: Colors.primary},
-  OFF_DUTY:   {label: {en: 'Off Duty',    ar: 'خارج الخدمة'}, color: Colors.textMuted,  bg: Colors.borderLight},
-  ON_LEAVE:   {label: {en: 'On Leave',    ar: 'إجازة'},       color: '#d68910',         bg: '#fef9e7'},
-  SUSPENDED:  {label: {en: 'Suspended',   ar: 'موقوف'},       color: '#c0392b',         bg: '#fdecea'},
-  TERMINATED: {label: {en: 'Terminated',  ar: 'منتهي'},       color: '#c0392b',         bg: '#fdecea'},
+const STATUS_CONFIG: Record<string, {label: Record<Locale, string>; color: string; bg: string}> = {
+  ACTIVE:     {label: {en: 'Active',      ar: 'نشط',          hi: 'सक्रिय',     bn: 'সক্রিয়',    ur: 'فعال'},       color: '#fff',            bg: Colors.primary},
+  OFF_DUTY:   {label: {en: 'Off Duty',    ar: 'خارج الخدمة', hi: 'ड्यूटी से बाहर', bn: 'ড্যুটি থেকে বাইরে', ur: 'ڈیوٹی سے باہر'}, color: Colors.textMuted,  bg: Colors.borderLight},
+  ON_LEAVE:   {label: {en: 'On Leave',    ar: 'إجازة',       hi: 'छुट्टी पर',   bn: 'ছুটিতে',    ur: 'چھٹی پر'},   color: '#d68910',         bg: '#fef9e7'},
+  SUSPENDED:  {label: {en: 'Suspended',   ar: 'موقوف',       hi: 'निलंबिت',   bn: 'স্থগিত',    ur: 'معطل'},       color: '#c0392b',         bg: '#fdecea'},
+  TERMINATED: {label: {en: 'Terminated',  ar: 'منتهي',       hi: 'समाप्ت',     bn: 'সমাপ্ত',    ur: 'ختم'},       color: '#c0392b',         bg: '#fdecea'},
 };
 
 const BLOOD_TYPE_LABELS: Record<string, string> = {
@@ -71,7 +71,7 @@ interface Props {
 }
 
 export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
-  const isAr = locale === 'ar';
+  const i18n = t(locale);
   const scrollY = useRef(new Animated.Value(0)).current;
   const [driver, setDriver] = useState<DriverDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,7 +93,7 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
       const updated = await api.upload<{photoUrl: string}>(`/drivers/${driverId}/photo`, form);
       setDriver(prev => prev ? {...prev, photoUrl: updated.photoUrl} : prev);
     } catch (e: any) {
-      Alert.alert(isAr ? 'خطأ' : 'Error', e?.message ?? 'Upload failed');
+      Alert.alert(i18n.error, e?.message ?? 'Upload failed');
     } finally {
       setUploading(false);
     }
@@ -101,11 +101,11 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
 
   function showPhotoOptions() {
     Alert.alert(
-      isAr ? 'تغيير الصورة' : 'Change Photo',
+      i18n.changePhoto,
       '',
       [
         {
-          text: isAr ? 'الكاميرا' : 'Camera',
+          text: i18n.camera,
           onPress: () => launchCamera(
             {mediaType: 'photo', quality: 0.8, saveToPhotos: false},
             res => {
@@ -116,7 +116,7 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
           ),
         },
         {
-          text: isAr ? 'المعرض' : 'Gallery',
+          text: i18n.gallery,
           onPress: () => launchImageLibrary(
             {mediaType: 'photo', quality: 0.8, selectionLimit: 1},
             res => {
@@ -126,7 +126,7 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
             },
           ),
         },
-        {text: isAr ? 'إلغاء' : 'Cancel', style: 'cancel'},
+        {text: i18n.cancel, style: 'cancel'},
       ],
     );
   }
@@ -143,16 +143,16 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
   if (!driver) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{isAr ? 'تعذر تحميل البيانات' : 'Could not load driver'}</Text>
+        <Text style={styles.errorText}>{i18n.couldNotLoadDriver}</Text>
         <TouchableOpacity onPress={onBack} style={styles.retryBtn}>
-          <Text style={styles.retryText}>{isAr ? 'رجوع' : 'Go back'}</Text>
+          <Text style={styles.retryText}>{i18n.goBack}</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   const statusCfg = STATUS_CONFIG[driver.status] ?? STATUS_CONFIG.OFF_DUTY;
-  const statusLabel = statusCfg.label[isAr ? 'ar' : 'en'];
+  const statusLabel = statusCfg.label[locale];
   const initials = driver.fullName
     .split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
@@ -287,13 +287,13 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
         {/* 3-column info strip */}
         <View style={styles.infoStrip}>
           <InfoCol
-            label={isAr ? 'انتهاء الرخصة' : 'License Expiry'}
+            label={i18n.licenseExpiryLabel}
             value={licenseExpiry}
             warn={isLicenseExpired}
           />
           <View style={styles.stripDiv} />
           <InfoCol
-            label={isAr ? 'فصيلة الدم' : 'Blood Type'}
+            label={i18n.bloodTypeLabel}
             value={bloodTypeLabel}
             highlight
           />
@@ -304,31 +304,31 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
           <StatTile
             icon="map-marker-distance"
             value={String(totalTrips)}
-            unit={isAr ? 'رحلة' : 'Trips'}
+            unit={i18n.tripsUnit}
             color="#247C76"
           />
           <StatTile
             icon="check-circle-outline"
             value={String(completedTrips)}
-            unit={isAr ? 'مكتملة' : 'Done'}
+            unit={i18n.doneUnit}
             color="#27ae60"
           />
           <StatTile
             icon="card-account-details-outline"
             value={driver.nationalId.slice(-4)}
-            unit={isAr ? 'هوية' : 'ID ...'}
+            unit={i18n.idUnit}
             color="#e67e22"
           />
           <StatTile
             icon="water"
             value={bloodTypeLabel}
-            unit={isAr ? 'دم' : 'Blood'}
+            unit={i18n.bloodUnit}
             color="#9b59b6"
           />
         </View>
 
         {/* ── Assigned Vehicles ── */}
-        <Text style={styles.sectionTitle}>{isAr ? 'المركبات المعيّنة' : 'Assigned Vehicles'}</Text>
+        <Text style={styles.sectionTitle}>{i18n.assignedVehicles}</Text>
         {(driver.vehicles ?? []).length > 0 ? (
           (driver.vehicles ?? []).map(v => (
             <View key={v.id} style={styles.vehicleCard}>
@@ -347,27 +347,25 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
         ) : (
           <View style={styles.emptyCard}>
             <AppIcon name="truck-outline" size={20} color={Colors.textMuted} />
-            <Text style={styles.emptyCardText}>{isAr ? 'لا توجد مركبة معينة' : 'No vehicle assigned'}</Text>
+            <Text style={styles.emptyCardText}>{i18n.noVehicleAssigned}</Text>
           </View>
         )}
 
         {/* ── Contact Info ── */}
-        <Text style={[styles.sectionTitle, {marginTop: 20}]}>{isAr ? 'بيانات التواصل' : 'Contact Info'}</Text>
+        <Text style={[styles.sectionTitle, {marginTop: 20}]}>{i18n.contactInfo}</Text>
         <View style={styles.contactCard}>
           <ContactRow
             icon="phone"
-            label={isAr ? 'الجوال' : 'Phone'}
+            label={i18n.phoneLabel}
             value={driver.phone}
             onPress={() => Linking.openURL(`tel:${driver.phone}`)}
-            isAr={isAr}
           />
           {driver.email && (
             <ContactRow
               icon="email-outline"
-              label={isAr ? 'البريد' : 'Email'}
+              label={i18n.emailLabel}
               value={driver.email}
               onPress={() => Linking.openURL(`mailto:${driver.email}`)}
-              isAr={isAr}
               noBorder
             />
           )}
@@ -376,7 +374,7 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
         <View style={styles.contactCard}>
           <InfoRow
             icon="card-account-details"
-            label={isAr ? 'رقم الهوية' : 'National ID'}
+            label={i18n.nationalIdField}
             value={driver.nationalId}
           />
         </View>
@@ -385,7 +383,7 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
         {driver.trips && driver.trips.length > 0 && (
           <>
             <Text style={[styles.sectionTitle, {marginTop: 20}]}>
-              {isAr ? 'آخر الرحلات' : 'Recent Trips'}
+              {i18n.recentTrips}
             </Text>
             {driver.trips.slice(0, 5).map(trip => {
               const statusColor = TRIP_STATUS_COLOR[trip.status] ?? Colors.textMuted;
@@ -467,9 +465,9 @@ function StatTile({icon, value, unit, color}: {icon: string; value: string; unit
   );
 }
 
-function ContactRow({icon, label, value, onPress, isAr, noBorder}: {
+function ContactRow({icon, label, value, onPress, noBorder}: {
   icon: string; label: string; value: string;
-  onPress: () => void; isAr: boolean; noBorder?: boolean;
+  onPress: () => void; noBorder?: boolean;
 }) {
   return (
     <TouchableOpacity

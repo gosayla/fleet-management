@@ -10,9 +10,10 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {api} from '../lib/api';
-import {Locale, t, formatDateTime} from '../lib/i18n';
+import {Locale, t, formatDateTime, isRTL as isRTLFn} from '../lib/i18n';
 import {Colors, Radius, Shadow, Spacing, Typography} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
+import {useCachedFetch} from '../hooks/useCachedFetch';
 
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
@@ -26,19 +27,29 @@ interface Notification {
 
 interface Props {
   locale: Locale;
-  onToggleLocale: () => void;
   onBack: () => void;
   onUnreadCountChange?: (count: number) => void;
 }
 
 
 
-export function NotificationsScreen({locale, onToggleLocale, onBack, onUnreadCountChange}: Props) {
+export function NotificationsScreen({locale, onBack, onUnreadCountChange}: Props) {
   const i18n = t(locale);
-  const isRTL = locale === 'ar';
-  const [items, setItems] = useState<Notification[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
+  const isRTL = isRTLFn(locale);
   const [markingAll, setMarkingAll] = useState(false);
+
+  const {data: fetched, refreshing, refresh: loadFresh} = useCachedFetch(
+    'notifications',
+    () => api.get<Notification[]>('/notifications'),
+  );
+
+  // Maintain local items so mark-read mutations are applied immediately
+  const [items, setItems] = useState<Notification[]>([]);
+  useEffect(() => {
+    if (fetched != null) {
+      setItems(Array.isArray(fetched) ? fetched : []);
+    }
+  }, [fetched]);
 
   function applyItems(nextItems: Notification[]) {
     setItems(nextItems);
@@ -46,15 +57,7 @@ export function NotificationsScreen({locale, onToggleLocale, onBack, onUnreadCou
   }
 
   async function load() {
-    setRefreshing(true);
-    try {
-      const data = await api.get<Notification[]>('/notifications');
-      applyItems(data);
-    } catch {
-      // endpoint may not exist yet — silently ignore
-    } finally {
-      setRefreshing(false);
-    }
+    loadFresh();
   }
 
   async function markRead(notificationId: string) {
@@ -110,13 +113,10 @@ export function NotificationsScreen({locale, onToggleLocale, onBack, onUnreadCou
                 {markingAll ? i18n.marking : i18n.markAllRead}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.langPill} onPress={onToggleLocale} activeOpacity={0.7}>
-              <Text style={styles.langText}>{i18n.languageLabel}</Text>
-            </TouchableOpacity>
           </View>
         </View>
         <Text style={styles.headerSub}>
-          {locale === 'ar' ? 'آخر التنبيهات' : 'Latest alerts'}
+          {i18n.latestAlerts}
           {` • ${items.filter(n => !n.isRead).length} ${i18n.unreadLabel}`}
         </Text>
       </View>
@@ -174,11 +174,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 6,
   },
   actionText: {fontSize: 12, fontWeight: '600' as const, color: '#fff'},
-  langPill: {
-    backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 6,
-  },
-  langText: {fontSize: 12, fontWeight: '600' as const, color: '#fff'},
   panel: {
     flex: 1, backgroundColor: Colors.bg,
     borderTopLeftRadius: 28, borderTopRightRadius: 28,

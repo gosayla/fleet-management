@@ -17,7 +17,7 @@ import {useAuth} from '../context/AuthContext';
 import {startBroadcastingLocation, stopBroadcasting} from '../lib/socket';
 import {api} from '../lib/api';
 import {Trip} from '@fleet/shared';
-import {Locale, t} from '../lib/i18n';
+import {Locale, t, isRTL as isRTLFn} from '../lib/i18n';
 import {ENABLE_MAPS} from '../lib/env';
 import {OsmMapView} from '../components/maps/OsmMapView';
 
@@ -28,13 +28,12 @@ interface Props {
   onComplete: () => void;
   onBack: () => void;
   locale: Locale;
-  onToggleLocale: () => void;
 }
 
-export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLocale}: Props) {
+export function ActiveTripScreen({trip, onComplete, onBack, locale}: Props) {
   const {user} = useAuth();
   const i18n = t(locale);
-  const isRTL = locale === 'ar';
+  const isRTL = isRTLFn(locale);
   const [tracking, setTracking] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{lat: number; lng: number} | null>(null);
   const [routeCoords, setRouteCoords] = useState<{latitude: number; longitude: number}[]>([]);
@@ -78,11 +77,11 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
   function handleBack() {
     if (tracking) {
       Alert.alert(
-        locale === 'ar' ? 'تنبيه' : 'Warning',
-        locale === 'ar' ? 'الرحلة قيد التشغيل. هل تريد الخروج مع إيقاف التتبع؟' : 'Trip is active. Exit and stop tracking?',
+        i18n.warning,
+        i18n.tripActiveExitMsg,
         [
-          {text: locale === 'ar' ? 'إلغاء' : 'Cancel', style: 'cancel'},
-          {text: locale === 'ar' ? 'خروج' : 'Exit', style: 'destructive', onPress: () => { stopTracking(); onBack(); }},
+          {text: i18n.cancel, style: 'cancel'},
+          {text: i18n.exitLabel, style: 'destructive', onPress: () => { stopTracking(); onBack(); }},
         ],
       );
     } else {
@@ -101,13 +100,11 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
     if (hasFine || hasCoarse) return true;
 
     const status = await PermissionsAndroid.request(fine, {
-      title: locale === 'ar' ? 'صلاحية الموقع' : 'Location Permission',
-      message: locale === 'ar'
-        ? 'التطبيق يحتاج صلاحية الموقع لتتبع الرحلة مباشرة.'
-        : 'This app needs location permission to track trips live.',
-      buttonPositive: locale === 'ar' ? 'سماح' : 'Allow',
-      buttonNegative: locale === 'ar' ? 'رفض' : 'Deny',
-      buttonNeutral: locale === 'ar' ? 'لاحقاً' : 'Later',
+      title: i18n.locationPermission,
+      message: i18n.locationPermissionMsg,
+      buttonPositive: i18n.allow,
+      buttonNegative: i18n.deny,
+      buttonNeutral: i18n.later,
     });
 
     return status === PermissionsAndroid.RESULTS.GRANTED;
@@ -119,10 +116,8 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
     const granted = await ensureLocationPermission();
     if (!granted) {
       Alert.alert(
-        locale === 'ar' ? 'الموقع مطلوب' : 'Location Required',
-        locale === 'ar'
-          ? 'فعّل صلاحية الموقع لبدء تتبع الرحلة.'
-          : 'Please enable location permission to start trip tracking.',
+        i18n.locationRequired,
+        i18n.locationRequiredMsg,
       );
       return;
     }
@@ -245,8 +240,8 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
         />
       ) : (
         <View style={styles.mapDisabledWrap}>
-          <Text style={styles.mapDisabledTitle}>{locale === 'ar' ? 'الخريطة غير مفعلة حالياً' : 'Map is temporarily disabled'}</Text>
-          <Text style={styles.mapDisabledText}>{locale === 'ar' ? 'فعّل مفتاح Google Maps لإظهار الخريطة.' : 'Set a Google Maps key to enable map preview.'}</Text>
+          <Text style={styles.mapDisabledTitle}>{i18n.mapTempDisabled}</Text>
+          <Text style={styles.mapDisabledText}>{i18n.setMapKey}</Text>
           {currentLocation && (
             <Text style={styles.mapDisabledCoords}>{currentLocation.lat.toFixed(5)}, {currentLocation.lng.toFixed(5)}</Text>
           )}
@@ -262,9 +257,6 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale, onToggleLoca
           <Text style={[styles.route, isRTL && styles.rtlText]} numberOfLines={2}>
             {trip.origin} → {trip.destination}
           </Text>
-          <TouchableOpacity style={styles.langBtn} onPress={onToggleLocale}>
-            <Text style={styles.langText}>{i18n.languageLabel}</Text>
-          </TouchableOpacity>
         </View>
 
         <Text style={[styles.vehicle, isRTL && styles.rtlText]}>{i18n.vehicle}: {vehicleLabel}</Text>
@@ -331,14 +323,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   closeBtnText: {fontSize: 14, fontWeight: '700' as const, color: '#374151'},
-  langBtn: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  langText: {color: '#374151', fontSize: 12, fontWeight: '600'},
   route: {fontSize: 17, fontWeight: '700', color: '#111827', flex: 1, marginRight: 8},
   vehicle: {fontSize: 14, color: '#6b7280'},
   rtlText: {textAlign: 'right'},

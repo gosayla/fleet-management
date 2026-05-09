@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -12,41 +12,27 @@ import {Locale, t} from '../lib/i18n';
 import {Colors, Spacing, Typography} from '../lib/theme';
 import {ScreenHeader} from '../components/ui/ScreenHeader';
 import {VehicleCard, VehicleCardData} from '../components/ui/cards/VehicleCard';
+import {useCachedFetch} from '../hooks/useCachedFetch';
 
 interface Props {
   locale: Locale;
-  onToggleLocale: () => void;
 }
 
-export function AdminVehiclesScreen({locale, onToggleLocale}: Props) {
+export function AdminVehiclesScreen({locale}: Props) {
   const i18n = t(locale);
-  const [vehicles, setVehicles] = useState<VehicleCardData[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-
-  async function load() {
-    setRefreshing(true);
-    try {
-      const res = await api.get<{data: VehicleCardData[]}>('/vehicles');
-      setVehicles(Array.isArray(res) ? res : (res as any).data ?? []);
-    } catch {
-    } finally {
-      setRefreshing(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
+  const {data: raw, refreshing, refresh: load} = useCachedFetch(
+    'admin:vehicles',
+    () => api.get<VehicleCardData[] | {data: VehicleCardData[]}>('/vehicles'),
+  );
+  const vehicles: VehicleCardData[] = raw == null ? [] : Array.isArray(raw) ? raw : (raw as any).data ?? [];
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <ScreenHeader
         locale={locale}
-        title={locale === 'ar' ? 'المركبات' : 'Vehicles'}
-        subtitle={`${vehicles.length} ${locale === 'ar' ? 'مركبة' : 'vehicles'}`}
-        languageLabel={i18n.languageLabel}
-        onToggleLocale={onToggleLocale}
+        title={i18n.vehiclesSegment}
+        subtitle={`${vehicles.length} ${i18n.vehiclesUnit}`}
       />
 
       <FlatList
@@ -59,7 +45,7 @@ export function AdminVehiclesScreen({locale, onToggleLocale}: Props) {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyIcon}>🚛</Text>
-            <Text style={styles.emptyText}>{locale === 'ar' ? 'لا توجد مركبات' : 'No vehicles'}</Text>
+            <Text style={styles.emptyText}>{i18n.noVehicles}</Text>
           </View>
         }
       />

@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -12,41 +12,27 @@ import {Locale, t} from '../lib/i18n';
 import {Colors, Spacing, Typography} from '../lib/theme';
 import {ScreenHeader} from '../components/ui/ScreenHeader';
 import {DriverCard, DriverCardData} from '../components/ui/cards/DriverCard';
+import {useCachedFetch} from '../hooks/useCachedFetch';
 
 interface Props {
   locale: Locale;
-  onToggleLocale: () => void;
 }
 
-export function AdminDriversScreen({locale, onToggleLocale}: Props) {
+export function AdminDriversScreen({locale}: Props) {
   const i18n = t(locale);
-  const [drivers, setDrivers] = useState<DriverCardData[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-
-  async function load() {
-    setRefreshing(true);
-    try {
-      const data = await api.get<DriverCardData[]>('/drivers');
-      setDrivers(data);
-    } catch {
-    } finally {
-      setRefreshing(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
+  const {data: raw, refreshing, refresh: load} = useCachedFetch(
+    'admin:drivers',
+    () => api.get<DriverCardData[]>('/drivers'),
+  );
+  const drivers: DriverCardData[] = raw ?? [];
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <ScreenHeader
         locale={locale}
-        title={locale === 'ar' ? 'السائقون' : 'Drivers'}
-        subtitle={`${drivers.length} ${locale === 'ar' ? 'سائق' : 'drivers'}`}
-        languageLabel={i18n.languageLabel}
-        onToggleLocale={onToggleLocale}
+        title={i18n.driversSegment}
+        subtitle={`${drivers.length} ${i18n.driversUnit}`}
       />
 
       <FlatList
@@ -59,7 +45,7 @@ export function AdminDriversScreen({locale, onToggleLocale}: Props) {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyIcon}>👤</Text>
-            <Text style={styles.emptyText}>{locale === 'ar' ? 'لا يوجد سائقون' : 'No drivers'}</Text>
+            <Text style={styles.emptyText}>{i18n.noDrivers}</Text>
           </View>
         }
       />

@@ -4,6 +4,7 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
 import { mkdirSync } from 'fs';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { VehiclesService } from './vehicles.service';
 import { VehiclesController } from './vehicles.controller';
 
@@ -13,6 +14,7 @@ mkdirSync(photosDir, { recursive: true });
 
 @Module({
   imports: [
+    NotificationsModule,
     MulterModule.register({
       storage: diskStorage({
         destination: photosDir,

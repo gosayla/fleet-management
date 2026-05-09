@@ -13,7 +13,7 @@ import {
 import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
-import {Locale} from '../lib/i18n';
+import {Locale, t, tripStatusLabel} from '../lib/i18n';
 import {ENABLE_MAPS} from '../lib/env';
 import {OsmMapView} from '../components/maps/OsmMapView';
 
@@ -49,17 +49,18 @@ const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 const HEADER_H = 220;
 const HEADER_MIN_H = 116;
 
-const STATUS_CONFIG: Record<string, {label: {en: string; ar: string}; color: string; bg: string; icon: string}> = {
-  SCHEDULED:   {label: {en: 'Scheduled',  ar: 'مجدولة'},   color: Colors.info,      bg: Colors.infoLight,    icon: 'clock-outline'},
-  IN_PROGRESS: {label: {en: 'In Progress', ar: 'جارية'},    color: Colors.success,   bg: Colors.successLight, icon: 'truck-fast-outline'},
-  COMPLETED:   {label: {en: 'Completed',  ar: 'مكتملة'},   color: Colors.textMuted, bg: Colors.borderLight,  icon: 'check-circle-outline'},
-  CANCELLED:   {label: {en: 'Cancelled',  ar: 'ملغاة'},    color: Colors.danger,    bg: Colors.dangerLight,  icon: 'close-circle-outline'},
+const STATUS_CONFIG: Record<string, {color: string; bg: string; icon: string}> = {
+  SCHEDULED:   {color: Colors.info,      bg: Colors.infoLight,    icon: 'clock-outline'},
+  IN_PROGRESS: {color: Colors.success,   bg: Colors.successLight, icon: 'truck-fast-outline'},
+  COMPLETED:   {color: Colors.textMuted, bg: Colors.borderLight,  icon: 'check-circle-outline'},
+  CANCELLED:   {color: Colors.danger,    bg: Colors.dangerLight,  icon: 'close-circle-outline'},
 };
 
-const TRIP_TYPE_LABELS: Record<string, {en: string; ar: string}> = {
-  ONE_TIME:         {en: 'One Time',         ar: 'مرة واحدة'},
-  DAILY:            {en: 'Daily',            ar: 'يومية'},
-  MONTHLY_CONTRACT: {en: 'Monthly Contract', ar: 'عقد شهري'},
+type Locale5 = 'ar' | 'en' | 'hi' | 'bn' | 'ur';
+const TRIP_TYPE_LABELS: Record<string, Record<Locale5, string>> = {
+  ONE_TIME:         {ar: 'مرة واحدة',  en: 'One Time',          hi: 'एक बार',         bn: 'একবার',       ur: 'ایک بار'},
+  DAILY:            {ar: 'يومية',       en: 'Daily',             hi: 'दैनिक',           bn: 'দৈনিक',       ur: 'روزانہ'},
+  MONTHLY_CONTRACT: {ar: 'عقد شهري', en: 'Monthly Contract',  hi: 'मासिक अनुबंध', bn: 'মাসিক চুক্তি', ur: 'ماہانہ معاہدہ'},
 };
 
 function fmtDate(iso?: string) {
@@ -83,7 +84,7 @@ interface Props {
 }
 
 export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: Props) {
-  const isAr = locale === 'ar';
+  const i18n = t(locale);
   const scrollY = useRef(new Animated.Value(0)).current;
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [locations, setLocations] = useState<TripLocationPoint[]>([]);
@@ -130,16 +131,15 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
   if (!trip) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{isAr ? 'تعذر تحميل البيانات' : 'Could not load trip'}</Text>
+        <Text style={styles.errorText}>{i18n.couldNotLoad}</Text>
         <TouchableOpacity onPress={onBack} style={styles.retryBtn}>
-          <Text style={styles.retryText}>{isAr ? 'رجوع' : 'Go back'}</Text>
+          <Text style={styles.retryText}>{i18n.goBack}</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   const statusCfg = STATUS_CONFIG[trip.status] ?? STATUS_CONFIG.SCHEDULED;
-  const tripTypeCfg = TRIP_TYPE_LABELS[trip.tripType];
   const displayName = trip.name || `${trip.origin} → ${trip.destination}`;
 
   const durationMs = trip.scheduledEnd && trip.scheduledStart
@@ -195,7 +195,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
           <TouchableOpacity style={styles.circleBtn} onPress={onBack} activeOpacity={0.8}>
             <AppIcon name="close" size={20} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerLabel}>{isAr ? 'تفاصيل الرحلة' : 'Trip Details'}</Text>
+          <Text style={styles.headerLabel}>{i18n.tripDetails}</Text>
           {onEdit ? (
             <TouchableOpacity style={styles.circleBtn} onPress={onEdit} activeOpacity={0.8}>
               <AppIcon name="pencil" size={18} color="#fff" />
@@ -222,7 +222,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
           <View style={[styles.statusPill, {backgroundColor: statusCfg.bg}]}>
             <AppIcon name={statusCfg.icon} size={13} color={statusCfg.color} />
             <Text style={[styles.statusPillText, {color: statusCfg.color}]}>
-              {statusCfg.label[isAr ? 'ar' : 'en']}
+                {tripStatusLabel(trip.status, locale)}
             </Text>
           </View>
         </Animated.View>
@@ -242,24 +242,24 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
 
         {/* 3-col info strip */}
         <View style={styles.infoStrip}>
-          <InfoCol label={isAr ? 'النوع' : 'Type'} value={tripTypeCfg?.[isAr ? 'ar' : 'en'] ?? trip.tripType} />
+          <InfoCol label={i18n.typeLabel} value={TRIP_TYPE_LABELS[trip.tripType]?.[locale] ?? trip.tripType.replace(/_/g, ' ')} />
           <View style={styles.stripDiv} />
-          <InfoCol label={isAr ? 'المدة' : 'Duration'} value={durationHrs !== '—' ? `${durationHrs}h` : '—'} highlight />
+          <InfoCol label={i18n.duration} value={durationHrs !== '—' ? `${durationHrs}h` : '—'} highlight />
           <View style={styles.stripDiv} />
-          <InfoCol label={isAr ? 'المسافة' : 'Distance'} value={trip.distanceKm ? `${trip.distanceKm} km` : '—'} />
+          <InfoCol label={i18n.distance} value={trip.distanceKm ? `${trip.distanceKm} km` : '—'} />
         </View>
 
         {/* Schedule card */}
-        <Text style={styles.sectionTitle}>{isAr ? 'الجدول الزمني' : 'Schedule'}</Text>
+        <Text style={styles.sectionTitle}>{i18n.scheduleSection}</Text>
         <View style={styles.infoCard}>
           <InfoRow
             icon="clock-start"
-            label={isAr ? 'البداية المجدولة' : 'Scheduled Start'}
+            label={i18n.scheduledStart}
             value={fmtDateTime(trip.scheduledStart)}
           />
           <InfoRow
             icon="clock-end"
-            label={isAr ? 'النهاية المجدولة' : 'Scheduled End'}
+            label={i18n.scheduledEnd}
             value={fmtDateTime(trip.scheduledEnd)}
             noBorder
           />
@@ -269,7 +269,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
             {trip.actualStart && (
               <InfoRow
                 icon="play-circle-outline"
-                label={isAr ? 'البداية الفعلية' : 'Actual Start'}
+                label={i18n.actualStart}
                 value={fmtDateTime(trip.actualStart)}
                 highlight
                 noBorder={!trip.actualEnd}
@@ -278,7 +278,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
             {trip.actualEnd && (
               <InfoRow
                 icon="stop-circle-outline"
-                label={isAr ? 'النهاية الفعلية' : 'Actual End'}
+                label={i18n.actualEnd}
                 value={fmtDateTime(trip.actualEnd)}
                 highlight
                 noBorder
@@ -288,20 +288,20 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
         )}
 
         {/* Live GPS tracker */}
-        <Text style={[styles.sectionTitle, {marginTop: 20}]}>{isAr ? 'تتبع الموقع' : 'Location Tracker'}</Text>
+        <Text style={[styles.sectionTitle, {marginTop: 20}]}>{i18n.locationTracker}</Text>
         {latestLocation ? (
           <>
             <View style={styles.infoCard}>
               <InfoRow
                 icon="map-marker"
-                label={isAr ? 'آخر إحداثيات' : 'Latest Coordinates'}
+                label={i18n.latestCoords}
                 value={`${latestLocation.lat.toFixed(5)}, ${latestLocation.lng.toFixed(5)}`}
                 highlight={trip.status === 'IN_PROGRESS'}
                 noBorder={false}
               />
               <InfoRow
                 icon="clock-outline"
-                label={isAr ? 'وقت التحديث' : 'Updated At'}
+                label={i18n.updatedAt}
                 value={fmtDateTime(latestLocation.recordedAt)}
                 highlight={trip.status === 'IN_PROGRESS'}
                 noBorder
@@ -318,22 +318,20 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
               />
             ) : (
               <EmptyCard
-                isAr={isAr}
                 icon="map-outline"
-                text={isAr ? 'الخريطة غير مفعلة حالياً' : 'Map is currently disabled'}
+                text={i18n.mapDisabled}
               />
             )}
           </>
         ) : (
           <EmptyCard
-            isAr={isAr}
             icon="map-marker-off-outline"
-            text={isAr ? 'لا توجد بيانات موقع حتى الآن' : 'No location points yet'}
+            text={i18n.noLocationData}
           />
         )}
 
         {/* Driver */}
-        <Text style={[styles.sectionTitle, {marginTop: 20}]}>{isAr ? 'السائق' : 'Driver'}</Text>
+        <Text style={[styles.sectionTitle, {marginTop: 20}]}>{i18n.driverSection}</Text>
         {trip.driver ? (
           <View style={styles.personCard}>
             <View style={styles.personAvatar}>
@@ -349,7 +347,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
               </Text>
             </View>
             <View style={{flex: 1}}>
-              <Text style={styles.personName}>{trip.driver.fullName || (isAr ? 'سائق' : 'Driver')}</Text>
+              <Text style={styles.personName}>{trip.driver.fullName || i18n.driverSection}</Text>
               <Text style={styles.personSub}>{trip.driver.phone}</Text>
             </View>
             <View style={styles.licenseChip}>
@@ -357,11 +355,11 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
             </View>
           </View>
         ) : (
-          <EmptyCard isAr={isAr} icon="account-outline" text={isAr ? 'لا يوجد سائق' : 'No driver'} />
+          <EmptyCard icon="account-outline" text={i18n.noDriver} />
         )}
 
         {/* Vehicle */}
-        <Text style={[styles.sectionTitle, {marginTop: 20}]}>{isAr ? 'المركبة' : 'Vehicle'}</Text>
+        <Text style={[styles.sectionTitle, {marginTop: 20}]}>{i18n.vehicle}</Text>
         {trip.vehicle ? (
           <View style={styles.personCard}>
             <View style={[styles.personAvatar, {backgroundColor: '#e8f5f4'}]}>
@@ -376,18 +374,18 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
             </View>
           </View>
         ) : (
-          <EmptyCard isAr={isAr} icon="truck-outline" text={isAr ? 'لا توجد مركبة' : 'No vehicle'} />
+          <EmptyCard icon="truck-outline" text={i18n.noVehicle} />
         )}
 
         {/* Extra info */}
         {(trip.clientName || trip.contractNumber || trip.notes) && (
           <>
-            <Text style={[styles.sectionTitle, {marginTop: 20}]}>{isAr ? 'معلومات إضافية' : 'Additional Info'}</Text>
+            <Text style={[styles.sectionTitle, {marginTop: 20}]}>{i18n.additionalInfo}</Text>
             <View style={styles.infoCard}>
               {trip.clientName && (
                 <InfoRow
                   icon="account-tie-outline"
-                  label={isAr ? 'اسم العميل' : 'Client Name'}
+                  label={i18n.clientName}
                   value={trip.clientName}
                   noBorder={!trip.contractNumber && !trip.notes}
                 />
@@ -395,7 +393,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
               {trip.contractNumber && (
                 <InfoRow
                   icon="file-document-outline"
-                  label={isAr ? 'رقم العقد' : 'Contract No.'}
+                  label={i18n.contractNo}
                   value={trip.contractNumber}
                   noBorder={!trip.notes}
                 />
@@ -403,7 +401,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
               {trip.notes && (
                 <InfoRow
                   icon="note-text-outline"
-                  label={isAr ? 'ملاحظات' : 'Notes'}
+                  label={i18n.notes}
                   value={trip.notes}
                   noBorder
                 />
@@ -420,7 +418,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
             activeOpacity={0.85}>
             <AppIcon name="play-circle-outline" size={20} color="#fff" />
             <Text style={styles.startTripText}>
-              {isAr ? 'بدء الرحلة' : 'Start Trip'}
+              {i18n.startTrip}
             </Text>
           </TouchableOpacity>
         )}
@@ -458,7 +456,7 @@ function InfoRow({icon, label, value, highlight, noBorder}: {
   );
 }
 
-function EmptyCard({isAr, icon, text}: {isAr: boolean; icon: string; text: string}) {
+function EmptyCard({icon, text}: {icon: string; text: string}) {
   return (
     <View style={styles.emptyCard}>
       <AppIcon name={icon} size={18} color={Colors.textMuted} />

@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {api} from '../lib/api';
-import {Locale} from '../lib/i18n';
+import {Locale, t} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {DriverCard, DriverCardData} from '../components/ui/cards/DriverCard';
@@ -20,7 +20,6 @@ import {VehicleCard, VehicleCardData} from '../components/ui/cards/VehicleCard';
 
 interface Props {
   locale: Locale;
-  onToggleLocale: () => void;
   onSelectVehicle: (id: string) => void;
   onSelectDriver?: (id: string) => void;
   onAddVehicle?: () => void;
@@ -32,8 +31,8 @@ type Segment = 'drivers' | 'vehicles';
 const STATUS_BAR_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 const PAGE_SIZE = 20;
 
-export function AdminFleetScreen({locale, onToggleLocale, onSelectVehicle, onSelectDriver, onAddVehicle, onAddDriver}: Props) {
-  const isAr = locale === 'ar';
+export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAddVehicle, onAddDriver}: Props) {
+  const i18n = t(locale);
   const [segment, setSegment] = useState<Segment>('vehicles');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -114,18 +113,18 @@ export function AdminFleetScreen({locale, onToggleLocale, onSelectVehicle, onSel
   }, [searchQuery, segment]);
 
   // ── Derived ─────────────────────────────────────────────────────────────
-  const driverLabel  = isAr ? 'السائقون' : 'Drivers';
-  const vehicleLabel = isAr ? 'المركبات' : 'Vehicles';
+  const driverLabel  = i18n.driversSegment;
+  const vehicleLabel = i18n.vehiclesSegment;
   const countLabel   = segment === 'drivers'
-    ? (isAr ? `${drivers.length} سائق` : `${drivers.length} drivers`)
-    : (isAr ? `${vTotal} مركبة` : `${vTotal} vehicles`);
+    ? `${drivers.length} ${i18n.driversUnit}`
+    : `${vTotal} ${i18n.vehiclesUnit}`;
 
   const vehicleFooter = vLoading
     ? <ActivityIndicator color={Colors.primary} style={{padding: 16}} />
     : vHasMore
       ? null
       : vehicles.length > 0
-        ? <Text style={styles.endText}>{isAr ? 'تم عرض الكل' : 'All loaded'}</Text>
+        ? <Text style={styles.endText}>{i18n.allLoaded}</Text>
         : null;
 
   return (
@@ -136,7 +135,7 @@ export function AdminFleetScreen({locale, onToggleLocale, onSelectVehicle, onSel
       <View style={styles.header}>
         <View style={{height: STATUS_BAR_H}} />
         <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>{isAr ? 'الأسطول' : 'Fleet'}</Text>
+          <Text style={styles.headerTitle}>{i18n.fleet}</Text>
           <View style={styles.headerActions}>
             <TouchableOpacity
               style={styles.iconBtn}
@@ -169,8 +168,8 @@ export function AdminFleetScreen({locale, onToggleLocale, onSelectVehicle, onSel
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder={segment === 'drivers'
-                ? (isAr ? 'ابحث في السائقين...' : 'Search drivers...')
-                : (isAr ? 'ابحث في المركبات...' : 'Search vehicles...')}
+                ? i18n.searchDrivers
+                : i18n.searchVehicles}
               placeholderTextColor="rgba(255,255,255,0.75)"
               autoCapitalize="none"
               autoCorrect={false}
@@ -222,7 +221,7 @@ export function AdminFleetScreen({locale, onToggleLocale, onSelectVehicle, onSel
             ListEmptyComponent={
               <View style={styles.empty}>
                 <AppIcon name="account-group-outline" size={48} color={Colors.border} />
-                <Text style={styles.emptyText}>{isAr ? 'لا يوجد سائقون' : 'No drivers'}</Text>
+                <Text style={styles.emptyText}>{i18n.noDrivers}</Text>
               </View>
             }
           />
@@ -242,7 +241,7 @@ export function AdminFleetScreen({locale, onToggleLocale, onSelectVehicle, onSel
               !vLoading ? (
                 <View style={styles.empty}>
                   <AppIcon name="truck-outline" size={48} color={Colors.border} />
-                  <Text style={styles.emptyText}>{isAr ? 'لا توجد مركبات' : 'No vehicles'}</Text>
+                  <Text style={styles.emptyText}>{i18n.noVehicles}</Text>
                 </View>
               ) : null
             }

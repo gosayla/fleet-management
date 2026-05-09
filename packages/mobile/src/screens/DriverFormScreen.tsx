@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {api} from '../lib/api';
-import {Locale} from '../lib/i18n';
+import {Locale, t} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 
@@ -45,12 +45,12 @@ type BloodType = (typeof BLOOD_TYPES)[number];
 const DRIVER_STATUSES = ['ACTIVE', 'OFF_DUTY', 'ON_LEAVE', 'SUSPENDED', 'TERMINATED'] as const;
 type DriverStatus = (typeof DRIVER_STATUSES)[number];
 
-const STATUS_LABELS: Record<DriverStatus, {en: string; ar: string}> = {
-  ACTIVE:     {en: 'Active',      ar: 'نشط'},
-  OFF_DUTY:   {en: 'Off Duty',    ar: 'خارج الخدمة'},
-  ON_LEAVE:   {en: 'On Leave',    ar: 'إجازة'},
-  SUSPENDED:  {en: 'Suspended',   ar: 'موقوف'},
-  TERMINATED: {en: 'Terminated',  ar: 'منتهي'},
+const STATUS_LABELS: Record<DriverStatus, Record<Locale, string>> = {
+  ACTIVE:     {en: 'Active',      ar: 'نشط',          hi: 'सक्रिय',     bn: 'সক্রিয়',    ur: 'فعال'},
+  OFF_DUTY:   {en: 'Off Duty',    ar: 'خارج الخدمة', hi: 'ड्यूटी से बाहर', bn: 'ড্যুটি থেকে বাইরে', ur: 'ڈیوٹی سے باہر'},
+  ON_LEAVE:   {en: 'On Leave',    ar: 'إجازة',       hi: 'छुट्टी पर',   bn: 'ছুটিতে',    ur: 'چھٹی پر'},
+  SUSPENDED:  {en: 'Suspended',   ar: 'موقوف',       hi: 'निलंबिت',   bn: 'স্থগিত',    ur: 'معطل'},
+  TERMINATED: {en: 'Terminated',  ar: 'منتهي',       hi: 'समाप्ت',     bn: 'সমাপ্ত',    ur: 'ختم'},
 };
 
 interface Props {
@@ -79,7 +79,7 @@ const EMPTY: FormState = {
 };
 
 export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
-  const isAr = locale === 'ar';
+  const i18n = t(locale);
   const isEdit = !!driverId;
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loadingDriver, setLoadingDriver] = useState(isEdit);
@@ -103,7 +103,7 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
           status: (d.status as DriverStatus) ?? 'ACTIVE',
         });
       })
-      .catch(() => setError(isAr ? 'تعذر تحميل بيانات السائق' : 'Failed to load driver'))
+      .catch(() => setError(i18n.failedToLoadDriver))
       .finally(() => setLoadingDriver(false));
   }, [driverId]);
 
@@ -115,22 +115,22 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
     setError('');
 
     const required: Array<[string, string]> = [
-      [form.fullName, isAr ? 'الاسم الكامل' : 'Full Name'],
-      [form.phone, isAr ? 'رقم الجوال' : 'Phone'],
-      [form.nationalId, isAr ? 'رقم الهوية' : 'National ID'],
-      [form.licenseExpiry, isAr ? 'انتهاء الرخصة' : 'License Expiry'],
+      [form.fullName, i18n.fullName],
+      [form.phone, i18n.phoneFieldLabel],
+      [form.nationalId, i18n.nationalIdLabel],
+      [form.licenseExpiry, i18n.licenseExpiryRequired],
     ];
 
     for (const [value, label] of required) {
       if (!value.trim()) {
-        setError((isAr ? 'الحقل مطلوب: ' : 'Required: ') + label);
+        setError(i18n.requiredField + label);
         return;
       }
     }
 
     const parsedExpiry = new Date(form.licenseExpiry.trim());
     if (Number.isNaN(parsedExpiry.getTime())) {
-      setError(isAr ? 'صيغة تاريخ الرخصة غير صحيحة (YYYY-MM-DD)' : 'License expiry date format is invalid (YYYY-MM-DD)');
+      setError(i18n.invalidLicenseDate);
       return;
     }
 
@@ -182,10 +182,10 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
             <AppIcon name="close" size={21} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-            {isEdit ? (isAr ? 'تعديل السائق' : 'Edit Driver') : (isAr ? 'إضافة سائق' : 'Add Driver')}
+          {isEdit ? i18n.editDriver : i18n.addDriver}
           </Text>
           <TouchableOpacity style={[styles.saveBtn, submitting && {opacity: 0.6}]} onPress={handleSubmit} disabled={submitting} activeOpacity={0.8}>
-            {submitting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveText}>{isAr ? 'حفظ' : 'Save'}</Text>}
+            {submitting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveText}>{i18n.save}</Text>}
           </TouchableOpacity>
         </View>
       </View>
@@ -199,34 +199,34 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
             </View>
           )}
 
-          <Text style={styles.section}>{isAr ? 'المعلومات الأساسية' : 'Basic Info'}</Text>
+          <Text style={styles.section}>{i18n.basicInfo}</Text>
           <View style={styles.card}>
-            <Field label={isAr ? 'الاسم الكامل' : 'Full Name'} required>
-              <TextInput style={styles.input} value={form.fullName} onChangeText={v => set('fullName', v)} placeholder={isAr ? 'محمد القحطاني' : 'Mohammed Al-Qahtani'} placeholderTextColor={Colors.textMuted} />
+            <Field label={i18n.fullName} required>
+              <TextInput style={styles.input} value={form.fullName} onChangeText={v => set('fullName', v)} placeholder={locale === 'ar' ? 'محمد القحطاني' : 'Mohammed Al-Qahtani'} placeholderTextColor={Colors.textMuted} />
             </Field>
             <Divider />
-            <Field label={isAr ? 'رقم الجوال' : 'Phone'} required>
+            <Field label={i18n.phoneFieldLabel} required>
               <TextInput style={styles.input} value={form.phone} onChangeText={v => set('phone', v)} keyboardType="phone-pad" placeholder="+966501234567" placeholderTextColor={Colors.textMuted} />
             </Field>
             <Divider />
-            <Field label={isAr ? 'رقم الهوية' : 'National ID'} required>
+            <Field label={i18n.nationalIdLabel} required>
               <TextInput style={styles.input} value={form.nationalId} onChangeText={v => set('nationalId', v)} placeholder="1098765432" placeholderTextColor={Colors.textMuted} keyboardType="number-pad" />
             </Field>
             {!isEdit && (
               <Text style={styles.helperText}>
-                {isAr ? 'كلمة المرور الافتراضية ستكون نفس رقم الجوال ويمكن للسائق تغييرها لاحقاً.' : 'Default password will be the same as phone number and can be changed later.'}
+                {i18n.defaultPasswordNote}
               </Text>
             )}
           </View>
 
-          <Text style={styles.section}>{isAr ? 'الرخصة' : 'License'}</Text>
+          <Text style={styles.section}>{i18n.licenseSection}</Text>
           <View style={styles.card}>
-            <Field label={isAr ? 'تاريخ انتهاء الرخصة' : 'License Expiry Date'} required>
+            <Field label={i18n.licenseExpiryDate} required>
               <TextInput style={styles.input} value={form.licenseExpiry} onChangeText={v => set('licenseExpiry', v)} placeholder="YYYY-MM-DD" placeholderTextColor={Colors.textMuted} keyboardType="numbers-and-punctuation" />
             </Field>
           </View>
 
-          <Text style={styles.section}>{isAr ? 'فصيلة الدم (اختياري)' : 'Blood Type (Optional)'}</Text>
+          <Text style={styles.section}>{i18n.bloodTypeOptional}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsRow}>
             {BLOOD_TYPES.map(type => (
               <TouchableOpacity key={type} style={[styles.pill, form.bloodType === type && styles.pillActive]} onPress={() => set('bloodType', form.bloodType === type ? '' : type)} activeOpacity={0.8}>
@@ -237,7 +237,7 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
 
           {isEdit && (
             <>
-              <Text style={styles.section}>{isAr ? 'الحالة' : 'Status'}</Text>
+              <Text style={[styles.section, {marginTop: 20}]}>{i18n.statusSection}</Text>
               <View style={styles.card}>
                 {DRIVER_STATUSES.map((s, idx) => {
                   const isFirst = idx === 0;
@@ -250,7 +250,7 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
                         onPress={() => set('status', s)}
                         activeOpacity={0.7}>
                         <Text style={[styles.statusLabel, isActive && {color: Colors.primary, fontWeight: '700' as const}]}>
-                          {STATUS_LABELS[s][isAr ? 'ar' : 'en']}
+                          {STATUS_LABELS[s][locale]}
                         </Text>
                         {isActive && <AppIcon name="check-circle" size={20} color={Colors.primary} />}
                       </TouchableOpacity>

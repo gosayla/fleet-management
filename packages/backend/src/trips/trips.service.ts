@@ -2,10 +2,14 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto, TripLocationDto, UpdateTripDto } from './trips.dto';
 import { AuthTokenPayload, TripStatus } from '@fleet/shared';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class TripsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   private async assertCanWriteLocation(
     companyId: string,
@@ -102,14 +106,16 @@ export class TripsService {
   }
 
   async create(companyId: string, dto: CreateTripDto) {
-    return this.prisma.trip.create({
+    const trip = await this.prisma.trip.create({
       data: { ...dto, companyId },
       include: { vehicle: true, driver: true },
     });
+    await this.notificationsService.notifyTripAssigned(companyId, trip.id);
+    return trip;
   }
 
   async update(companyId: string, id: string, dto: UpdateTripDto, user: AuthTokenPayload) {
-    await this.findOne(companyId, id, user);
+    const existing = await this.findOne(companyId, id, user);
 
     const data: Record<string, unknown> = { ...dto };
 
@@ -133,11 +139,21 @@ export class TripsService {
       data.actualEnd = new Date();
     }
 
-    return this.prisma.trip.update({
+    const updated = await this.prisma.trip.update({
       where: { id },
       data,
       include: { vehicle: true, driver: true },
     });
+    if (dto.driverId && dto.driverId !== existing.driverId) {
+      await this.notificationsService.notifyTripAssigned(companyId, updated.id);
+    }
+    if (dto.status === TripStatus.IN_PROGRESS) {
+      await this.notificationsService.notifyTripStatus(companyId, updated.id, 'IN_PROGRESS');
+    }
+    if (dto.status === TripStatus.COMPLETED) {
+      await this.notificationsService.notifyTripStatus(companyId, updated.id, 'COMPLETED');
+    }
+    return updated;
   }
 
   async cancel(companyId: string, id: string) {

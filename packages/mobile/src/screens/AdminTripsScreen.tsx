@@ -11,10 +11,11 @@ import {
   TextInput,
 } from 'react-native';
 import {api} from '../lib/api';
-import {Locale} from '../lib/i18n';
+import {Locale, t} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {TripCard} from '../components/ui/cards/TripCard';
+import {useCachedFetch} from '../hooks/useCachedFetch';
 
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
@@ -33,39 +34,43 @@ export interface TripListItem {
 
 interface Props {
   locale: Locale;
-  onToggleLocale: () => void;
   onSelectTrip?: (id: string) => void;
   onAddTrip?: () => void;
 }
 
 const FILTERS = [
-  {key: 'ALL',         en: 'All',       ar: 'الكل'},
-  {key: 'IN_PROGRESS', en: 'Active',    ar: 'جارية'},
-  {key: 'SCHEDULED',   en: 'Scheduled', ar: 'مجدولة'},
-  {key: 'COMPLETED',   en: 'Done',      ar: 'منتهية'},
-];
+  {key: 'ALL',         ar: 'الكل',    en: 'All',       hi: 'सभी',       bn: 'সব',        ur: 'سب'},
+  {key: 'IN_PROGRESS', ar: 'جارية',   en: 'Active',    hi: 'सक्रिय',     bn: 'সক্রিয়',     ur: 'جاری'},
+  {key: 'SCHEDULED',   ar: 'مجدولة',  en: 'Scheduled', hi: 'निर्धारिت',   bn: 'নির্ধারিত',   ur: 'طے شدہ'},
+  {key: 'COMPLETED',   ar: 'منتهية',  en: 'Done',      hi: 'पूर्ण',      bn: 'সম্পন্ন',    ur: 'مکمل'},
+] as const;
 
-export function AdminTripsScreen({locale, onToggleLocale, onSelectTrip, onAddTrip}: Props) {
-  const isAr = locale === 'ar';
-  const [trips, setTrips] = useState<TripListItem[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
+export function AdminTripsScreen({locale, onSelectTrip, onAddTrip}: Props) {
+  const i18n = t(locale);
   const [filter, setFilter] = useState('ALL');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');  
+  const {data: raw, refreshing, refresh: refreshAll} = useCachedFetch(
+    'admin:trips',
+    () => api.get<TripListItem[]>('/trips'),
+  );
+  const [trips, setTrips] = useState<TripListItem[]>([]);
+
+  // Sync hook data into local state so search can override it
+  useEffect(() => {
+    if (raw != null) setTrips(Array.isArray(raw) ? raw : []);
+  }, [raw]);
 
   async function load(search?: string) {
-    setRefreshing(true);
-    try {
-      const qs = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
-      const data = await api.get<TripListItem[]>(`/trips${qs}`);
-      setTrips(Array.isArray(data) ? data : []);
-    } catch {
-    } finally {
-      setRefreshing(false);
+    if (search?.trim()) {
+      try {
+        const data = await api.get<TripListItem[]>(`/trips?search=${encodeURIComponent(search.trim())}`);
+        setTrips(Array.isArray(data) ? data : []);
+      } catch {}
+    } else {
+      refreshAll();
     }
   }
-
-  useEffect(() => {load();}, []);
 
   useEffect(() => {
     const timer = setTimeout(() => load(searchQuery), 300);
@@ -86,7 +91,7 @@ export function AdminTripsScreen({locale, onToggleLocale, onSelectTrip, onAddTri
       <View style={styles.header}>
         <View style={{height: SB_HEIGHT}} />
         <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>{isAr ? 'الرحلات' : 'Trips'}</Text>
+          <Text style={styles.headerTitle}>{i18n.trips}</Text>
           <View style={styles.headerActions}>
             <TouchableOpacity
               style={styles.iconBtn}
@@ -102,7 +107,7 @@ export function AdminTripsScreen({locale, onToggleLocale, onSelectTrip, onAddTri
           </View>
         </View>
         <Text style={styles.headerSub}>
-          {`${trips.length} ${isAr ? 'رحلة' : 'trips'}`}
+          {`${trips.length} ${i18n.tripsUnit}`}
         </Text>
         {searchOpen && (
           <View style={styles.searchWrap}>
@@ -111,7 +116,7 @@ export function AdminTripsScreen({locale, onToggleLocale, onSelectTrip, onAddTri
               style={styles.searchInput}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder={isAr ? 'ابحث في الرحلات...' : 'Search trips...'}
+              placeholder={i18n.searchTrips}
               placeholderTextColor="rgba(255,255,255,0.7)"
               autoCapitalize="none"
               autoCorrect={false}
@@ -135,7 +140,7 @@ export function AdminTripsScreen({locale, onToggleLocale, onSelectTrip, onAddTri
               style={[styles.filterPill, filter === f.key && styles.filterPillActive]}
               onPress={() => setFilter(f.key)}>
               <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
-                {isAr ? f.ar : f.en}
+                {f[locale]}
                 {` (${countByStatus(f.key)})`}
               </Text>
             </TouchableOpacity>
@@ -158,7 +163,7 @@ export function AdminTripsScreen({locale, onToggleLocale, onSelectTrip, onAddTri
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <AppIcon name="calendar-outline" size={48} color={Colors.border} />
-              <Text style={styles.emptyText}>{isAr ? 'لا توجد رحلات' : 'No trips'}</Text>
+              <Text style={styles.emptyText}>{i18n.noTripsFound}</Text>
             </View>
           }
         />

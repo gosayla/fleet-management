@@ -23,12 +23,12 @@ interface Props {
 }
 
 // Status maps to a teal badge (ACTIVE) or muted badge
-const STATUS_BADGE: Record<string, {bg: string; text: string; label: {en: string; ar: string}}> = {
-  ACTIVE:     {bg: Colors.primary,     text: '#fff',            label: {en: 'Active',    ar: 'نشط'}},
-  OFF_DUTY:   {bg: Colors.borderLight, text: Colors.textMuted,  label: {en: 'Off Duty',  ar: 'خارج الخدمة'}},
-  ON_LEAVE:   {bg: Colors.warningLight,text: Colors.warning,    label: {en: 'On Leave',  ar: 'إجازة'}},
-  SUSPENDED:  {bg: Colors.dangerLight, text: Colors.danger,     label: {en: 'Suspended', ar: 'موقوف'}},
-  TERMINATED: {bg: Colors.dangerLight, text: Colors.danger,     label: {en: 'Terminated',ar: 'منتهي'}},
+const STATUS_BADGE: Record<string, {bg: string; text: string; label: Record<Locale, string>}> = {
+  ACTIVE:     {bg: Colors.primary,     text: '#fff',            label: {en: 'Active',     ar: 'نشط',           hi: 'सक्रिय',       bn: 'সক্রিয়',      ur: 'فعال'}},
+  OFF_DUTY:   {bg: Colors.borderLight, text: Colors.textMuted,  label: {en: 'Off Duty',   ar: 'خارج الخدمة',   hi: 'ड्यूटी से बाहर', bn: 'ড্যুটি থেকে বাইরে', ur: 'ڈیوٹی سے باہر'}},
+  ON_LEAVE:   {bg: Colors.warningLight,text: Colors.warning,    label: {en: 'On Leave',   ar: 'إجازة',         hi: 'छुट्टी पर',     bn: 'ছুটিতে',      ur: 'چھٹی پر'}},
+  SUSPENDED:  {bg: Colors.dangerLight, text: Colors.danger,     label: {en: 'Suspended',  ar: 'موقوف',         hi: 'निलंबित',      bn: 'স্থগিত',      ur: 'معطل'}},
+  TERMINATED: {bg: Colors.dangerLight, text: Colors.danger,     label: {en: 'Terminated', ar: 'منتهي',         hi: 'समाप्त',       bn: 'সমাপ্ত',      ur: 'ختم'}},
 };
 
 export function DriverCard({driver, locale, onPress}: Props) {
@@ -36,7 +36,7 @@ export function DriverCard({driver, locale, onPress}: Props) {
   const initials = (driver.fullName ?? '?')
     .split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
   const subtitle = driver.phone ?? '—';
-  const label = badge.label[locale === 'ar' ? 'ar' : 'en'];
+  const label = badge.label[locale];
   const photoUrl = resolvePhotoUrl(driver.photoUrl);
 
   return (

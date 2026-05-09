@@ -19,7 +19,7 @@ import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import {api, resolveApiAssetUrls, resolvePhotoUrl} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
-import {Locale} from '../lib/i18n';
+import {Locale, t} from '../lib/i18n';
 import {subscribeToVehicleLocation} from '../lib/socket';
 import {OsmMapView} from '../components/maps/OsmMapView';
 
@@ -68,11 +68,11 @@ const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 const HEADER_H = 240;
 const HEADER_MIN_H = 118;
 
-const STATUS_LABELS: Record<string, {en: string; ar: string}> = {
-  ACTIVE:      {en: 'In Use',      ar: 'نشطة'},
-  MAINTENANCE: {en: 'Maintenance', ar: 'صيانة'},
-  INACTIVE:    {en: 'Inactive',    ar: 'غير نشطة'},
-  RETIRED:     {en: 'Retired',     ar: 'متقاعدة'},
+const STATUS_LABELS: Record<string, Record<Locale, string>> = {
+  ACTIVE:      {en: 'In Use',      ar: 'نشطة',      hi: 'उपयोग में',  bn: 'ব্যবহারে',  ur: 'استعمال میں'},
+  MAINTENANCE: {en: 'Maintenance', ar: 'صيانة',     hi: 'रखरखाव',     bn: 'রক্ষণাবেক্ষণ', ur: 'دیکھ بھال'},
+  INACTIVE:    {en: 'Inactive',    ar: 'غير نشطة',  hi: 'निष्क्रिय',  bn: 'নিষ্ক্রিয়',  ur: 'غیر فعال'},
+  RETIRED:     {en: 'Retired',     ar: 'متقاعدة',   hi: 'सेवानिवृत्त', bn: 'অবসরপ্রাপ্ত', ur: 'ریٹائرڈ'},
 };
 
 // Dark tinted color per vehicle type for the header bg
@@ -94,7 +94,7 @@ interface Props {
 }
 
 export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) {
-  const isAr = locale === 'ar';
+  const i18n = t(locale);
   const scrollY = useRef(new Animated.Value(0)).current;
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
   const [photos, setPhotos] = useState<VehiclePhoto[]>([]);
@@ -143,7 +143,7 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
       await api.upload<VehiclePhoto>(`/vehicles/${vehicleId}/photos`, form);
       refreshPhotos();
     } catch (e: any) {
-      Alert.alert(isAr ? 'خطأ' : 'Error', e?.message ?? 'Upload failed');
+      Alert.alert(i18n.error, e?.message ?? 'Upload failed');
     } finally {
       setUploading(false);
     }
@@ -151,11 +151,11 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
 
   function showAddPhotoOptions() {
     Alert.alert(
-      isAr ? 'إضافة صورة' : 'Add Photo',
+      i18n.addPhoto,
       '',
       [
         {
-          text: isAr ? 'الكاميرا' : 'Camera',
+          text: i18n.camera,
           onPress: () => launchCamera(
             {mediaType: 'photo', quality: 0.8, saveToPhotos: false},
             res => {
@@ -166,7 +166,7 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
           ),
         },
         {
-          text: isAr ? 'المعرض' : 'Gallery',
+          text: i18n.gallery,
           onPress: () => launchImageLibrary(
             {mediaType: 'photo', quality: 0.8, selectionLimit: 1},
             res => {
@@ -176,7 +176,7 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
             },
           ),
         },
-        {text: isAr ? 'إلغاء' : 'Cancel', style: 'cancel'},
+        {text: i18n.cancel, style: 'cancel'},
       ],
     );
   }
@@ -191,12 +191,12 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
 
   async function deletePhoto(photo: VehiclePhoto) {
     Alert.alert(
-      isAr ? 'حذف الصورة' : 'Delete Photo',
-      isAr ? 'هل تريد حذف هذه الصورة؟' : 'Delete this photo?',
+      i18n.deletePhotoTitle,
+      i18n.deletePhotoConfirm,
       [
-        {text: isAr ? 'إلغاء' : 'Cancel', style: 'cancel'},
+        {text: i18n.cancel, style: 'cancel'},
         {
-          text: isAr ? 'حذف' : 'Delete',
+          text: i18n.deleteLabel,
           style: 'destructive',
           onPress: async () => {
             try {
@@ -222,19 +222,19 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
   if (!vehicle) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{isAr ? 'تعذر تحميل البيانات' : 'Could not load vehicle'}</Text>
+        <Text style={styles.errorText}>{i18n.couldNotLoadVehicle}</Text>
         <TouchableOpacity onPress={onBack} style={styles.retryBtn}>
-          <Text style={styles.retryText}>{isAr ? 'رجوع' : 'Go back'}</Text>
+          <Text style={styles.retryText}>{i18n.goBack}</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const statusLabel = STATUS_LABELS[vehicle.status]?.[isAr ? 'ar' : 'en'] ?? vehicle.status;
+  const statusLabel = STATUS_LABELS[vehicle.status]?.[locale] ?? vehicle.status;
   const drivers = vehicle.drivers ?? [];
   const driverName = drivers.length > 0
     ? drivers.length === 1 ? drivers[0].fullName : `${drivers[0].fullName} +${drivers.length - 1}`
-    : (isAr ? 'غير معين' : 'Unassigned');
+    : i18n.unassigned;
   const profilePhoto = photos.find(p => p.isProfile) ?? photos[0] ?? null;
 
   const vehicleCheck = vehicle.inspectionExpiryDate
@@ -344,18 +344,18 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
         {/* 3-column info strip */}
         <View style={styles.infoStrip}>
           <InfoCol
-            label={isAr ? 'اسم السائق' : 'Driver Name'}
+            label={i18n.driverNameLabel}
             value={driverName}
           />
           <View style={styles.stripDiv} />
           <InfoCol
-            label={isAr ? 'الحالة' : 'Vehicle Status'}
+            label={i18n.vehicleStatusLabel}
             value={statusLabel}
             highlight={vehicle.status === 'ACTIVE'}
           />
           <View style={styles.stripDiv} />
           <InfoCol
-            label={isAr ? 'تاريخ الفحص' : 'Vehicle Check'}
+            label={i18n.vehicleCheckLabel}
             value={vehicleCheck}
           />
         </View>
@@ -371,7 +371,7 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
           <StatTile
             icon="gas-station"
             value={vehicle.fuelCapacity > 0 ? `${vehicle.fuelCapacity}` : 'Diesel'}
-            unit={isAr ? 'وقود' : 'Fuel'}
+            unit={i18n.fuelUnit}
             color="#27ae60"
           />
           <StatTile
@@ -383,13 +383,13 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
           <StatTile
             icon="cash-multiple"
             value={costLabel}
-            unit={isAr ? 'تكلفة' : 'Earn'}
+            unit={i18n.costUnit}
             color="#9b59b6"
           />
         </View>
 
         {/* ── Live GPS ── */}
-        <Text style={styles.sectionTitle}>{isAr ? 'الموقع الحي' : 'Live GPS'}</Text>
+        <Text style={styles.sectionTitle}>{i18n.liveGPSSection}</Text>
         <View style={styles.mapCard}>
           <View style={styles.mapBg}>
             {vehicle.lastLocationLat != null && vehicle.lastLocationLng != null ? (
@@ -403,15 +403,15 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
             ) : (
               <View style={styles.mapEmptyState}>
                 <AppIcon name="map-marker-off-outline" size={22} color={Colors.textMuted} />
-                <Text style={styles.mapEmptyText}>{isAr ? 'لا يوجد بيانات موقع بعد' : 'No live location yet'}</Text>
+                <Text style={styles.mapEmptyText}>{i18n.noLiveLocation}</Text>
               </View>
             )}
 
             <View style={styles.speedChip}>
               <Text style={styles.speedText}>
                 {vehicle.lastLocationAt
-                  ? `${isAr ? 'آخر تحديث' : 'Updated'}: ${new Date(vehicle.lastLocationAt).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})}`
-                  : (isAr ? 'لا يوجد بيانات GPS' : 'No GPS data')}
+                  ? `${i18n.updatedLabel}: ${new Date(vehicle.lastLocationAt).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})}`
+                  : i18n.noGpsData}
               </Text>
             </View>
 
@@ -426,55 +426,55 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
         {/* ── GPS Telemetry ── */}
         {(vehicle.pilotMotorHours != null || vehicle.pilotImei) && (
           <>
-            <Text style={[styles.sectionTitle, {marginTop: 4}]}>{isAr ? 'بيانات GPS' : 'GPS Telemetry'}</Text>
+            <Text style={[styles.sectionTitle, {marginTop: 4}]}>{i18n.gpsTelemetry}</Text>
             <View style={styles.telemetryCard}>
               {vehicle.pilotMotorHours != null && vehicle.pilotMotorHours > 0 && (
                 <TelemetryRow
                   icon="engine-outline"
-                  label={isAr ? 'ساعات المحرك' : 'Engine Hours'}
+                  label={i18n.engineHours}
                   value={`${(vehicle.pilotMotorHours).toFixed(1)} h`}
                 />
               )}
               {vehicle.pilotProviderMileage != null && vehicle.pilotProviderMileage > 0 && (
                 <TelemetryRow
                   icon="map-marker-distance"
-                  label={isAr ? 'مسافة الجهاز' : 'Device Mileage'}
+                  label={i18n.deviceMileage}
                   value={`${vehicle.pilotProviderMileage.toFixed(1)} km`}
                 />
               )}
               {vehicle.pilotBatteryVoltage != null && vehicle.pilotBatteryVoltage > 0 && (
                 <TelemetryRow
                   icon="car-battery"
-                  label={isAr ? 'فولتية البطارية' : 'Battery Voltage'}
+                  label={i18n.batteryVoltage}
                   value={`${vehicle.pilotBatteryVoltage.toFixed(2)} V`}
                 />
               )}
               {vehicle.pilotIgnitionOn != null && (
                 <TelemetryRow
                   icon={vehicle.pilotIgnitionOn ? 'key' : 'key-outline'}
-                  label={isAr ? 'المحرك' : 'Ignition'}
-                  value={vehicle.pilotIgnitionOn ? (isAr ? 'تشغيل' : 'On') : (isAr ? 'إيقاف' : 'Off')}
+                  label={i18n.ignition}
+                  value={vehicle.pilotIgnitionOn ? i18n.ignitionOn : i18n.ignitionOff}
                   valueColor={vehicle.pilotIgnitionOn ? '#27ae60' : undefined}
                 />
               )}
               {vehicle.pilotLoadWeight != null && vehicle.pilotLoadWeight > 0 && (
                 <TelemetryRow
                   icon="weight"
-                  label={isAr ? 'الحمولة' : 'Load Weight'}
+                  label={i18n.loadWeight}
                   value={`${vehicle.pilotLoadWeight.toFixed(0)} kg`}
                 />
               )}
               {vehicle.pilotLastStop && (
                 <TelemetryRow
                   icon="map-marker-check-outline"
-                  label={isAr ? 'آخر توقف' : 'Last Stop'}
+                  label={i18n.lastStop}
                   value={new Date(vehicle.pilotLastStop).toLocaleDateString()}
                 />
               )}
               {vehicle.pilotLastMove && (
                 <TelemetryRow
                   icon="map-marker-path"
-                  label={isAr ? 'آخر حركة' : 'Last Move'}
+                  label={i18n.lastMove}
                   value={new Date(vehicle.pilotLastMove).toLocaleDateString()}
                 />
               )}
@@ -494,7 +494,7 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
         {/* ── Assigned Drivers ── */}
         {drivers.length > 0 && (
           <>
-            <Text style={[styles.sectionTitle, {marginTop: 8}]}>{isAr ? 'السائقون المعيّنون' : 'Assigned Drivers'}</Text>
+            <Text style={[styles.sectionTitle, {marginTop: 8}]}>{i18n.assignedDriversLabel}</Text>
             {drivers.map((d, idx) => (
               <View key={d.id} style={[styles.logRow, idx < drivers.length - 1 && {marginBottom: 6}]}>
                 <View style={styles.driverThumb}>
@@ -516,7 +516,7 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
 
         {/* ── Vehicle Photos ── */}
         <View style={styles.photosSectionHeader}>
-          <Text style={[styles.sectionTitle, {marginTop: 16}]}>{isAr ? 'صور المركبة' : 'Vehicle Photos'}</Text>
+          <Text style={[styles.sectionTitle, {marginTop: 16}]}>{i18n.vehiclePhotos}</Text>
           <TouchableOpacity
             style={styles.addPhotoBtn}
             onPress={showAddPhotoOptions}
@@ -525,7 +525,7 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
           >
             {uploading
               ? <ActivityIndicator size={14} color={Colors.primary} />
-              : <><AppIcon name="camera-plus" size={14} color={Colors.primary} /><Text style={styles.addPhotoBtnText}>{isAr ? 'إضافة' : 'Add'}</Text></>
+              : <><AppIcon name="camera-plus" size={14} color={Colors.primary} /><Text style={styles.addPhotoBtnText}>{i18n.addLabel}</Text></>
             }
           </TouchableOpacity>
         </View>
@@ -557,14 +557,14 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
         ) : (
           <TouchableOpacity style={styles.emptyPhotos} onPress={showAddPhotoOptions} activeOpacity={0.8}>
             <AppIcon name="camera-plus-outline" size={28} color={Colors.textMuted} />
-            <Text style={styles.emptyPhotosText}>{isAr ? 'أضف صورة للمركبة' : 'Add vehicle photos'}</Text>
+            <Text style={styles.emptyPhotosText}>{i18n.addVehiclePhoto}</Text>
           </TouchableOpacity>
         )}
 
         {/* ── Recent Maintenance ── */}
         {vehicle.maintenanceLogs && vehicle.maintenanceLogs.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>{isAr ? 'آخر الصيانة' : 'Recent Maintenance'}</Text>
+            <Text style={styles.sectionTitle}>{i18n.recentMaintenance}</Text>
             {vehicle.maintenanceLogs.slice(0, 3).map(log => (
               <View key={log.id} style={styles.logRow}>
                 <View style={styles.logIcon}>
@@ -590,22 +590,22 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
         )}
 
         {/* ── Document validity ── */}
-        <Text style={[styles.sectionTitle, {marginTop: 8}]}>{isAr ? 'صلاحية الوثائق' : 'Document Validity'}</Text>
+        <Text style={[styles.sectionTitle, {marginTop: 8}]}>{i18n.docValidity}</Text>
         <View style={styles.docsCard}>
-          <DocRow label={isAr ? 'حالة الفحص الدوري' : 'MVPI Status'} value={vehicle.mvpiStatus ?? '—'} warn={vehicle.mvpiStatus === 'Expired'} />
-          <DocRow label={isAr ? 'انتهاء التأمين' : 'Insurance Expiry'} value={vehicle.insuranceExpiryDate ?? '—'} warn={!!vehicle.insuranceExpiryDate && new Date(vehicle.insuranceExpiryDate) < new Date()} />
-          <DocRow label={isAr ? 'انتهاء الترخيص' : 'License Expiry'} value={vehicle.licenseExpiryDate ?? '—'} warn={!!vehicle.licenseExpiryDate && new Date(vehicle.licenseExpiryDate) < new Date()} last />
+          <DocRow label={i18n.mvpiStatusLabel} value={vehicle.mvpiStatus ?? '—'} warn={vehicle.mvpiStatus === 'Expired'} />
+          <DocRow label={i18n.insuranceExpiryStatus} value={vehicle.insuranceExpiryDate ?? '—'} warn={!!vehicle.insuranceExpiryDate && new Date(vehicle.insuranceExpiryDate) < new Date()} />
+          <DocRow label={i18n.licenseExpiryStatus} value={vehicle.licenseExpiryDate ?? '—'} warn={!!vehicle.licenseExpiryDate && new Date(vehicle.licenseExpiryDate) < new Date()} last />
         </View>
 
         {/* ── Attached documents (downloadable) ── */}
         {vehicle.documents && vehicle.documents.length > 0 && (
           <>
-            <Text style={[styles.sectionTitle, {marginTop: 8}]}>{isAr ? 'المستندات المرفقة' : 'Attached Documents'}</Text>
+            <Text style={[styles.sectionTitle, {marginTop: 8}]}>{i18n.attachedDocs}</Text>
             {vehicle.documents.map((doc, idx) => (
               <DocFileRow
                 key={doc.id}
                 doc={doc}
-                isAr={isAr}
+                locale={locale}
                 last={idx === (vehicle.documents!.length - 1)}
               />
             ))}
@@ -636,18 +636,18 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
               {!activePhoto.isProfile && (
                 <TouchableOpacity style={styles.lightboxAction} onPress={() => setAsProfile(activePhoto)}>
                   <AppIcon name="star-outline" size={18} color="#fff" />
-                  <Text style={styles.lightboxActionText}>{isAr ? 'تعيين كرئيسية' : 'Set as Profile'}</Text>
+                  <Text style={styles.lightboxActionText}>{i18n.setAsProfileLabel}</Text>
                 </TouchableOpacity>
               )}
               {activePhoto.isProfile && (
                 <View style={[styles.lightboxAction, {opacity: 0.6}]}>
                   <AppIcon name="star" size={18} color="#FFD700" />
-                  <Text style={styles.lightboxActionText}>{isAr ? 'الصورة الرئيسية' : 'Profile Photo'}</Text>
+                  <Text style={styles.lightboxActionText}>{i18n.profilePhotoLabel}</Text>
                 </View>
               )}
               <TouchableOpacity style={styles.lightboxAction} onPress={() => deletePhoto(activePhoto)}>
                 <AppIcon name="trash-can-outline" size={18} color="#e74c3c" />
-                <Text style={[styles.lightboxActionText, {color: '#e74c3c'}]}>{isAr ? 'حذف' : 'Delete'}</Text>
+                <Text style={[styles.lightboxActionText, {color: '#e74c3c'}]}>{i18n.deleteLabel}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -721,31 +721,32 @@ const DOC_ICONS: Record<string, string> = {
   DEFAULT:              'file-outline',
 };
 
-const DOC_LABELS: Record<string, {ar: string; en: string}> = {
-  VEHICLE_REGISTRATION: {ar: 'تسجيل مركبة', en: 'Vehicle Registration'},
-  VEHICLE_INSURANCE: {ar: 'تأمين مركبة', en: 'Vehicle Insurance'},
-  PERIODIC_INSPECTION: {ar: 'فحص دوري', en: 'Periodic Inspection'},
-  DRIVER_LICENSE: {ar: 'رخصة قيادة', en: 'Driver License'},
-  TRANSPORT_PERMIT: {ar: 'تصريح نقل', en: 'Transport Permit'},
-  OWNERSHIP_DEED: {ar: 'صك ملكية', en: 'Ownership Deed'},
-  OPERATION_CARD: {ar: 'بطاقة تشغيل', en: 'Operation Card'},
+const DOC_LABELS: Record<string, Record<string, string>> = {
+  VEHICLE_REGISTRATION: {ar: 'تسجيل مركبة', en: 'Vehicle Registration', hi: 'वाहन पंजीकरण', bn: 'গাড়ি নিবন্ধন', ur: 'گاڑی رجسٹریشن'},
+  VEHICLE_INSURANCE: {ar: 'تأمين مركبة', en: 'Vehicle Insurance', hi: 'वाहन बीमा', bn: 'গাড়ির বীমা', ur: 'گاڑی انشورنس'},
+  PERIODIC_INSPECTION: {ar: 'فحص دوري', en: 'Periodic Inspection', hi: 'आवधिक निरीक्षण', bn: 'পর্যায়ক্রমিক পরিদর্শন', ur: 'وقتاً فوقتاً معائنہ'},
+  DRIVER_LICENSE: {ar: 'رخصة قيادة', en: 'Driver License', hi: 'ड्राइवर लाइसेंस', bn: 'ড্রাইভার লাইসেন্স', ur: 'ڈرائیور لائسنس'},
+  TRANSPORT_PERMIT: {ar: 'تصريح نقل', en: 'Transport Permit', hi: 'परिवहन परमिट', bn: 'পরিবহন পারমিট', ur: 'ٹرانسپورٹ پرمٹ'},
+  OWNERSHIP_DEED: {ar: 'صك ملكية', en: 'Ownership Deed', hi: 'स्वामित्व विलेख', bn: 'মালিকানা দলিল', ur: 'ملکیت دستاویز'},
+  OPERATION_CARD: {ar: 'بطاقة تشغيل', en: 'Operation Card', hi: 'ऑपरेशन कार्ड', bn: 'অপারেশন কার্ড', ur: 'آپریشن کارڈ'},
 };
 
 function DocFileRow({
   doc,
-  isAr,
+  locale,
   last,
 }: {
   doc: {id: string; type: string; fileUrl: string; issueDate: string; expiryDate: string; issuingAuthority?: string};
-  isAr: boolean;
+  locale: Locale;
   last: boolean;
 }) {
+  const i18n = t(locale);
   const expiry = doc.expiryDate
     ? new Date(doc.expiryDate).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'})
     : '—';
   const isExpired = doc.expiryDate && new Date(doc.expiryDate) < new Date();
   const icon = DOC_ICONS[doc.type] ?? DOC_ICONS.DEFAULT;
-  const typeName = DOC_LABELS[doc.type]?.[isAr ? 'ar' : 'en'] ?? doc.type.replace(/_/g, ' ');
+  const typeName = DOC_LABELS[doc.type]?.[locale] ?? doc.type.replace(/_/g, ' ');
 
   async function handleOpen() {
     const url = doc.fileUrl;
@@ -767,8 +768,8 @@ function DocFileRow({
       }
 
       Alert.alert(
-        isAr ? 'تعذر فتح الملف' : 'Cannot open file',
-        isAr ? 'تعذر فتح المستند على هذا الجهاز حالياً.' : 'The document could not be opened on this device right now.',
+        i18n.cannotOpenFile,
+        i18n.cannotOpenFileMsg,
       );
     }
   }
@@ -784,7 +785,7 @@ function DocFileRow({
       <View style={{flex: 1}}>
         <Text style={styles.fileType}>{typeName}</Text>
         <Text style={[styles.fileExpiry, isExpired ? {color: '#e74c3c'} : {}]}>
-          {isAr ? 'ينتهي: ' : 'Exp: '}{expiry}
+          {i18n.expLabel}{expiry}
         </Text>
       </View>
       <View style={styles.downloadBtn}>

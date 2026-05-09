@@ -15,7 +15,7 @@ import {
   Alert,
 } from 'react-native';
 import {api} from '../lib/api';
-import {Locale} from '../lib/i18n';
+import {Locale, t} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 
@@ -23,19 +23,19 @@ const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
 const TRIP_TYPES = ['ONE_TIME', 'DAILY', 'MONTHLY_CONTRACT'] as const;
 type TripType = (typeof TRIP_TYPES)[number];
-const TRIP_TYPE_LABELS: Record<TripType, {en: string; ar: string}> = {
-  ONE_TIME:         {en: 'One Time',         ar: 'مرة واحدة'},
-  DAILY:            {en: 'Daily',            ar: 'يومية'},
-  MONTHLY_CONTRACT: {en: 'Monthly Contract', ar: 'عقد شهري'},
+const TRIP_TYPE_LABELS: Record<TripType, Record<string, string>> = {
+  ONE_TIME:         {en: 'One Time',         ar: 'مرة واحدة',    hi: 'एक बार',       bn: 'একবার',        ur: 'ایک بار'},
+  DAILY:            {en: 'Daily',            ar: 'يومية',            hi: 'दैनिक',          bn: 'প্রতিদিন',         ur: 'روزانہ'},
+  MONTHLY_CONTRACT: {en: 'Monthly Contract', ar: 'عقد شهري', hi: 'मासिक अनुबंध', bn: 'মাসিক চুক্তি', ur: 'ماہانہ معاہدہ'},
 };
 
 const TRIP_STATUSES = ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
 type TripStatus = (typeof TRIP_STATUSES)[number];
-const TRIP_STATUS_LABELS: Record<TripStatus, {en: string; ar: string}> = {
-  SCHEDULED:   {en: 'Scheduled',   ar: 'مجدولة'},
-  IN_PROGRESS: {en: 'In Progress', ar: 'جارية'},
-  COMPLETED:   {en: 'Completed',   ar: 'مكتملة'},
-  CANCELLED:   {en: 'Cancelled',   ar: 'ملغاة'},
+const TRIP_STATUS_LABELS: Record<TripStatus, Record<string, string>> = {
+  SCHEDULED:   {en: 'Scheduled',   ar: 'مجدولة',  hi: 'निर्धारिت',    bn: 'নির্ধারিত',     ur: 'طے شدہ'},
+  IN_PROGRESS: {en: 'In Progress', ar: 'جارية',    hi: 'जारी',         bn: 'চলতি',          ur: 'جاری'},
+  COMPLETED:   {en: 'Completed',   ar: 'مكتملة',  hi: 'पूर्ण',          bn: 'সম্পন্ন',         ur: 'مکمل'},
+  CANCELLED:   {en: 'Cancelled',   ar: 'ملغاة',    hi: 'रद्द',          bn: 'বাতিল',          ur: 'منسوخ'},
 };
 
 interface DriverOption {id: string; fullName: string; phone: string; licenseNumber: string}
@@ -79,7 +79,7 @@ interface Props {
 }
 
 export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
-  const isAr = locale === 'ar';
+  const i18n = t(locale);
   const isEdit = !!tripId;
 
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -128,7 +128,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
           status: (t.status as TripStatus) ?? 'SCHEDULED',
         });
       })
-      .catch(() => setError(isAr ? 'تعذر تحميل بيانات الرحلة' : 'Failed to load trip'))
+      .catch(() => setError(i18n.failedToLoadTrip))
       .finally(() => setLoadingTrip(false));
   }, [tripId]);
 
@@ -136,30 +136,30 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
     setError('');
 
     if (!form.origin.trim() || !form.destination.trim()) {
-      setError(isAr ? 'المصدر والوجهة مطلوبان' : 'Origin and destination are required');
+      setError(i18n.originRequired);
       return;
     }
     if (!form.driverId) {
-      setError(isAr ? 'يجب اختيار سائق' : 'Please select a driver');
+      setError(i18n.driverRequiredMsg);
       return;
     }
     if (!form.vehicleId) {
-      setError(isAr ? 'يجب اختيار مركبة' : 'Please select a vehicle');
+      setError(i18n.vehicleRequiredMsg);
       return;
     }
     if (!form.scheduledStart.trim() || !form.scheduledEnd.trim()) {
-      setError(isAr ? 'تاريخ البداية والنهاية مطلوبان' : 'Start and end dates are required');
+      setError(i18n.datesRequiredMsg);
       return;
     }
 
     const start = parseLocalInput(form.scheduledStart);
     const end   = parseLocalInput(form.scheduledEnd);
     if (!start || !end) {
-      setError(isAr ? 'صيغة التاريخ غير صحيحة (YYYY-MM-DD HH:MM)' : 'Invalid date format (YYYY-MM-DD HH:MM)');
+      setError(i18n.dateFormatError);
       return;
     }
     if (end <= start) {
-      setError(isAr ? 'يجب أن تكون نهاية الرحلة بعد بدايتها' : 'End must be after start');
+      setError(i18n.endAfterStart);
       return;
     }
 
@@ -196,10 +196,8 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
         }
 
         Alert.alert(
-          isAr ? 'تم الحفظ' : 'Saved',
-          isAr
-            ? 'تم حفظ الرحلة بدون الاسم لأن الخادم الحالي لا يدعم هذا الحقل بعد.'
-            : 'The trip was saved without the name because the current server does not support that field yet.',
+          i18n.saved,
+          i18n.tripSavedNameMsg,
         );
       }
 
@@ -233,7 +231,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
             <AppIcon name="close" size={21} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-            {isEdit ? (isAr ? 'تعديل الرحلة' : 'Edit Trip') : (isAr ? 'إضافة رحلة' : 'Add Trip')}
+          {isEdit ? i18n.editTrip : i18n.addTrip}
           </Text>
           <TouchableOpacity
             style={[styles.saveBtn, submitting && {opacity: 0.6}]}
@@ -242,7 +240,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
             activeOpacity={0.8}>
             {submitting
               ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.saveText}>{isAr ? 'حفظ' : 'Save'}</Text>
+              : <Text style={styles.saveText}>{i18n.save}</Text>
             }
           </TouchableOpacity>
         </View>
@@ -262,39 +260,39 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
           )}
 
           {/* Basic Info */}
-          <SectionLabel text={isAr ? 'معلومات الرحلة' : 'Trip Info'} />
+          <SectionLabel text={i18n.tripInfoSection} />
           <View style={styles.card}>
-            <Field label={isAr ? 'اسم الرحلة' : 'Trip Name'}>
+            <Field label={i18n.tripNameField}>
               <TextInput
                 style={styles.input}
                 value={form.name}
                 onChangeText={v => set('name', v)}
-                placeholder={isAr ? 'نقل مطار #12' : 'Airport Transfer #12'}
+                placeholder={i18n.tripNameField}
                 placeholderTextColor={Colors.textMuted}
               />
             </Field>
             <Divider />
-            <Field label={isAr ? 'المصدر' : 'Origin'} required>
+            <Field label={i18n.originField} required>
               <TextInput
                 style={styles.input}
                 value={form.origin}
                 onChangeText={v => set('origin', v)}
-                placeholder={isAr ? 'الرياض' : 'Riyadh'}
+                placeholder={i18n.originField}
                 placeholderTextColor={Colors.textMuted}
               />
             </Field>
             <Divider />
-            <Field label={isAr ? 'الوجهة' : 'Destination'} required>
+            <Field label={i18n.destinationField} required>
               <TextInput
                 style={styles.input}
                 value={form.destination}
                 onChangeText={v => set('destination', v)}
-                placeholder={isAr ? 'جدة' : 'Jeddah'}
+                placeholder={i18n.destinationField}
                 placeholderTextColor={Colors.textMuted}
               />
             </Field>
             <Divider />
-            <Field label={isAr ? 'نوع الرحلة' : 'Trip Type'}>
+            <Field label={i18n.tripTypeField}>
               <View style={styles.pillsRow}>
                 {TRIP_TYPES.map(tt => (
                   <TouchableOpacity
@@ -303,7 +301,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
                     onPress={() => set('tripType', tt)}
                     activeOpacity={0.8}>
                     <Text style={[styles.pillText, form.tripType === tt && styles.pillTextActive]}>
-                      {TRIP_TYPE_LABELS[tt][isAr ? 'ar' : 'en']}
+                      {TRIP_TYPE_LABELS[tt][locale] ?? TRIP_TYPE_LABELS[tt].en}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -312,9 +310,9 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
           </View>
 
           {/* Schedule */}
-          <SectionLabel text={isAr ? 'الجدول الزمني' : 'Schedule'} />
+          <SectionLabel text={i18n.scheduleSection} />
           <View style={styles.card}>
-            <Field label={isAr ? 'تاريخ ووقت البداية' : 'Start Date & Time'} required>
+            <Field label={i18n.startDateTimeLabel} required>
               <TextInput
                 style={styles.input}
                 value={form.scheduledStart}
@@ -325,7 +323,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
               />
             </Field>
             <Divider />
-            <Field label={isAr ? 'تاريخ ووقت النهاية' : 'End Date & Time'} required>
+            <Field label={i18n.endDateTimeLabel} required>
               <TextInput
                 style={styles.input}
                 value={form.scheduledEnd}
@@ -338,7 +336,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
           </View>
 
           {/* Driver picker */}
-          <SectionLabel text={isAr ? 'السائق' : 'Driver'} required />
+          <SectionLabel text={i18n.driverSection} required />
           <TouchableOpacity
             style={styles.pickerBtn}
             onPress={() => setDriverModalOpen(true)}
@@ -359,7 +357,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
               <View style={styles.pickerPlaceholder}>
                 <AppIcon name="account-outline" size={20} color={Colors.textMuted} />
                 <Text style={styles.pickerPlaceholderText}>
-                  {isAr ? 'اختر سائقاً...' : 'Select a driver...'}
+                  {i18n.selectDriverPicker}
                 </Text>
               </View>
             )}
@@ -367,7 +365,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
           </TouchableOpacity>
 
           {/* Vehicle picker */}
-          <SectionLabel text={isAr ? 'المركبة' : 'Vehicle'} required />
+          <SectionLabel text={i18n.vehicleSection} required />
           <TouchableOpacity
             style={styles.pickerBtn}
             onPress={() => setVehicleModalOpen(true)}
@@ -386,7 +384,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
               <View style={styles.pickerPlaceholder}>
                 <AppIcon name="truck-outline" size={20} color={Colors.textMuted} />
                 <Text style={styles.pickerPlaceholderText}>
-                  {isAr ? 'اختر مركبة...' : 'Select a vehicle...'}
+                  {i18n.selectVehiclePicker}
                 </Text>
               </View>
             )}
@@ -394,19 +392,19 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
           </TouchableOpacity>
 
           {/* Optional fields */}
-          <SectionLabel text={isAr ? 'معلومات إضافية (اختياري)' : 'Additional Info (Optional)'} />
+          <SectionLabel text={i18n.additionalInfoOpt} />
           <View style={styles.card}>
-            <Field label={isAr ? 'اسم العميل' : 'Client Name'}>
+            <Field label={i18n.clientName}>
               <TextInput
                 style={styles.input}
                 value={form.clientName}
                 onChangeText={v => set('clientName', v)}
-                placeholder={isAr ? 'اسم العميل أو الراكب' : 'Client or passenger name'}
+                placeholder={i18n.clientName}
                 placeholderTextColor={Colors.textMuted}
               />
             </Field>
             <Divider />
-            <Field label={isAr ? 'رقم العقد' : 'Contract Number'}>
+            <Field label={i18n.contractNo}>
               <TextInput
                 style={styles.input}
                 value={form.contractNumber}
@@ -416,12 +414,12 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
               />
             </Field>
             <Divider />
-            <Field label={isAr ? 'ملاحظات' : 'Notes'}>
+            <Field label={i18n.notes}>
               <TextInput
                 style={[styles.input, {minHeight: 60}]}
                 value={form.notes}
                 onChangeText={v => set('notes', v)}
-                placeholder={isAr ? 'ملاحظات إضافية...' : 'Additional notes...'}
+                placeholder={i18n.notes}
                 placeholderTextColor={Colors.textMuted}
                 multiline
               />
@@ -431,7 +429,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
           {/* Status (edit only) */}
           {isEdit && (
             <>
-              <SectionLabel text={isAr ? 'الحالة' : 'Status'} />
+              <SectionLabel text={i18n.statusSection} />
               <View style={styles.card}>
                 {TRIP_STATUSES.map((s, idx) => {
                   const isActive = form.status === s;
@@ -443,7 +441,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
                         onPress={() => set('status', s)}
                         activeOpacity={0.7}>
                         <Text style={[styles.statusLabel, isActive && {color: Colors.primary, fontWeight: '700' as const}]}>
-                          {TRIP_STATUS_LABELS[s][isAr ? 'ar' : 'en']}
+                          {TRIP_STATUS_LABELS[s][locale] ?? TRIP_STATUS_LABELS[s].en}
                         </Text>
                         {isActive && <AppIcon name="check-circle" size={20} color={Colors.primary} />}
                       </TouchableOpacity>
@@ -462,8 +460,8 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
       <PickerModal
         visible={driverModalOpen}
         onClose={() => setDriverModalOpen(false)}
-        title={isAr ? 'اختر سائقاً' : 'Select Driver'}
-        isAr={isAr}
+        title={i18n.selectDriver}
+        isAr={locale === 'ar'}
         items={drivers.map(d => ({
           id: d.id,
           primary: d.fullName,
@@ -478,8 +476,8 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
       <PickerModal
         visible={vehicleModalOpen}
         onClose={() => setVehicleModalOpen(false)}
-        title={isAr ? 'اختر مركبة' : 'Select Vehicle'}
-        isAr={isAr}
+        title={i18n.selectVehicle}
+        isAr={locale === 'ar'}
         items={vehicles.map(v => ({
           id: v.id,
           primary: v.plateNumber,

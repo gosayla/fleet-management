@@ -21,7 +21,7 @@ import {
 import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
-import {Locale} from '../lib/i18n';
+import {Locale, t} from '../lib/i18n';
 import {VehicleType, VehicleStatus} from '@fleet/shared';
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
@@ -29,21 +29,21 @@ const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 const VEHICLE_TYPES = Object.values(VehicleType);
 const VEHICLE_STATUSES = Object.values(VehicleStatus);
 
-const TYPE_LABELS: Record<VehicleType, {en: string; ar: string}> = {
-  SEDAN:           {en: 'Sedan',           ar: 'سيدان'},
-  SUV:             {en: 'SUV',             ar: 'دفع رباعي'},
-  TRUCK:           {en: 'Truck',           ar: 'شاحنة'},
-  VAN:             {en: 'Van',             ar: 'فان'},
-  BUS:             {en: 'Bus',             ar: 'حافلة'},
-  MOTORCYCLE:      {en: 'Motorcycle',      ar: 'دراجة'},
-  HEAVY_EQUIPMENT: {en: 'Heavy Equipment', ar: 'معدات ثقيلة'},
+const TYPE_LABELS: Record<VehicleType, Record<string, string>> = {
+  SEDAN:           {en: 'Sedan',           ar: 'سيدان',             hi: 'सेडान',      bn: 'সেডান',      ur: 'سیڈان'},
+  SUV:             {en: 'SUV',             ar: 'دفع رباعي',         hi: 'एसुवी',       bn: 'এসয়ুভি',       ur: 'ایس یو وی'},
+  TRUCK:           {en: 'Truck',           ar: 'شاحنة',             hi: 'ट्रक',      bn: 'ট্রাক',      ur: 'ٹرک'},
+  VAN:             {en: 'Van',             ar: 'فان',                hi: 'वैन',        bn: 'ভ্যান',        ur: 'وین'},
+  BUS:             {en: 'Bus',             ar: 'حافلة',              hi: 'बस',         bn: 'বাস',         ur: 'بس'},
+  MOTORCYCLE:      {en: 'Motorcycle',      ar: 'دراجة',          hi: 'मोटरसाइकिल', bn: 'মোটরসাইকেল', ur: 'موٹرسائیکل'},
+  HEAVY_EQUIPMENT: {en: 'Heavy Equipment', ar: 'معدات ثقيلة',  hi: 'भारी उपकरण', bn: 'ভারী যন্ত্রপাতি', ur: 'بھاری آلات'},
 };
 
-const STATUS_LABELS: Record<VehicleStatus, {en: string; ar: string}> = {
-  ACTIVE:      {en: 'Active',      ar: 'نشط'},
-  MAINTENANCE: {en: 'Maintenance', ar: 'صيانة'},
-  INACTIVE:    {en: 'Inactive',    ar: 'غير نشط'},
-  RETIRED:     {en: 'Retired',     ar: 'متقاعد'},
+const STATUS_LABELS: Record<VehicleStatus, Record<string, string>> = {
+  ACTIVE:      {en: 'Active',      ar: 'نشط',      hi: 'सक्रिय',  bn: 'সক্রিয়',  ur: 'فعال'},
+  MAINTENANCE: {en: 'Maintenance', ar: 'صيانة',  hi: 'रखरखाव', bn: 'রক্ষণাবেক্ষণ', ur: 'دیکھ بھال'},
+  INACTIVE:    {en: 'Inactive',    ar: 'غير نشط',  hi: 'निष्क्रिय', bn: 'নিষ্ক্রিয়', ur: 'غیر فعال'},
+  RETIRED:     {en: 'Retired',     ar: 'متقاعد',  hi: 'सेवानिवृत्त', bn: 'অবসরপ্রাপ্ত', ur: 'ریٹائرڈ'},
 };
 
 interface DriverOption {id: string; fullName: string}
@@ -90,7 +90,7 @@ const EMPTY: FormState = {
 };
 
 export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props) {
-  const isAr = locale === 'ar';
+  const i18n = t(locale);
   const isEdit = !!vehicleId;
 
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -140,7 +140,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
         status: v.status ?? VehicleStatus.ACTIVE,
         assignedDriverId: v.assignedDriverId ?? '',
       });
-    }).catch(() => setError(isAr ? 'تعذر تحميل البيانات' : 'Failed to load vehicle'))
+    }).catch(() => setError(i18n.failedToLoadVehicle))
       .finally(() => setLoadingVehicle(false));
   }, [vehicleId]);
 
@@ -149,18 +149,18 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
     setError('');
     // Required field validation
     const required: [string, string][] = [
-      [form.plateNumber, isAr ? 'رقم اللوحة' : 'Plate Number'],
-      [form.vin,         isAr ? 'رقم الهيكل VIN' : 'VIN'],
-      [form.make,        isAr ? 'الصانع' : 'Make'],
-      [form.model,       isAr ? 'الموديل' : 'Model'],
-      [form.year,        isAr ? 'السنة' : 'Year'],
-      [form.color,       isAr ? 'اللون' : 'Color'],
-      [form.odometer,    isAr ? 'العداد' : 'Odometer'],
-      [form.fuelCapacity,isAr ? 'سعة الوقود' : 'Fuel Capacity'],
+      [form.plateNumber, i18n.plateNumber],
+      [form.vin,         i18n.vinField],
+      [form.make,        i18n.makeField],
+      [form.model,       i18n.modelField],
+      [form.year,        i18n.yearField],
+      [form.color,       i18n.colorField],
+      [form.odometer,    i18n.odometerKm],
+      [form.fuelCapacity,i18n.fuelCapacityL],
     ];
     for (const [val, label] of required) {
       if (!val.trim()) {
-        setError((isAr ? 'الحقل مطلوب: ' : 'Required: ') + label);
+        setError(i18n.requiredField + ': ' + label);
         return;
       }
     }
@@ -210,9 +210,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
     );
   }
 
-  const title = isEdit
-    ? (isAr ? 'تعديل المركبة' : 'Edit Vehicle')
-    : (isAr ? 'إضافة مركبة' : 'Add Vehicle');
+  const title = isEdit ? i18n.editVehicle : i18n.addVehicle;
 
   return (
     <View style={styles.container}>
@@ -233,7 +231,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
             activeOpacity={0.8}>
             {submitting
               ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.saveBtnText}>{isAr ? 'حفظ' : 'Save'}</Text>}
+              : <Text style={styles.saveBtnText}>{i18n.save}</Text>}
           </TouchableOpacity>
         </View>
       </View>
@@ -256,9 +254,9 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
           )}
 
           {/* ── Section: Basic Info ── */}
-          <SectionTitle title={isAr ? 'المعلومات الأساسية' : 'Basic Info'} />
+          <SectionTitle title={i18n.basicInfo} />
           <View style={styles.card}>
-            <FormField label={isAr ? 'رقم اللوحة' : 'Plate Number'} required>
+            <FormField label={i18n.plateNumber} required>
               <TextInput
                 style={styles.input}
                 value={form.plateNumber}
@@ -269,7 +267,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
               />
             </FormField>
             <FieldDivider />
-            <FormField label={isAr ? 'رقم الهيكل (VIN)' : 'VIN'} required>
+            <FormField label={i18n.vinField} required>
               <TextInput
                 style={styles.input}
                 value={form.vin}
@@ -280,7 +278,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
               />
             </FormField>
             <FieldDivider />
-            <FormField label={isAr ? 'الصانع' : 'Make'} required>
+            <FormField label={i18n.makeField} required>
               <TextInput
                 style={styles.input}
                 value={form.make}
@@ -290,7 +288,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
               />
             </FormField>
             <FieldDivider />
-            <FormField label={isAr ? 'الموديل' : 'Model'} required>
+            <FormField label={i18n.modelField} required>
               <TextInput
                 style={styles.input}
                 value={form.model}
@@ -300,7 +298,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
               />
             </FormField>
             <FieldDivider />
-            <FormField label={isAr ? 'سنة الصنع' : 'Year'} required>
+            <FormField label={i18n.yearField} required>
               <TextInput
                 style={styles.input}
                 value={form.year}
@@ -312,19 +310,19 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
               />
             </FormField>
             <FieldDivider />
-            <FormField label={isAr ? 'اللون' : 'Color'} required>
+            <FormField label={i18n.colorField} required>
               <TextInput
                 style={styles.input}
                 value={form.color}
                 onChangeText={v => set('color', v)}
-                placeholder={isAr ? 'أبيض' : 'White'}
+                placeholder={i18n.colorField}
                 placeholderTextColor={Colors.textMuted}
               />
             </FormField>
           </View>
 
           {/* ── Section: Vehicle Type ── */}
-          <SectionTitle title={isAr ? 'نوع المركبة' : 'Vehicle Type'} />
+          <SectionTitle title={i18n.vehicleTypeSection} />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -336,16 +334,16 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
                 onPress={() => setForm(prev => ({...prev, type}))}
                 activeOpacity={0.75}>
                 <Text style={[styles.typePillText, form.type === type && styles.typePillTextActive]}>
-                  {TYPE_LABELS[type][isAr ? 'ar' : 'en']}
+                  {TYPE_LABELS[type][locale] ?? TYPE_LABELS[type].en}
                 </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
           {/* ── Section: Measurements ── */}
-          <SectionTitle title={isAr ? 'القياسات' : 'Measurements'} />
+          <SectionTitle title={i18n.measurementsSection} />
           <View style={styles.card}>
-            <FormField label={isAr ? 'قراءة العداد (كم)' : 'Odometer (km)'} required>
+            <FormField label={i18n.odometerKm} required>
               <TextInput
                 style={styles.input}
                 value={form.odometer}
@@ -356,7 +354,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
               />
             </FormField>
             <FieldDivider />
-            <FormField label={isAr ? 'سعة خزان الوقود (لتر)' : 'Fuel Capacity (L)'} required>
+            <FormField label={i18n.fuelCapacityL} required>
               <TextInput
                 style={styles.input}
                 value={form.fuelCapacity}
@@ -369,9 +367,9 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
           </View>
 
           {/* ── Section: Operation Card ── */}
-          <SectionTitle title={isAr ? 'بطاقة التشغيل' : 'Operation Card'} />
+          <SectionTitle title={i18n.operationCardSection} />
           <View style={styles.card}>
-            <FormField label={isAr ? 'رقم البطاقة' : 'Card Number'}>
+            <FormField label={i18n.cardNumber}>
               <TextInput
                 style={styles.input}
                 value={form.operationCardNumber}
@@ -381,7 +379,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
               />
             </FormField>
             <FieldDivider />
-            <FormField label={isAr ? 'تاريخ الإصدار' : 'Issue Date'}>
+            <FormField label={i18n.issueDate}>
               <TextInput
                 style={styles.input}
                 value={form.operationCardIssueDate}
@@ -392,7 +390,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
               />
             </FormField>
             <FieldDivider />
-            <FormField label={isAr ? 'تاريخ الانتهاء' : 'Expiry Date'}>
+            <FormField label={i18n.expiryDateLabel}>
               <TextInput
                 style={styles.input}
                 value={form.operationCardExpiryDate}
@@ -403,7 +401,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
               />
             </FormField>
             <FieldDivider />
-            <FormField label={isAr ? 'تاريخ التجديد' : 'Renew Date'}>
+            <FormField label={i18n.renewDate}>
               <TextInput
                 style={styles.input}
                 value={form.operationCardRenewDate}
@@ -418,7 +416,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
           {/* ── Section: Tamm / License ── */}
           <SectionTitle title="Tamm" />
           <View style={styles.card}>
-            <FormField label={isAr ? 'انتهاء رخصة السير' : 'License Expiry Date'}>
+            <FormField label={i18n.licenseExpiryVehicle}>
               <TextInput
                 style={styles.input}
                 value={form.licenseExpiryDate}
@@ -429,7 +427,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
               />
             </FormField>
             <FieldDivider />
-            <FormField label={isAr ? 'انتهاء التأمين' : 'Insurance Expiry Date'}>
+            <FormField label={i18n.insuranceExpiry}>
               <TextInput
                 style={styles.input}
                 value={form.insuranceExpiryDate}
@@ -444,10 +442,10 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
           {/* ── Section: Status & Driver (edit only) ── */}
           {isEdit && (
             <>
-              <SectionTitle title={isAr ? 'الحالة والسائق' : 'Status & Driver'} />
+              <SectionTitle title={i18n.statusAndDriverSection} />
               <View style={styles.card}>
                 {/* Status picker */}
-                <FormField label={isAr ? 'حالة المركبة' : 'Vehicle Status'}>
+                <FormField label={i18n.vehicleStatusLabel}>
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -460,7 +458,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
                           onPress={() => setForm(prev => ({...prev, status: s}))}
                           activeOpacity={0.75}>
                           <Text style={[styles.statusPillText, form.status === s && styles.statusPillTextActive]}>
-                            {STATUS_LABELS[s][isAr ? 'ar' : 'en']}
+                            {STATUS_LABELS[s][locale] ?? STATUS_LABELS[s].en}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -471,13 +469,13 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
                 <FieldDivider />
 
                 {/* Driver searchable picker */}
-                <FormField label={isAr ? 'السائق المعين' : 'Assigned Driver'}>
+                <FormField label={i18n.assignedDriverLabel}>
                   <TouchableOpacity
                     style={styles.pickerRow}
                     onPress={() => setDriverPickerOpen(true)}
                     activeOpacity={0.75}>
                     <Text style={[styles.pickerText, !selectedDriver && {color: Colors.textMuted}]}>
-                      {selectedDriver?.fullName ?? (isAr ? 'غير معين' : 'Unassigned')}
+                      {selectedDriver?.fullName ?? i18n.unassigned}
                     </Text>
                     <AppIcon name="chevron-down" size={18} color={Colors.textMuted} />
                   </TouchableOpacity>
@@ -502,12 +500,12 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
           onPress={() => setDriverPickerOpen(false)}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>{isAr ? 'اختر السائق' : 'Select Driver'}</Text>
+            <Text style={styles.modalTitle}>{i18n.selectDriver}</Text>
             <TextInput
               style={styles.modalSearch}
               value={driverQuery}
               onChangeText={setDriverQuery}
-              placeholder={isAr ? 'بحث...' : 'Search...'}
+              placeholder={i18n.searchPlaceholder}
               placeholderTextColor={Colors.textMuted}
               autoFocus
             />
@@ -524,7 +522,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
                     setDriverPickerOpen(false);
                   }}>
                   <Text style={[styles.driverItemText, {color: Colors.textMuted}]}>
-                    {isAr ? 'غير معين' : 'Unassigned'}
+                    {i18n.unassigned}
                   </Text>
                 </TouchableOpacity>
               }
@@ -545,7 +543,7 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
-                <Text style={styles.driverEmpty}>{isAr ? 'لا يوجد سائقون' : 'No drivers found'}</Text>
+                <Text style={styles.driverEmpty}>{i18n.noDriversFound}</Text>
               }
             />
           </View>

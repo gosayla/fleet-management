@@ -1,5 +1,7 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+
+const SUPPORTED_LANGUAGES = ['ar', 'en', 'hi', 'bn', 'ur'] as const;
 
 export class LoginDto {
   @ApiProperty({ example: '+966501234567' })
@@ -42,6 +44,12 @@ export class RegisterDto {
   @IsString()
   @IsNotEmpty()
   crNumber: string;
+
+  @ApiProperty({ example: 'ar', required: false, enum: SUPPORTED_LANGUAGES })
+  @IsOptional()
+  @IsString()
+  @IsIn(SUPPORTED_LANGUAGES)
+  language?: (typeof SUPPORTED_LANGUAGES)[number];
 }
 
 export class UpdateFcmTokenDto {
@@ -49,6 +57,13 @@ export class UpdateFcmTokenDto {
   @IsString()
   @IsNotEmpty()
   fcmToken: string;
+}
+
+export class UpdateLanguageDto {
+  @ApiProperty({ example: 'en', enum: SUPPORTED_LANGUAGES })
+  @IsString()
+  @IsIn(SUPPORTED_LANGUAGES)
+  language: (typeof SUPPORTED_LANGUAGES)[number];
 }
 
 export class ResetPasswordDto {

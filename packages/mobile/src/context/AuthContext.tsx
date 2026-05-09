@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (phone: string, password: string) => Promise<void>;
   logout: () => void;
+  updateLanguage: (language: 'ar' | 'en' | 'hi' | 'bn' | 'ur') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,8 +47,14 @@ export function AuthProvider({children}: {children: ReactNode}) {
     setUser(null);
   }
 
+  async function updateLanguage(language: 'ar' | 'en' | 'hi' | 'bn' | 'ur') {
+    const updatedUser = await api.patch<AuthTokenPayload>('/auth/language', {language});
+    await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  }
+
   return (
-    <AuthContext.Provider value={{user, isLoading, login, logout}}>
+    <AuthContext.Provider value={{user, isLoading, login, logout, updateLanguage}}>
       {children}
     </AuthContext.Provider>
   );

@@ -7,8 +7,7 @@ import {AppIcon} from './AppIcon';
 export interface TabItem {
   key: string;
   icon: string;
-  labelAr: string;
-  labelEn: string;
+  labels: Record<Locale, string>;
 }
 
 interface Props {
@@ -24,7 +23,7 @@ export function BottomTabBar({tabs, activeKey, locale, onPress, badgeByKey}: Pro
     <View style={styles.bar}>
       {tabs.map(tab => {
         const active = tab.key === activeKey;
-        const label = locale === 'ar' ? tab.labelAr : tab.labelEn;
+        const label = tab.labels[locale];
         const badge = badgeByKey?.[tab.key] ?? 0;
         const showBadge = badge > 0;
         const badgeLabel = badge > 99 ? '99+' : String(badge);

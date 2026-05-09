@@ -1,22 +1,31 @@
-﻿import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, StatusBar, Platform} from 'react-native';
+﻿import React, {useState} from 'react';
+import {View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, StatusBar, Platform, ActivityIndicator} from 'react-native';
 import {useAuth} from '../context/AuthContext';
-import {Locale, t} from '../lib/i18n';
+import {Locale, t, isRTL as getIsRTL} from '../lib/i18n';
 import {Colors, Spacing, Typography} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 
 interface Props {
   locale: Locale;
-  onToggleLocale: () => void;
+  onSetLocale: (locale: Locale) => void;
   onBack: () => void;
 }
 
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
-export function ProfileScreen({locale, onToggleLocale, onBack}: Props) {
-  const {user, logout} = useAuth();
+const LANGUAGE_OPTIONS = [
+  {value: 'ar', label: 'العربية'},
+  {value: 'en', label: 'English'},
+  {value: 'hi', label: 'हिन्दी'},
+  {value: 'bn', label: 'বাংলা'},
+  {value: 'ur', label: 'اردو'},
+] as const;
+
+export function ProfileScreen({locale, onSetLocale, onBack}: Props) {
+  const {user, logout, updateLanguage} = useAuth();
   const i18n = t(locale);
-  const isRTL = locale === 'ar';
+  const isRTL = getIsRTL(locale);
+  const [savingLanguage, setSavingLanguage] = useState<string | null>(null);
 
   function confirmLogout() {
     Alert.alert(i18n.logoutTitle, i18n.logoutConfirm, [
@@ -27,6 +36,16 @@ export function ProfileScreen({locale, onToggleLocale, onBack}: Props) {
 
   const initials = ((user as any)?.fullName ?? user?.email ?? '?')[0].toUpperCase();
   const displayName = (user as any)?.fullName ?? user?.email ?? '';
+  const preferredLanguage = (user as any)?.language ?? 'ar';
+
+  async function handleLanguageChange(language: 'ar' | 'en' | 'hi' | 'bn' | 'ur') {
+    if (language === locale) return;
+    // Change UI immediately (optimistic)
+    onSetLocale(language);
+    setSavingLanguage(language);
+    // Sync to backend in background — don't block or show error if offline
+    updateLanguage(language).catch(() => {}).finally(() => setSavingLanguage(null));
+  }
 
   return (
     <View style={styles.container}>
@@ -34,9 +53,6 @@ export function ProfileScreen({locale, onToggleLocale, onBack}: Props) {
 
       {/* Teal header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.langPill} onPress={onToggleLocale} activeOpacity={0.7}>
-          <Text style={styles.langText}>{i18n.languageLabel}</Text>
-        </TouchableOpacity>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
@@ -55,6 +71,29 @@ export function ProfileScreen({locale, onToggleLocale, onBack}: Props) {
           <InfoRow icon="email-outline" label={locale === 'ar' ? 'البريد الإلكتروني' : 'Email'} value={user?.email ?? ''} />
           <InfoRow icon="shield-account-outline" label={locale === 'ar' ? 'الدور' : 'Role'} value={user?.role ?? ''} />
           <InfoRow icon="office-building-outline" label={locale === 'ar' ? 'الشركة' : 'Company'} value={(user as any)?.companyId ?? ''} last />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{i18n.appLanguage}</Text>
+          <View style={styles.languageGrid}>
+            {LANGUAGE_OPTIONS.map((option) => {
+              const active = locale === option.value;
+              const loading = savingLanguage === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[styles.languageChip, active && styles.languageChipActive]}
+                  onPress={() => handleLanguageChange(option.value)}
+                  activeOpacity={0.8}
+                  disabled={!!savingLanguage}
+                >
+                  {loading ? <ActivityIndicator size="small" color={active ? '#fff' : Colors.primary} /> : (
+                    <Text style={[styles.languageChipText, active && styles.languageChipTextActive]}>{option.label}</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         {/* Logout */}
@@ -113,13 +152,6 @@ const styles = StyleSheet.create({
     marginTop: -28,
     overflow: 'hidden',
   },
-  langPill: {
-    alignSelf: 'flex-end',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
-    marginBottom: Spacing.md,
-  },
-  langText: {fontSize: 12, fontWeight: '600' as const, color: Colors.white},
   avatar: {
     width: 84, height: 84, borderRadius: 42,
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -137,12 +169,31 @@ const styles = StyleSheet.create({
   },
   roleText: {fontSize: 12, fontWeight: '600' as const, color: Colors.white, textTransform: 'uppercase', letterSpacing: 1},
   body: {padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl},
+  sectionLabel: {fontSize: 12, fontWeight: '700' as const, color: Colors.textMuted, marginBottom: 12, textTransform: 'uppercase'},
   section: {
     backgroundColor: Colors.white,
     borderRadius: 14,
     paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
     borderWidth: 1, borderColor: Colors.border,
   },
+  languageGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 8},
+  languageChip: {
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: Colors.bg,
+    minWidth: 86,
+    alignItems: 'center',
+  },
+  languageChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  languageChipText: {fontSize: 13, fontWeight: '600' as const, color: Colors.textPrimary},
+  languageChipTextActive: {color: '#fff'},
   logoutBtn: {
     backgroundColor: Colors.dangerLight,
     borderRadius: 14,

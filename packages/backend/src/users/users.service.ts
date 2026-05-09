@@ -9,6 +9,7 @@ import { UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './users.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const USER_SELECT = {
   id: true,
@@ -16,6 +17,7 @@ const USER_SELECT = {
   fullName: true,
   phone: true,
   role: true,
+  language: true,
   createdAt: true,
 } as const;
 
@@ -34,7 +36,10 @@ function getManageableRoles(requesterRole: string): UserRole[] {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async findAll(companyId: string, requesterRole: string) {
     const allowed = getManageableRoles(requesterRole);
@@ -55,7 +60,7 @@ export class UsersService {
     if (existing) throw new ConflictException('البريد الإلكتروني مسجل مسبقاً');
 
     const hashed = await argon2.hash(dto.password);
-    return this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         companyId,
         email: dto.email,
@@ -63,9 +68,12 @@ export class UsersService {
         fullName: dto.fullName,
         phone: dto.phone,
         role: dto.role,
+        language: dto.language ?? 'ar',
       },
       select: USER_SELECT,
     });
+    await this.notificationsService.notifyAccountCreated(created.id, created.role);
+    return created;
   }
 
   async update(companyId: string, id: string, dto: UpdateUserDto, requesterRole: string) {
@@ -85,9 +93,17 @@ export class UsersService {
     if (dto.fullName) data.fullName = dto.fullName;
     if (dto.phone) data.phone = dto.phone;
     if (dto.role) data.role = dto.role;
+    if (dto.language) data.language = dto.language;
     if (dto.password) data.password = await argon2.hash(dto.password);
 
-    return this.prisma.user.update({ where: { id }, data, select: USER_SELECT });
+    const updated = await this.prisma.user.update({ where: { id }, data, select: USER_SELECT });
+    if (dto.role || dto.language || dto.password) {
+      await this.notificationsService.notifyAccountUpdated(
+        updated.id,
+        dto.password ? 'password' : dto.role ? 'role' : 'language',
+      );
+    }
+    return updated;
   }
 
   async remove(companyId: string, id: string, selfId: string, requesterRole: string) {

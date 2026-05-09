@@ -9,6 +9,7 @@ import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto, RegisterDto, ResetPasswordDto } from './auth.dto';
 import { AuthTokenPayload } from '@fleet/shared';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AuthService {
@@ -16,7 +17,28 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly notificationsService: NotificationsService,
   ) {}
+
+  private serializeUser(user: {
+    id: string;
+    email: string | null;
+    fullName: string;
+    phone: string;
+    role: string;
+    companyId: string;
+    language: string;
+  }) {
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      phone: user.phone,
+      role: user.role,
+      companyId: user.companyId,
+      language: user.language,
+    };
+  }
 
   async register(dto: RegisterDto) {
     const existing = await this.prisma.user.findUnique({
@@ -43,6 +65,7 @@ export class AuthService {
         phone: dto.phone,
         role: 'FLEET_MANAGER',
         companyId: company.id,
+        language: dto.language ?? 'ar',
       },
     });
 
@@ -51,12 +74,7 @@ export class AuthService {
     return {
       accessToken: token,
       user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        phone: user.phone,
-        role: user.role,
-        companyId: user.companyId,
+        ...this.serializeUser(user),
       },
     };
   }
@@ -79,12 +97,7 @@ export class AuthService {
     return {
       accessToken: token,
       user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        phone: user.phone,
-        role: user.role,
-        companyId: user.companyId,
+        ...this.serializeUser(user),
       },
     };
   }
@@ -115,7 +128,25 @@ export class AuthService {
       data: { password: hashed },
     });
 
+    await this.notificationsService.notifyPasswordUpdated(user.id);
+
     return { message: 'تم تحديث كلمة المرور بنجاح' };
+  }
+
+  async getCurrentUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        role: true,
+        companyId: true,
+        language: true,
+      },
+    });
+    return user ? this.serializeUser(user) : null;
   }
 
   async updateFcmToken(userId: string, fcmToken: string) {
@@ -123,6 +154,23 @@ export class AuthService {
       where: { id: userId },
       data: { fcmToken },
     });
+  }
+
+  async updateLanguage(userId: string, language: string) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { language },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        role: true,
+        companyId: true,
+        language: true,
+      },
+    });
+    return this.serializeUser(user);
   }
 
   private async signToken(
