@@ -12,7 +12,10 @@ import {
   ActivityIndicator,
   PanResponder,
   Animated,
+  Dimensions,
 } from 'react-native';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 import {api} from '../lib/api';
 import {Locale, t} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
@@ -44,6 +47,19 @@ export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAdd
   const [segment, setSegment] = useState<Segment>(initialSegment ?? 'vehicles');
   const [searchOpen, setSearchOpen] = useState(!!(initialSearch?.trim()));
   const [searchQuery, setSearchQuery] = useState(initialSearch ?? '');
+
+  // Pager: drivers=0, vehicles=-SCREEN_WIDTH
+  const segmentRef = useRef<Segment>(initialSegment ?? 'vehicles');
+  const slideX = useRef(new Animated.Value(
+    (initialSegment ?? 'vehicles') === 'drivers' ? 0 : -SCREEN_WIDTH,
+  )).current;
+
+  function switchTo(seg: Segment) {
+    const target = seg === 'drivers' ? 0 : -SCREEN_WIDTH;
+    segmentRef.current = seg;
+    setSegment(seg);
+    Animated.spring(slideX, {toValue: target, useNativeDriver: true, bounciness: 4, speed: 14}).start();
+  }
 
   // Drivers state (all loaded at once — no pagination from server)
   const [drivers, setDrivers] = useState<DriverCardData[]>([]);
@@ -101,28 +117,35 @@ export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAdd
     onStateChange?.(segment, searchQuery);
   }, [segment, searchQuery]);
 
-  // ── Swipe gesture to change segment ─────────────────────────────────────
-  const swipeX = useRef(new Animated.Value(0)).current;
+  // ── Swipe gesture: moves both pages live with the finger ────────────────
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gs) =>
         Math.abs(gs.dx) > 10 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5,
       onPanResponderMove: (_, gs) => {
-        swipeX.setValue(gs.dx);
+        const base = segmentRef.current === 'drivers' ? 0 : -SCREEN_WIDTH;
+        // Clamp so you can't drag past the last page
+        const next = Math.min(0, Math.max(-SCREEN_WIDTH, base + gs.dx));
+        slideX.setValue(next);
       },
       onPanResponderRelease: (_, gs) => {
-        Animated.spring(swipeX, {toValue: 0, useNativeDriver: true}).start();
-        if (Math.abs(gs.dx) < 40) return;
-        if (gs.dx < 0) {
-          // swipe left → vehicles
-          setSegment('vehicles');
-        } else {
-          // swipe right → drivers
-          setSegment('drivers');
+        const cur = segmentRef.current;
+        if (Math.abs(gs.dx) >= 50) {
+          if (gs.dx < 0 && cur === 'drivers') {
+            switchTo('vehicles');
+            return;
+          } else if (gs.dx > 0 && cur === 'vehicles') {
+            switchTo('drivers');
+            return;
+          }
         }
+        // Snap back
+        const base = cur === 'drivers' ? 0 : -SCREEN_WIDTH;
+        Animated.spring(slideX, {toValue: base, useNativeDriver: true, bounciness: 4, speed: 14}).start();
       },
       onPanResponderTerminate: () => {
-        Animated.spring(swipeX, {toValue: 0, useNativeDriver: true}).start();
+        const base = segmentRef.current === 'drivers' ? 0 : -SCREEN_WIDTH;
+        Animated.spring(slideX, {toValue: base, useNativeDriver: true}).start();
       },
     }),
   ).current;
@@ -230,7 +253,7 @@ export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAdd
         <View style={styles.segmentWrap}>
           <TouchableOpacity
             style={[styles.segBtn, segment === 'drivers' && styles.segBtnActive]}
-            onPress={() => setSegment('drivers')}
+            onPress={() => switchTo('drivers')}
             activeOpacity={0.8}>
             <Text style={[styles.segText, segment === 'drivers' && styles.segTextActive]}>
               {driverLabel}
@@ -238,7 +261,7 @@ export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAdd
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.segBtn, segment === 'vehicles' && styles.segBtnActive]}
-            onPress={() => setSegment('vehicles')}
+            onPress={() => switchTo('vehicles')}
             activeOpacity={0.8}>
             <Text style={[styles.segText, segment === 'vehicles' && styles.segTextActive]}>
               {vehicleLabel}
@@ -249,46 +272,51 @@ export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAdd
         {/* Count */}
         <Text style={styles.countText}>{countLabel}</Text>
 
-        {/* ── Lists (swipeable) ── */}
+        {/* ── Lists (sliding pager) ── */}
         <View style={styles.listArea} {...panResponder.panHandlers}>
-        {segment === 'drivers' ? (
-          <FlatList
-            key="drivers"
-            data={drivers}
-            keyExtractor={d => d.id}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />}
-            renderItem={({item}) => <DriverCard driver={item} locale={locale} onPress={() => onSelectDriver?.(item.id)} />}
-            ListEmptyComponent={
-              <View style={styles.empty}>
-                <AppIcon name="account-group-outline" size={48} color={Colors.border} />
-                <Text style={styles.emptyText}>{i18n.noDrivers}</Text>
-              </View>
-            }
-          />
-        ) : (
-          <FlatList
-            key="vehicles"
-            data={vehicles}
-            keyExtractor={v => v.id}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />}
-            renderItem={({item}) => <VehicleCard vehicle={item} locale={locale} onPress={() => onSelectVehicle(item.id)} />}
-            onEndReached={loadMoreVehicles}
-            onEndReachedThreshold={0.3}
-            ListFooterComponent={vehicleFooter}
-            ListEmptyComponent={
-              !vLoading ? (
+          <Animated.View style={[styles.pager, {transform: [{translateX: slideX}]}]}>
+            {/* Page 0 — Drivers */}
+            <View style={styles.page}>
+            <FlatList
+              key="drivers"
+              data={drivers}
+              keyExtractor={d => d.id}
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />}
+              renderItem={({item}) => <DriverCard driver={item} locale={locale} onPress={() => onSelectDriver?.(item.id)} />}
+              ListEmptyComponent={
                 <View style={styles.empty}>
-                  <AppIcon name="truck-outline" size={48} color={Colors.border} />
-                  <Text style={styles.emptyText}>{i18n.noVehicles}</Text>
+                  <AppIcon name="account-group-outline" size={48} color={Colors.border} />
+                  <Text style={styles.emptyText}>{i18n.noDrivers}</Text>
                 </View>
-              ) : null
-            }
-          />
-        )}
+              }
+            />
+            </View>
+            {/* Page 1 — Vehicles */}
+            <View style={styles.page}>
+            <FlatList
+              key="vehicles"
+              data={vehicles}
+              keyExtractor={v => v.id}
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />}
+              renderItem={({item}) => <VehicleCard vehicle={item} locale={locale} onPress={() => onSelectVehicle(item.id)} />}
+              onEndReached={loadMoreVehicles}
+              onEndReachedThreshold={0.3}
+              ListFooterComponent={vehicleFooter}
+              ListEmptyComponent={
+                !vLoading ? (
+                  <View style={styles.empty}>
+                    <AppIcon name="truck-outline" size={48} color={Colors.border} />
+                    <Text style={styles.emptyText}>{i18n.noVehicles}</Text>
+                  </View>
+                ) : null
+              }
+            />
+            </View>
+          </Animated.View>
         </View>
       </View>
     </View>
@@ -340,7 +368,16 @@ const styles = StyleSheet.create({
     marginTop: -20,  // pull up to overlap header
     overflow: 'hidden',
   },
-  listArea: {flex: 1},
+  listArea: {flex: 1, overflow: 'hidden'},
+  pager: {
+    flex: 1,
+    flexDirection: 'row',
+    width: SCREEN_WIDTH * 2,
+  },
+  page: {
+    width: SCREEN_WIDTH,
+    flex: 1,
+  },
 
   // Segment toggle
   segmentWrap: {
