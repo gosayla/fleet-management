@@ -1,4 +1,4 @@
-import urllib.request, ssl, json, time, http.cookiejar, datetime
+import urllib.request, ssl, json, time, http.cookiejar, datetime, urllib.parse, pathlib
 
 ctx = ssl.create_default_context()
 ctx.check_hostname = False
@@ -12,10 +12,24 @@ opener = urllib.request.build_opener(
 
 BASE = "https://gps.smarttrackerpro.net"
 
+# Load credentials from packages/backend/.env
+_env = {}
+_env_file = pathlib.Path(__file__).parent / "packages" / "backend" / ".env"
+for line in _env_file.read_text(encoding="utf-8").splitlines():
+    line = line.strip()
+    if line and not line.startswith("#") and "=" in line:
+        k, _, v = line.partition("=")
+        _env[k.strip()] = v.strip()
+
+username = _env.get("SMARTTRACKER_USERNAME", "")
+password = _env.get("SMARTTRACKER_PASSWORD", "")
+if not username or not password:
+    raise RuntimeError("SMARTTRACKER_USERNAME / SMARTTRACKER_PASSWORD not found in packages/backend/.env")
+
 # 1. Login
 login_req = urllib.request.Request(
     f"{BASE}/backend/ax/user/login.php",
-    data=b"username=sharifest321&password=Aa123456",
+    data=f"username={urllib.parse.quote(username)}&password={urllib.parse.quote(password)}".encode(),
     headers={"Content-Type": "application/x-www-form-urlencoded", "Referer": BASE + "/"}
 )
 login_resp = json.loads(opener.open(login_req, timeout=15).read().decode())

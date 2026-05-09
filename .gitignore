@@ -6,3 +6,6 @@ build/
 .env
 .env.local
 .env.*.local
+
+# Local debug/utility scripts
+*.py
