@@ -28,9 +28,19 @@ export function AdminVehiclesScreen({locale}: Props) {
 
   const {data: raw, refreshing, refresh: load} = useCachedFetch(
     'admin:vehicles',
-    () => api.get<VehicleCardData[] | {data: VehicleCardData[]}>('/vehicles'),
+    () => api.get<{data: VehicleCardData[]; total: number} | VehicleCardData[]>('/vehicles?limit=500'),
   );
-  const all: VehicleCardData[] = raw == null ? [] : Array.isArray(raw) ? raw : (raw as any).data ?? [];
+  const all: VehicleCardData[] = raw == null
+    ? []
+    : Array.isArray(raw)
+    ? raw
+    : ((raw as {data: VehicleCardData[]}).data ?? []);
+
+  const total: number = raw == null
+    ? 0
+    : Array.isArray(raw)
+    ? raw.length
+    : ((raw as {total: number}).total ?? all.length);
 
   const vehicles = gpsFilter === 'has'
     ? all.filter(v => v.pilotImei != null)
@@ -50,7 +60,7 @@ export function AdminVehiclesScreen({locale}: Props) {
       <ScreenHeader
         locale={locale}
         title={i18n.vehiclesSegment}
-        subtitle={`${vehicles.length} / ${all.length} ${i18n.vehiclesUnit}`}
+        subtitle={`${vehicles.length} / ${total} ${i18n.vehiclesUnit}`}
       />
 
       {/* GPS filter chips */}
