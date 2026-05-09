@@ -52,12 +52,26 @@ export class PilotSyncService {
   }
 
   async syncCompanyVehicles(companyId: string, token?: string) {
-    // Fetch from all providers in parallel and merge by plate
+    // Use env token as fallback when none supplied by the caller
+    const resolvedToken = token || this.config.get<string>('PILOT_GPS_TOKEN', '');
+
+    // Fetch from all providers in parallel — each wrapped to avoid one failure killing the rest
+    const safeGet = async <T>(name: string, fn: () => Promise<T[]>): Promise<T[]> => {
+      try {
+        const result = await fn();
+        this.logger.log(`${name}: fetched ${result.length} devices`);
+        return result;
+      } catch (err) {
+        this.logger.error(`${name}: fetch failed — ${(err as Error)?.message ?? err}`);
+        return [];
+      }
+    };
+
     const [pilotDevices, smartTrackerDevices, tmtDevices, gdiamondDevices] = await Promise.all([
-      token ? this.pilotClient.fetchDevices(token) : Promise.resolve([] as PilotDevice[]),
-      this.pilotClient.fetchDevicesSmartTracker(),
-      this.pilotClient.fetchDevicesTmtGps(),
-      this.pilotClient.fetchDevicesGDiamond(),
+      resolvedToken ? safeGet('pilot-gps.com', () => this.pilotClient.fetchDevices(resolvedToken)) : Promise.resolve([] as PilotDevice[]),
+      safeGet('SmartTracker', () => this.pilotClient.fetchDevicesSmartTracker()),
+      safeGet('TmtGps', () => this.pilotClient.fetchDevicesTmtGps()),
+      safeGet('GDiamond', () => this.pilotClient.fetchDevicesGDiamond()),
     ]);
 
     const allDevices = [...pilotDevices, ...smartTrackerDevices, ...tmtDevices, ...gdiamondDevices];
