@@ -18,6 +18,9 @@ export interface VehicleCardData {
   photos?: {url: string; isProfile: boolean}[];
   /** GPS telemetry: true when ignition is currently on */
   pilotIgnitionOn?: boolean | null;
+  pilotSpeed?: number | null;
+  pilotHeading?: number | null;
+  pilotIsOnline?: boolean | null;
 }
 
 interface Props {

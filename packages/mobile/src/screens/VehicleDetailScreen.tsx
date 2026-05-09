@@ -55,6 +55,9 @@ interface VehicleDetail {
   pilotIgnitionOn?: boolean | null;
   pilotLoadWeight?: number | null;
   pilotProviderMileage?: number | null;
+  pilotSpeed?: number | null;
+  pilotHeading?: number | null;
+  pilotIsOnline?: boolean | null;
 }
 
 interface VehiclePhoto {
@@ -455,6 +458,21 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
                   label={i18n.ignition}
                   value={vehicle.pilotIgnitionOn ? i18n.ignitionOn : i18n.ignitionOff}
                   valueColor={vehicle.pilotIgnitionOn ? '#27ae60' : undefined}
+                />
+              )}
+              {vehicle.pilotIsOnline != null && (
+                <TelemetryRow
+                  icon={vehicle.pilotIsOnline ? 'wifi' : 'wifi-off'}
+                  label={locale === 'ar' ? 'حالة الجهاز' : 'Device Status'}
+                  value={vehicle.pilotIsOnline ? (locale === 'ar' ? 'متصل' : 'Online') : (locale === 'ar' ? 'غير متصل' : 'Offline')}
+                  valueColor={vehicle.pilotIsOnline ? '#27ae60' : '#e74c3c'}
+                />
+              )}
+              {vehicle.pilotSpeed != null && (
+                <TelemetryRow
+                  icon="speedometer"
+                  label={locale === 'ar' ? 'السرعة الحالية' : 'Current Speed'}
+                  value={`${Math.round(vehicle.pilotSpeed)} km/h`}
                 />
               )}
               {vehicle.pilotLoadWeight != null && vehicle.pilotLoadWeight > 0 && (

@@ -197,6 +197,9 @@ model Vehicle {
   pilotIgnitionOn      Boolean?  // Ignition sensor state
   pilotLoadWeight      Float?    // Sensor weight reading (kg, if equipped)
   pilotProviderMileage Float?    // Accumulated device mileage (km) — NOT true odometer
+  pilotSpeed           Float?    // Last reported speed (km/h)
+  pilotHeading         Float?    // Last reported heading (0–360°)
+  pilotIsOnline        Boolean?  // Whether the GPS device is currently online
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 

@@ -64,6 +64,9 @@ type VehicleDetails = Vehicle & {
   pilotIgnitionOn?: boolean | null;
   pilotLoadWeight?: number | null;
   pilotProviderMileage?: number | null;
+  pilotSpeed?: number | null;
+  pilotHeading?: number | null;
+  pilotIsOnline?: boolean | null;
 };
 
 type VehiclePhoto = {
@@ -378,6 +381,18 @@ export default function VehicleDashboardPage() {
           <InfoRow
             label={isRTL ? 'حالة المحرك' : 'Ignition'}
             value={vehicle.pilotIgnitionOn != null ? (vehicle.pilotIgnitionOn ? (isRTL ? 'تشغيل' : 'On') : (isRTL ? 'إيقاف' : 'Off')) : undefined}
+          />
+          <InfoRow
+            label={isRTL ? 'السرعة الحالية' : 'Current Speed'}
+            value={vehicle.pilotSpeed != null ? `${formatNumber(Math.round(vehicle.pilotSpeed), locale)} km/h` : undefined}
+          />
+          <InfoRow
+            label={isRTL ? 'الاتجاه' : 'Heading'}
+            value={vehicle.pilotHeading != null ? `${formatNumber(Math.round(vehicle.pilotHeading), locale)}°` : undefined}
+          />
+          <InfoRow
+            label={isRTL ? 'حالة الجهاز' : 'Device Status'}
+            value={vehicle.pilotIsOnline != null ? (vehicle.pilotIsOnline ? (isRTL ? 'متصل' : 'Online') : (isRTL ? 'غير متصل' : 'Offline')) : undefined}
           />
           <InfoRow
             label={isRTL ? 'الحمولة' : 'Load Weight'}

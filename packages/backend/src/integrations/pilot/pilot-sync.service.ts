@@ -92,6 +92,9 @@ export class PilotSyncService {
       if (match.ignitionOn != null) telemetryData.pilotIgnitionOn = match.ignitionOn;
       if (match.loadWeight != null && match.loadWeight > 0) telemetryData.pilotLoadWeight = match.loadWeight;
       if (match.providerMileage != null && match.providerMileage > 0) telemetryData.pilotProviderMileage = match.providerMileage;
+      telemetryData.pilotSpeed = match.speed ?? 0;
+      if (match.heading != null) telemetryData.pilotHeading = match.heading;
+      telemetryData.pilotIsOnline = match.isOnline;
 
       // Only update location fields when provider has a valid GPS fix
       if (match.lat !== null && match.lng !== null) {
