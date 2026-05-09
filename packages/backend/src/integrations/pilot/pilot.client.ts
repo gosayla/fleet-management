@@ -356,8 +356,9 @@ export class PilotClient {
       );
 
       const loginData = loginRes.data as Record<string, unknown>;
+      this.logger.log(`SmartTracker login response status=${loginRes.status} success=${loginData.success} hasToken=${!!loginData.token} keys=${Object.keys(loginData).join(',')}`);
       if (!loginData.success) {
-        this.logger.warn('SmartTracker login failed');
+        this.logger.warn(`SmartTracker login failed — response: ${JSON.stringify(loginData).slice(0, 200)}`);
         return [];
       }
 
@@ -381,7 +382,11 @@ export class PilotClient {
       );
 
       const body = dataRes.data as Record<string, unknown>;
-      if (!body.success && !Array.isArray(body.objects)) return [];
+      this.logger.log(`SmartTracker data response status=${dataRes.status} success=${body.success} objectCount=${Array.isArray(body.objects) ? (body.objects as unknown[]).length : 'N/A'} keys=${Object.keys(body).join(',')}`);
+      if (!body.success && !Array.isArray(body.objects)) {
+        this.logger.warn(`SmartTracker data endpoint returned no objects — body: ${JSON.stringify(body).slice(0, 300)}`);
+        return [];
+      }
 
       const objects = (body.objects ?? []) as RawPilotDevice[];
       return objects
@@ -469,8 +474,9 @@ export class PilotClient {
         .map((c) => c.split(';')[0].trim())
         .find((c) => c.startsWith('PHPSESSID=')) ?? '';
 
+      this.logger.log(`TmtGps auth response status=${loginRes.status} cookieCount=${setCookieHeaders.length} sessionCookie=${sessionCookie ? 'found' : 'missing'}`);
       if (!sessionCookie) {
-        this.logger.warn('TmtGps: no PHPSESSID cookie received from auth URL');
+        this.logger.warn(`TmtGps: no PHPSESSID cookie received — status=${loginRes.status} setCookies=${setCookieHeaders.join('; ').slice(0, 200)}`);
         return [];
       }
 
@@ -488,8 +494,9 @@ export class PilotClient {
       );
 
       const listData = listRes.data as { rows?: Array<{ id: string; cell: string[] }> };
+      this.logger.log(`TmtGps vehicle list response status=${listRes.status} rowCount=${listData.rows?.length ?? 0}`);
       if (!listData.rows?.length) {
-        this.logger.warn('TmtGps: empty vehicle list');
+        this.logger.warn(`TmtGps: empty vehicle list — body: ${JSON.stringify(listData).slice(0, 200)}`);
         return [];
       }
 
@@ -515,6 +522,7 @@ export class PilotClient {
       );
 
       const trackData = trackRes.data as Record<string, TmtGpsVehicle>;
+      this.logger.log(`TmtGps track response status=${trackRes.status} imeiCount=${Object.keys(trackData).length} plateMapSize=${imeiToPlate.size}`);
       const devices: PilotDevice[] = [];
 
       for (const [imei, vehicle] of Object.entries(trackData)) {
@@ -677,8 +685,9 @@ export class PilotClient {
         .map((c) => c.split(';')[0].trim())
         .find((c) => c.startsWith('JSESSIONID=')) ?? '';
 
+      this.logger.log(`GDiamond login response status=${loginRes.status} cookieCount=${setCookies.length} sessionCookie=${sessionCookie ? 'found' : 'missing'}`);
       if (!sessionCookie) {
-        this.logger.warn('GDiamond: no JSESSIONID cookie received — check login credentials');
+        this.logger.warn(`GDiamond: no JSESSIONID cookie received — status=${loginRes.status} setCookies=${setCookies.join('; ').slice(0, 300)}`);
         return [];
       }
 
@@ -705,6 +714,10 @@ export class PilotClient {
       );
 
       const body = dataRes.data as { JMapData?: { DataSets?: unknown[] } };
+      this.logger.log(`GDiamond map response status=${dataRes.status} hasJMapData=${!!body.JMapData} datasetCount=${body.JMapData?.DataSets?.length ?? 0} bodyKeys=${Object.keys(body).join(',')}`);
+      if (!body.JMapData) {
+        this.logger.warn(`GDiamond: JMapData missing from response — body sample: ${JSON.stringify(body).slice(0, 300)}`);
+      }
       const datasets = body.JMapData?.DataSets ?? [];
 
       return datasets
