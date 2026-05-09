@@ -346,7 +346,7 @@ export class PilotClient {
       const ts = Math.floor(Date.now() / 1000);
       const dataRes = await axios.post<unknown>(
         `${BASE}/backend/ax/current_data.php`,
-        `unixtimestamp=${ts}&user_id=0&c=3&n=`,
+        `unixtimestamp=${ts}&user_id=0&c=0&n=`,
         {
           timeout: 15_000,
           headers: {
