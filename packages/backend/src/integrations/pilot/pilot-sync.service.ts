@@ -31,7 +31,9 @@ export class PilotSyncService {
   @Cron('*/5 * * * *')
   async scheduledSync() {
     const token = this.config.get<string>('PILOT_GPS_TOKEN', '');
-    if (!token) return;
+    const stUser = this.config.get<string>('SMARTTRACKER_USERNAME', '');
+
+    if (!token && !stUser) return;
 
     try {
       const companies = await this.prisma.company.findMany({ select: { id: true } });
@@ -48,16 +50,22 @@ export class PilotSyncService {
   }
 
   async syncCompanyVehicles(companyId: string, token?: string) {
-    const [devices, vehicles] = await Promise.all([
-      this.pilotClient.fetchDevices(token),
-      this.prisma.vehicle.findMany({
-        where: { companyId },
-        select: { id: true, plateNumber: true },
-      }),
+    // Fetch from both providers in parallel and merge by plate
+    const [pilotDevices, smartTrackerDevices] = await Promise.all([
+      token ? this.pilotClient.fetchDevices(token) : Promise.resolve([] as PilotDevice[]),
+      this.pilotClient.fetchDevicesSmartTracker(),
     ]);
 
+    const allDevices = [...pilotDevices, ...smartTrackerDevices];
+
+    const vehicles = await this.prisma.vehicle.findMany({
+      where: { companyId },
+      select: { id: true, plateNumber: true },
+    });
+
     const byPlate = new Map<string, PilotDevice>();
-    for (const device of devices) {
+    // SmartTracker first so pilot-gps.com can override if both match the same plate
+    for (const device of allDevices) {
       byPlate.set(normalizePlate(device.plateNumber), device);
     }
 
@@ -116,7 +124,7 @@ export class PilotSyncService {
     }
 
     const knownPlates = new Set(vehicles.map((v) => normalizePlate(v.plateNumber)));
-    for (const device of devices) {
+    for (const device of allDevices) {
       if (!knownPlates.has(normalizePlate(device.plateNumber))) {
         unmatchedProviderDevices.push(device.plateNumber);
       }
@@ -127,7 +135,7 @@ export class PilotSyncService {
       .map((v) => v.plateNumber);
 
     return {
-      sourceCount: devices.length,
+      sourceCount: allDevices.length,
       companyVehicleCount: vehicles.length,
       updated,
       unmatchedProviderDevices,

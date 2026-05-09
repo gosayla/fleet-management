@@ -42,6 +42,7 @@ interface RawPilotDevice {
   events?: unknown[];
   initial_mileage?: number | null;
   firing?: number | null;
+  is_server_online?: boolean | null;
   zone?: unknown[];
   security?: unknown;
   wasl?: number | null;
@@ -298,6 +299,122 @@ export class PilotClient {
   private toDate(unixRaw: string | number | undefined): Date | null {
     const n = Number(unixRaw);
     return n > 0 ? new Date(n * 1000) : null;
+  }
+
+  // ─── SmartTracker (gps.smarttrackerpro.net) ─────────────────────────────
+
+  /**
+   * Login + fetch all vehicles from gps.smarttrackerpro.net.
+   * This provider uses username/password session auth (PILOTID cookie)
+   * instead of a token URL.
+   */
+  async fetchDevicesSmartTracker(
+    username?: string,
+    password?: string,
+  ): Promise<PilotDevice[]> {
+    const user = username ?? this.config.get<string>('SMARTTRACKER_USERNAME', '');
+    const pass = password ?? this.config.get<string>('SMARTTRACKER_PASSWORD', '');
+    if (!user || !pass) return [];
+
+    const BASE = 'https://gps.smarttrackerpro.net';
+
+    try {
+      // 1. Login to obtain session cookie
+      const loginRes = await axios.post<unknown>(
+        `${BASE}/backend/ax/user/login.php`,
+        `username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`,
+        {
+          timeout: 15_000,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Referer: `${BASE}/`,
+          },
+          withCredentials: true,
+        },
+      );
+
+      const loginData = loginRes.data as Record<string, unknown>;
+      if (!loginData.success) {
+        this.logger.warn('SmartTracker login failed');
+        return [];
+      }
+
+      const token = String(loginData.token ?? '');
+      const cookie = `PILOTID=${token}; node=${loginData.node_id ?? 3}`;
+
+      // 2. Fetch current_data for all vehicles
+      const ts = Math.floor(Date.now() / 1000);
+      const dataRes = await axios.post<unknown>(
+        `${BASE}/backend/ax/current_data.php`,
+        `unixtimestamp=${ts}&user_id=0&c=3&n=`,
+        {
+          timeout: 15_000,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'application/json',
+            Referer: `${BASE}/`,
+            Cookie: cookie,
+          },
+        },
+      );
+
+      const body = dataRes.data as Record<string, unknown>;
+      if (!body.success && !Array.isArray(body.objects)) return [];
+
+      const objects = (body.objects ?? []) as RawPilotDevice[];
+      return objects
+        .map((item) => this.toDeviceSmartTracker(item))
+        .filter((d): d is PilotDevice => d !== null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`SmartTracker GPS fetch failed: ${message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Maps a SmartTracker `current_data.php` object to a PilotDevice.
+   * Key differences from ksa.pilot-gps.com:
+   *  - `firing`  = ignition on/off  (not sensor string)
+   *  - `len`     = mileage in metres (divide by 1000 → km)
+   *  - `motor_hours` already in hours (multiply by 3600 → seconds for PilotDevice)
+   *  - No `sensors` object; battery/weight not provided by this provider
+   */
+  private toDeviceSmartTracker(item: RawPilotDevice): PilotDevice | null {
+    const plateNumber = String(item.veh ?? item.name ?? item.id ?? '').trim();
+    if (!plateNumber) return null;
+
+    const location = this.parseCoordinatePair(item.lat, item.lon)
+      ?? this.parseCoordinatePair(item.last_event?.lat, item.last_event?.lon);
+
+    const ts = Number(item.unixtimestamp ?? item.last_event?.unixtimestamp ?? 0);
+    const lenMeters = Number.isFinite(Number(item.len)) ? Number(item.len) : null;
+    const motorH = Number.isFinite(Number(item.motor_hours)) ? Number(item.motor_hours) : null;
+
+    return {
+      plateNumber,
+      providerVehicleId: typeof item.veh_id === 'number' ? item.veh_id : undefined,
+      deviceImei: item.uniqid ?? undefined,
+      lat: location?.lat ?? null,
+      lng: location?.lng ?? null,
+      altitude: null,
+      speed: Number(item.last_event?.speed ?? 0) || 0,
+      heading: Number(item.dir ?? 0),
+      satellites: Number.isFinite(item.satsinview) ? (item.satsinview as number) : null,
+      recordedAt: ts > 0 ? new Date(ts * 1000) : new Date(),
+      isOnline: item.is_server_online === true,
+      isEngineOn: Number(item.firing ?? 0) === 1,
+      sourceState: item.wasl_state ?? undefined,
+      // len is metres from this provider; PilotDevice.providerMileage is km
+      providerMileage: lenMeters !== null && lenMeters > 0 ? lenMeters / 1000 : null,
+      // motor_hours is in hours; PilotDevice stores seconds (sync service divides by 3600)
+      motorHoursSeconds: motorH !== null && motorH > 0 ? motorH * 3600 : null,
+      lastStop: this.toDate(item.last_event?.last_stop),
+      lastMove: this.toDate(item.last_event?.last_move),
+      batteryVoltage: null,
+      ignitionOn: Number(item.firing ?? 0) === 1,
+      loadWeight: null,
+    };
   }
 
   private toDevice(item: RawPilotDevice): PilotDevice | null {
