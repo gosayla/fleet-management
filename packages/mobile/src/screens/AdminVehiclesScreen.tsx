@@ -27,7 +27,7 @@ export function AdminVehiclesScreen({locale}: Props) {
   const [gpsFilter, setGpsFilter] = useState<GpsFilter>('all');
 
   const {data: raw, refreshing, refresh: load} = useCachedFetch(
-    'admin:vehicles',
+    'admin:vehicles:v2',
     () => api.get<{data: VehicleCardData[]; total: number} | VehicleCardData[]>('/vehicles?limit=500'),
   );
   const all: VehicleCardData[] = raw == null
