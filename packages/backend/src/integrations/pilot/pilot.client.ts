@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import * as https from 'https';
 
 interface RawPilotDevice {
   '0'?: {
@@ -73,6 +74,16 @@ interface TmtGpsVehicle {
   p?: string;
   /** Engine hours as string */
   eh?: string | number;
+}
+
+interface GDiamondDataSet {
+  id?: string;
+  Status?: string;
+  /** "1" = ignition on, "0" = off */
+  ignState?: string;
+  batteryLevel?: string | number;
+  /** Pipe-delimited position strings */
+  Points?: string[];
 }
 
 export interface PilotDevice {
@@ -592,6 +603,160 @@ export class PilotClient {
       sourceState: st || undefined,
       providerMileage,
       motorHoursSeconds,
+      lastStop: null,
+      lastMove: null,
+      batteryVoltage,
+      ignitionOn,
+      loadWeight: null,
+    };
+  }
+
+  // ─── GDiamond GPS (fleet.gdiamond.net:8443) ──────────────────────────────
+
+  /**
+   * Saudi plate letters appear in provider data as Latin transliterations
+   * in reverse RTL order (e.g. "5662 KXA" → أ ص ك 5662).
+   */
+  private readonly GDIAMOND_LATIN_TO_ARABIC: Record<string, string> = {
+    A: 'أ', B: 'ب', J: 'ح', D: 'د', R: 'ر',
+    S: 'س', X: 'ص', T: 'ط', E: 'ع', F: 'ف',
+    G: 'ق', K: 'ك', L: 'ل', M: 'م', N: 'ن',
+    H: 'ه', W: 'و', Y: 'ي',
+  };
+
+  private parseGDiamondPlate(name: string): string {
+    // Format: "5662 KXA" (number space latin-letters in reverse RTL order)
+    const m = name.trim().match(/^(\d+)\s+([A-Z]+)$/);
+    if (!m) return name.trim();
+    const number = m[1];
+    const arabicLetters = m[2]
+      .split('')
+      .reverse()
+      .map((c) => this.GDIAMOND_LATIN_TO_ARABIC[c] ?? c)
+      .join(' ');
+    return `${arabicLetters} ${number}`;
+  }
+
+  /**
+   * Login via GTS form POST to get JSESSIONID, then fetch live map data.
+   * DataSets[].Points[0] is a pipe-delimited string with:
+   *   [0]=recordId  [1]=name  [2]=epoch  [8]=lat  [9]=lon
+   *   [10]=#sats    [11]=kph  [12]=heading  [13]=alt  [17]=mileage(km)
+   * Ignition and status come from dataset-level fields.
+   */
+  async fetchDevicesGDiamond(): Promise<PilotDevice[]> {
+    const account = this.config.get<string>('GDIAMOND_ACCOUNT', '');
+    const user = this.config.get<string>('GDIAMOND_USER', '');
+    const pass = this.config.get<string>('GDIAMOND_PASSWORD', '');
+    if (!account || !user || !pass) return [];
+
+    const BASE = 'https://fleet.gdiamond.net:8443';
+    // Self-signed cert on non-standard port — disable verification for this host only
+    const agent = new https.Agent({ rejectUnauthorized: false });
+
+    try {
+      // 1. Login — standard GTS servlet form POST
+      const loginRes = await axios.post<unknown>(
+        `${BASE}/track/Track`,
+        `page=login.user&account=${encodeURIComponent(account)}&user=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`,
+        {
+          timeout: 15_000,
+          httpsAgent: agent,
+          maxRedirects: 10,
+          validateStatus: () => true,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
+            Referer: `${BASE}/track/Track?page=login.user`,
+          },
+        },
+      );
+
+      const setCookies = (loginRes.headers['set-cookie'] ?? []) as string[];
+      const sessionCookie = setCookies
+        .map((c) => c.split(';')[0].trim())
+        .find((c) => c.startsWith('JSESSIONID=')) ?? '';
+
+      if (!sessionCookie) {
+        this.logger.warn('GDiamond: no JSESSIONID cookie received — check login credentials');
+        return [];
+      }
+
+      // 2. Fetch live map data (last known position for all devices)
+      const now = new Date();
+      const tomorrow = new Date(now.getTime() + 86_400_000);
+      const dateTo = `${tomorrow.getFullYear()}/${String(tomorrow.getMonth() + 1).padStart(2, '0')}/${String(tomorrow.getDate()).padStart(2, '0')}/23:59`;
+      const uniq = Math.random().toString();
+
+      const dataRes = await axios.get<unknown>(
+        `${BASE}/track/Track?page=map.device.new&page_cmd=mapupd&_uniq=${uniq}&date_fr=&date_to=${encodeURIComponent(dateTo)}&date_tz=GMT%2B03%3A00&group=all&devStatus=ALL&limType=last`,
+        {
+          timeout: 15_000,
+          httpsAgent: agent,
+          headers: {
+            Accept: '*/*',
+            Cookie: sessionCookie,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
+            Referer: `${BASE}/track/Track?page=map.device.new`,
+            'X-Requested-With': 'XMLHttpRequest',
+            'If-Modified-Since': 'Sat, 1 Jan 2000 00:00:00 GMT',
+          },
+        },
+      );
+
+      const body = dataRes.data as { JMapData?: { DataSets?: unknown[] } };
+      const datasets = body.JMapData?.DataSets ?? [];
+
+      return datasets
+        .map((ds) => this.toDeviceGDiamond(ds as GDiamondDataSet))
+        .filter((d): d is PilotDevice => d !== null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`GDiamond GPS fetch failed: ${message}`);
+      return [];
+    }
+  }
+
+  private toDeviceGDiamond(ds: GDiamondDataSet): PilotDevice | null {
+    const point = ds.Points?.[0];
+    if (!point) return null;
+
+    const pts = point.split('|');
+    // pts[1]=name, pts[2]=epoch, pts[8]=lat, pts[9]=lon
+    // pts[10]=#sats, pts[11]=kph, pts[12]=heading, pts[13]=alt, pts[17]=mileage
+    const rawName = (pts[1] ?? '').trim();
+    if (!rawName) return null;
+
+    const plateNumber = this.parseGDiamondPlate(rawName);
+    const epoch = Number(pts[2]) || 0;
+    const location = this.parseCoordinatePair(pts[8], pts[9]);
+    const speed = Number(pts[11]) || 0;
+    const heading = Number(pts[12]) || 0;
+    const sats = Number(pts[10]);
+    const mileage = Number(pts[17]) || null;
+
+    const status = ds.Status ?? '';
+    const isOnline = status !== '' && status !== 'DEVICE_NOT_WORKING';
+    const ignitionOn = ds.ignState === '1';
+    const batRaw = Number(ds.batteryLevel ?? 0);
+    const batteryVoltage = batRaw > 0 ? batRaw : null;
+
+    return {
+      plateNumber,
+      providerVehicleId: undefined,
+      deviceImei: ds.id,
+      lat: location?.lat ?? null,
+      lng: location?.lng ?? null,
+      altitude: Number(pts[13]) || null,
+      speed,
+      heading,
+      satellites: sats > 0 ? sats : null,
+      recordedAt: epoch > 0 ? new Date(epoch * 1000) : new Date(),
+      isOnline,
+      isEngineOn: ignitionOn,
+      sourceState: status || undefined,
+      providerMileage: mileage && mileage > 0 ? mileage : null,
+      motorHoursSeconds: null,
       lastStop: null,
       lastMove: null,
       batteryVoltage,

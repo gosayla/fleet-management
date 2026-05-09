@@ -33,8 +33,9 @@ export class PilotSyncService {
     const token = this.config.get<string>('PILOT_GPS_TOKEN', '');
     const stUser = this.config.get<string>('SMARTTRACKER_USERNAME', '');
     const tmtUrl = this.config.get<string>('TMTGPS_AUTH_URL', '');
+    const gdAccount = this.config.get<string>('GDIAMOND_ACCOUNT', '');
 
-    if (!token && !stUser && !tmtUrl) return;
+    if (!token && !stUser && !tmtUrl && !gdAccount) return;
 
     try {
       const companies = await this.prisma.company.findMany({ select: { id: true } });
@@ -52,13 +53,14 @@ export class PilotSyncService {
 
   async syncCompanyVehicles(companyId: string, token?: string) {
     // Fetch from all providers in parallel and merge by plate
-    const [pilotDevices, smartTrackerDevices, tmtDevices] = await Promise.all([
+    const [pilotDevices, smartTrackerDevices, tmtDevices, gdiamondDevices] = await Promise.all([
       token ? this.pilotClient.fetchDevices(token) : Promise.resolve([] as PilotDevice[]),
       this.pilotClient.fetchDevicesSmartTracker(),
       this.pilotClient.fetchDevicesTmtGps(),
+      this.pilotClient.fetchDevicesGDiamond(),
     ]);
 
-    const allDevices = [...pilotDevices, ...smartTrackerDevices, ...tmtDevices];
+    const allDevices = [...pilotDevices, ...smartTrackerDevices, ...tmtDevices, ...gdiamondDevices];
 
     const vehicles = await this.prisma.vehicle.findMany({
       where: { companyId },
