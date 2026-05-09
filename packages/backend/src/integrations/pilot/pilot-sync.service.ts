@@ -141,6 +141,24 @@ export class PilotSyncService {
       .filter((v) => !matchedVehicleIds.has(v.id))
       .map((v) => v.plateNumber);
 
+    this.logger.log(
+      `GPS sync done — providers: ${allDevices.length} devices, DB vehicles: ${vehicles.length}, matched+updated: ${matchedVehicleIds.size}`,
+    );
+
+    if (unmatchedProviderDevices.length) {
+      this.logger.warn(
+        `GPS plates from providers with NO match in DB (${unmatchedProviderDevices.length}):\n` +
+        unmatchedProviderDevices.map((p) => `  provider="${p}"  normalized="${normalizePlate(p)}"`).join('\n'),
+      );
+    }
+
+    if (notUpdatedVehicles.length) {
+      this.logger.warn(
+        `DB vehicles with NO GPS match (${notUpdatedVehicles.length}):\n` +
+        notUpdatedVehicles.map((p) => `  db="${p}"  normalized="${normalizePlate(p)}"`).join('\n'),
+      );
+    }
+
     return {
       sourceCount: allDevices.length,
       companyVehicleCount: vehicles.length,
