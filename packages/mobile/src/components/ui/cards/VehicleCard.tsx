@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
+﻿import React, {useEffect, useRef} from 'react';
+import {View, Text, StyleSheet, TouchableOpacity, Image, Animated} from 'react-native';
 import {Locale} from '../../../lib/i18n';
 import {Colors, Spacing} from '../../../lib/theme';
 import {AppIcon} from '../AppIcon';
@@ -16,6 +16,8 @@ export interface VehicleCardData {
   mileage: number;
   companyName?: string;
   photos?: {url: string; isProfile: boolean}[];
+  /** GPS telemetry: true when ignition is currently on */
+  pilotIgnitionOn?: boolean | null;
 }
 
 interface Props {
@@ -46,6 +48,25 @@ export function VehicleCard({vehicle, locale, onPress}: Props) {
   const badge = STATUS_BADGE[vehicle.status] ?? STATUS_BADGE.INACTIVE;
   const subtitle = `${vehicle.make}-${vehicle.model}`;
   const label = badge.label[locale];
+  const isActive = vehicle.pilotIgnitionOn === true;
+
+  // Subtle glow when ignition is on (from GPS telemetry)
+  const glowOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isActive) {
+      glowOpacity.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowOpacity, {toValue: 0.45, duration: 1400, useNativeDriver: true}),
+        Animated.timing(glowOpacity, {toValue: 0,    duration: 1400, useNativeDriver: true}),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isActive]);
 
   // Abbreviate plate: take up to 4 chars (handles both Arabic & alphanumeric plates)
   const plateAbbr = vehicle.plateNumber.replace(/\s+/g, '').slice(-4);
@@ -55,6 +76,12 @@ export function VehicleCard({vehicle, locale, onPress}: Props) {
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.75} onPress={onPress}>
       <View style={styles.iconWrap}>
+        {/* Soft glow ring for ignition-on vehicles */}
+        {isActive && (
+          <Animated.View
+            style={[styles.glowRing, {opacity: glowOpacity}]}
+          />
+        )}
         {photoUrl ? (
           <Image source={{uri: photoUrl}} style={styles.photo} />
         ) : (
@@ -93,7 +120,23 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
+    overflow: 'visible',  // allow pulse ring to extend beyond
+  },
+  pulseRing: {
+    position: 'absolute',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primary,
+    zIndex: -1,
+  },
+  glowRing: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.primary,
+    zIndex: -1,
   },
   photo: {width: 48, height: 48, borderRadius: 24},
   body: {flex: 1},

@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   StatusBar,
   Platform,
   ActivityIndicator,
+  PanResponder,
+  Animated,
 } from 'react-native';
 import {api} from '../lib/api';
 import {Locale, t} from '../lib/i18n';
@@ -24,6 +26,12 @@ interface Props {
   onSelectDriver?: (id: string) => void;
   onAddVehicle?: () => void;
   onAddDriver?: () => void;
+  /** Persisted segment (restored on mount) */
+  initialSegment?: Segment;
+  /** Persisted search query (restored on mount) */
+  initialSearch?: string;
+  /** Called when segment/search changes so parent can persist */
+  onStateChange?: (segment: Segment, search: string) => void;
 }
 
 type Segment = 'drivers' | 'vehicles';
@@ -31,11 +39,11 @@ type Segment = 'drivers' | 'vehicles';
 const STATUS_BAR_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 const PAGE_SIZE = 20;
 
-export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAddVehicle, onAddDriver}: Props) {
+export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAddVehicle, onAddDriver, initialSegment, initialSearch, onStateChange}: Props) {
   const i18n = t(locale);
-  const [segment, setSegment] = useState<Segment>('vehicles');
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [segment, setSegment] = useState<Segment>(initialSegment ?? 'vehicles');
+  const [searchOpen, setSearchOpen] = useState(!!(initialSearch?.trim()));
+  const [searchQuery, setSearchQuery] = useState(initialSearch ?? '');
 
   // Drivers state (all loaded at once — no pagination from server)
   const [drivers, setDrivers] = useState<DriverCardData[]>([]);
@@ -85,6 +93,39 @@ export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAdd
     if (!vHasMore || vLoading) return;
     loadVehiclesPage(vPage + 1, false, searchQuery);
   }, [vHasMore, vLoading, vPage, searchQuery]);
+
+  // ── Notify parent when segment/search changes ────────────────────────────
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    onStateChange?.(segment, searchQuery);
+  }, [segment, searchQuery]);
+
+  // ── Swipe gesture to change segment ─────────────────────────────────────
+  const swipeX = useRef(new Animated.Value(0)).current;
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 10 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5,
+      onPanResponderMove: (_, gs) => {
+        swipeX.setValue(gs.dx);
+      },
+      onPanResponderRelease: (_, gs) => {
+        Animated.spring(swipeX, {toValue: 0, useNativeDriver: true}).start();
+        if (Math.abs(gs.dx) < 40) return;
+        if (gs.dx < 0) {
+          // swipe left → vehicles
+          setSegment('vehicles');
+        } else {
+          // swipe right → drivers
+          setSegment('drivers');
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(swipeX, {toValue: 0, useNativeDriver: true}).start();
+      },
+    }),
+  ).current;
 
   // ── Initial load & refresh ───────────────────────────────────────────────
   async function refresh() {
@@ -208,7 +249,8 @@ export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAdd
         {/* Count */}
         <Text style={styles.countText}>{countLabel}</Text>
 
-        {/* ── Lists ── */}
+        {/* ── Lists (swipeable) ── */}
+        <View style={styles.listArea} {...panResponder.panHandlers}>
         {segment === 'drivers' ? (
           <FlatList
             key="drivers"
@@ -247,6 +289,7 @@ export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAdd
             }
           />
         )}
+        </View>
       </View>
     </View>
   );
@@ -297,6 +340,7 @@ const styles = StyleSheet.create({
     marginTop: -20,  // pull up to overlap header
     overflow: 'hidden',
   },
+  listArea: {flex: 1},
 
   // Segment toggle
   segmentWrap: {

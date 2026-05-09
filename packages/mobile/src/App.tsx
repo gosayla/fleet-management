@@ -76,6 +76,9 @@ function Navigator() {
   const [tripFormId, setTripFormId] = useState<string | null>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  // Fleet screen persisted state
+  const [fleetSegment, setFleetSegment] = useState<'drivers' | 'vehicles'>('vehicles');
+  const [fleetSearch, setFleetSearch] = useState('');
   // Driver trip detail (separate from admin selectedTripId so back nav is scoped)
   const [driverViewTripId, setDriverViewTripId] = useState<string | null>(null);
 
@@ -293,7 +296,7 @@ function Navigator() {
     <View style={styles.shell}>
       <View style={styles.screenArea}>
         {adminTab === 'dashboard'     && <AdminDashboardScreen locale={locale} onSelectTrip={setSelectedTripId} onNotificationsPress={() => setNotificationsOpen(true)} unreadNotifications={unreadNotifications} />}
-        {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} />}
+        {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} initialSegment={fleetSegment} initialSearch={fleetSearch} onStateChange={(seg, q) => { setFleetSegment(seg); setFleetSearch(q); }} />}
         {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onSelectTrip={setSelectedTripId} onAddTrip={() => { setTripFormId(null); setTripFormOpen(true); }} />}
         {adminTab === 'profile'        && <ProfileScreen locale={locale} onSetLocale={setLocale} onBack={() => setAdminTab('dashboard')} />}
       </View>
