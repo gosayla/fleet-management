@@ -64,6 +64,17 @@ interface RawPilotDevice {
   sensors?: Record<string, string>;
 }
 
+interface TmtGpsVehicle {
+  /** d[0] = [server_time, device_time, lat, lon, speed, heading, pct, sensors] */
+  d?: [string, string, string, string, string | number, string | number, number, Record<string, unknown>][];
+  /** "off" | "s" (stopped) | "m" (moving) | "i" (idle/engine on parked) */
+  st?: string;
+  /** "teltonika" | "ruptela" */
+  p?: string;
+  /** Engine hours as string */
+  eh?: string | number;
+}
+
 export interface PilotDevice {
   plateNumber: string;
   providerVehicleId?: number;
@@ -413,6 +424,178 @@ export class PilotClient {
       lastMove: this.toDate(item.last_event?.last_move),
       batteryVoltage: null,
       ignitionOn: Number(item.firing ?? 0) === 1,
+      loadWeight: null,
+    };
+  }
+
+  // ─── TMT GPS (track.tmtgps.io) ───────────────────────────────────────────
+
+  /**
+   * Authenticate via auto-login URL, fetch the vehicle list and live tracking
+   * data from track.tmtgps.io.
+   * Auth flow: GET ?au=<token> → PHPSESSID cookie → subsequent requests.
+   */
+  async fetchDevicesTmtGps(authUrl?: string): Promise<PilotDevice[]> {
+    const url = authUrl ?? this.config.get<string>('TMTGPS_AUTH_URL', '');
+    if (!url) return [];
+
+    const BASE = 'https://track.tmtgps.io';
+
+    try {
+      // 1. Auto-login: stop at first response (may be 302) to grab Set-Cookie
+      const loginRes = await axios.get<unknown>(url, {
+        timeout: 15_000,
+        maxRedirects: 0,
+        validateStatus: () => true,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
+          Referer: `${BASE}/`,
+        },
+      });
+
+      const setCookieHeaders = (loginRes.headers['set-cookie'] ?? []) as string[];
+      const sessionCookie = setCookieHeaders
+        .map((c) => c.split(';')[0].trim())
+        .find((c) => c.startsWith('PHPSESSID=')) ?? '';
+
+      if (!sessionCookie) {
+        this.logger.warn('TmtGps: no PHPSESSID cookie received from auth URL');
+        return [];
+      }
+
+      const sharedHeaders = {
+        Cookie: sessionCookie,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
+        'X-Requested-With': 'XMLHttpRequest',
+        Referer: `${BASE}/tracking.php`,
+      };
+
+      // 2. Fetch vehicle list: IMEI → plate number
+      const listRes = await axios.get<unknown>(
+        `${BASE}/func/fn_settings.objects.php?cmd=load_object_list&_search=false&rows=200&page=1&sidx=name&sord=asc`,
+        { timeout: 15_000, headers: { ...sharedHeaders, Accept: 'application/json, text/javascript, */*' } },
+      );
+
+      const listData = listRes.data as { rows?: Array<{ id: string; cell: string[] }> };
+      if (!listData.rows?.length) {
+        this.logger.warn('TmtGps: empty vehicle list');
+        return [];
+      }
+
+      const imeiToPlate = new Map<string, string>();
+      for (const row of listData.rows) {
+        const plate = this.parseTmtPlate(row.cell[0] ?? '');
+        if (plate) imeiToPlate.set(row.id, plate);
+      }
+
+      // 3. Fetch live tracking data for all vehicles
+      const trackRes = await axios.post<unknown>(
+        `${BASE}/func/fn_objects.php`,
+        'cmd=load_object_data',
+        {
+          timeout: 15_000,
+          headers: {
+            ...sharedHeaders,
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            Accept: 'application/json, text/javascript, */*',
+            Origin: BASE,
+          },
+        },
+      );
+
+      const trackData = trackRes.data as Record<string, TmtGpsVehicle>;
+      const devices: PilotDevice[] = [];
+
+      for (const [imei, vehicle] of Object.entries(trackData)) {
+        const plateNumber = imeiToPlate.get(imei);
+        if (!plateNumber) continue;
+        const device = this.toDeviceTmtGps(imei, plateNumber, vehicle);
+        if (device) devices.push(device);
+      }
+
+      return devices;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`TmtGps fetch failed: ${message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Parse plate from TMT GPS cell[0] which comes in two formats:
+   *   "9147 - ا س ح "   (number - Arabic)
+   *   "ا ط ل - 5850"    (Arabic - number)
+   * Returns canonical "Arabic number" format, e.g. "ا س ح 9147".
+   */
+  private parseTmtPlate(cell0: string): string {
+    const parts = cell0.split(/\s*-\s*/);
+    if (parts.length !== 2) return cell0.trim();
+    const [a, b] = parts.map((p) => p.trim());
+    const aIsNumber = /^\d+$/.test(a.replace(/\s/g, ''));
+    const arabic = aIsNumber ? b : a;
+    const number = aIsNumber ? a : b;
+    return `${arabic} ${number}`.trim();
+  }
+
+  private toDeviceTmtGps(imei: string, plateNumber: string, v: TmtGpsVehicle): PilotDevice | null {
+    const d = v.d?.[0];
+    if (!d) return null;
+
+    const location = this.parseCoordinatePair(d[2], d[3]);
+    const speed = Number(d[4]) || 0;
+    const heading = Number(d[5]) || 0;
+    const sensors = (d[7] ?? {}) as Record<string, unknown>;
+    const isRuptela = v.p === 'ruptela';
+
+    // Ignition: io1 (teltonika) or io251 (ruptela)
+    const ignRaw = isRuptela ? sensors['io251'] : sensors['io1'];
+    const ignitionOn = ignRaw !== undefined ? Number(ignRaw) === 1 : null;
+
+    // Battery voltage mV → V: io66 (teltonika) or io29 (ruptela)
+    const batRaw = Number(isRuptela ? sensors['io29'] : sensors['io66']);
+    const batteryVoltage = batRaw > 0 ? batRaw / 1000 : null;
+
+    // Mileage: io16 metres (teltonika) or io163 km (ruptela)
+    let providerMileage: number | null = null;
+    if (isRuptela) {
+      const m = Number(sensors['io163']);
+      providerMileage = m > 0 ? m : null;
+    } else {
+      const m = Number(sensors['io16']);
+      providerMileage = m > 0 ? m / 1000 : null;
+    }
+
+    // Engine hours
+    const ehRaw = Number(v.eh ?? 0);
+    const motorHoursSeconds = ehRaw > 0 ? ehRaw * 3600 : null;
+
+    // Status: "off" = offline, "s" = stopped, "m" = moving, "i" = idle (engine on)
+    const st = v.st ?? '';
+    const isOnline = st !== 'off';
+    const isEngineOn = st === 'm' || st === 'i' || ignitionOn === true;
+
+    const satellites = sensors['gpslev'] !== undefined ? Number(sensors['gpslev']) : null;
+
+    return {
+      plateNumber,
+      providerVehicleId: undefined,
+      deviceImei: imei,
+      lat: location?.lat ?? null,
+      lng: location?.lng ?? null,
+      altitude: null,
+      speed,
+      heading,
+      satellites,
+      recordedAt: d[0] ? new Date(d[0]) : new Date(),
+      isOnline,
+      isEngineOn,
+      sourceState: st || undefined,
+      providerMileage,
+      motorHoursSeconds,
+      lastStop: null,
+      lastMove: null,
+      batteryVoltage,
+      ignitionOn,
       loadWeight: null,
     };
   }
