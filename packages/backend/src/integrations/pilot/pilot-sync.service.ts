@@ -100,7 +100,9 @@ export class PilotSyncService {
       // Only include telemetry fields that have real (non-zero) values
       // to avoid overwriting good data with zeros when device has no signal
       const telemetryData: Record<string, unknown> = {};
-      if (match.deviceImei) telemetryData.pilotImei = match.deviceImei;
+      // Always mark pilotImei so the GPS filter counts this vehicle;
+      // fall back to plateNumber if the provider does not expose a device IMEI.
+      telemetryData.pilotImei = match.deviceImei || match.plateNumber;
       if (match.motorHoursSeconds) telemetryData.pilotMotorHours = match.motorHoursSeconds / 3600;
       if (match.lastStop) telemetryData.pilotLastStop = match.lastStop;
       if (match.lastMove) telemetryData.pilotLastMove = match.lastMove;
