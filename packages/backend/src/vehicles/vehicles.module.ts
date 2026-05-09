@@ -23,10 +23,11 @@ mkdirSync(photosDir, { recursive: true });
         },
       }),
       fileFilter: (_req, file, cb) => {
-        if (/\.(jpg|jpeg|png|webp)$/i.test(extname(file.originalname))) {
+        const ext = extname(file.originalname).toLowerCase();
+        if (/\.(jpg|jpeg|png|webp|xlsx|xls)$/.test(ext)) {
           cb(null, true);
         } else {
-          cb(new Error('Only image files are allowed'), false);
+          cb(new Error('Only image or Excel files are allowed'), false);
         }
       },
       limits: { fileSize: 10 * 1024 * 1024 },

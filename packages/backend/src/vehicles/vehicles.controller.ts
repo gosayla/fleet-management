@@ -12,6 +12,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto, UpdateVehicleDto, VehiclesQueryDto } from './vehicles.dto';
@@ -64,7 +65,7 @@ export class VehiclesController {
   /** POST /vehicles/import/preview — parse XLSX and return rows without saving */
   @Post('import/preview')
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   previewImport(
     @UploadedFile() file: Express.Multer.File,
   ) {
@@ -75,7 +76,7 @@ export class VehiclesController {
   /** POST /vehicles/import — parse XLSX and upsert vehicles into DB */
   @Post('import')
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   importVehicles(
     @CurrentUser() user: AuthTokenPayload,
     @UploadedFile() file: Express.Multer.File,
