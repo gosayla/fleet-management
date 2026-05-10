@@ -69,9 +69,10 @@ function fmtDate(iso: string) {
 
 interface Props {
   locale: Locale;
+  onBack?: () => void;
 }
 
-export function AuditLogScreen({locale}: Props) {
+export function AuditLogScreen({locale, onBack}: Props) {
   const i18n = t(locale);
   const rtl = isRTL(locale);
 
@@ -213,6 +214,11 @@ export function AuditLogScreen({locale}: Props) {
       {/* Header */}
       <View style={[styles.header, {paddingTop: SB_HEIGHT + 12}]}>
         <View style={[styles.headerRow, rtl && styles.rowRTL]}>
+          {onBack && (
+            <TouchableOpacity onPress={onBack} style={styles.backBtn} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+              <AppIcon name={rtl ? 'chevron-right' : 'chevron-left'} size={24} color={Colors.primary} />
+            </TouchableOpacity>
+          )}
           <AppIcon name="clipboard-list-outline" size={22} color={Colors.primary} />
           <Text style={[styles.title, rtl && styles.textRTL]}>{i18n.auditLog}</Text>
         </View>
@@ -278,6 +284,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e5e7eb',
   },
   headerRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  backBtn: {marginEnd: 4},
   title: {fontSize: 20, fontWeight: '700', color: Colors.text, marginStart: 6},
   filterWrap: {backgroundColor: '#fff', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#e5e7eb'},
   filterRow: {flexDirection: 'row', paddingHorizontal: Spacing.md, gap: 8, alignItems: 'center'},

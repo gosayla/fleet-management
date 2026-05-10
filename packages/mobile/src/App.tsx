@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+﻿import React, {useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   View,
@@ -42,37 +42,28 @@ import {api} from './lib/api';
 import {setNotificationTapHandler} from './lib/notifications';
 
 type DriverTab = 'dashboard' | 'trips' | 'documents' | 'profile';
-type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'documents' | 'audit' | 'profile';
+type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'documents' | 'profile';
 type MaintenanceTechTab = 'maintenance' | 'profile';
 
-// ── Tab config ───────────────────────────────────────────────────────────────
+// â”€â”€ Tab config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DRIVER_TABS: TabItem[] = [
-  {key: 'dashboard', icon: 'view-grid-outline', labels: {ar: 'الرئيسية', en: 'Home',    hi: 'होम',      bn: 'হোম',      ur: 'ہوم'}},
-  {key: 'trips',     icon: 'truck-outline',     labels: {ar: 'رحلاتي',   en: 'Trips',   hi: 'यात्राएं', bn: 'ট্রিপ',    ur: 'سفر'}},
-  {key: 'documents', icon: 'file-document-outline', labels: {ar: 'وثائقي', en: 'My Docs', hi: 'दस्तावेज़', bn: 'নথি', ur: 'دستاویز'}},
-  {key: 'profile',   icon: 'account-outline',   labels: {ar: 'حسابي',    en: 'Profile', hi: 'प्रोफाइल', bn: 'প্রোফাইল', ur: 'پروفائل'}},
+  {key: 'dashboard', icon: 'view-grid-outline', labels: {ar: 'ط§ظ„ط±ط¦ظٹط³ظٹط©', en: 'Home',    hi: 'à¤¹à¥‹à¤®',      bn: 'à¦¹à§‹à¦®',      ur: 'غپظˆظ…'}},
+  {key: 'trips',     icon: 'truck-outline',     labels: {ar: 'ط±ط­ظ„ط§طھظٹ',   en: 'Trips',   hi: 'à¤¯à¤¾à¤¤à¥چà¤°à¤¾à¤ڈà¤‚', bn: 'à¦ںà§چà¦°à¦؟à¦ھ',    ur: 'ط³ظپط±'}},
+  {key: 'documents', icon: 'file-document-outline', labels: {ar: 'ظˆط«ط§ط¦ظ‚ظٹ', en: 'My Docs', hi: 'à¤¦à¤¸à¥چà¤¤à¤¾à¤µà¥‡à¤œà¤¼', bn: 'à¦¨à¦¥à¦؟', ur: 'ط¯ط³طھط§ظˆغŒط²'}},
+  {key: 'profile',   icon: 'account-outline',   labels: {ar: 'ط­ط³ط§ط¨ظٹ',    en: 'Profile', hi: 'à¤ھà¥چà¤°à¥‹à¤«à¤¾à¤‡à¤²', bn: 'à¦ھà§چà¦°à§‹à¦«à¦¾à¦‡à¦²', ur: 'ظ¾ط±ظˆظپط§ط¦ظ„'}},
 ];
 
 const MAINTENANCE_TECH_TABS: TabItem[] = [
-  {key: 'maintenance', icon: 'wrench', labels: {ar: 'الصيانة', en: 'Maintenance', hi: 'रखरखाव', bn: 'রক্ষণাবেক্ষণ', ur: 'دیکھ بھال'}},
-  {key: 'profile',     icon: 'account-outline', labels: {ar: 'حسابي', en: 'Profile', hi: 'प्रोफाइल', bn: 'প্রোফাইল', ur: 'پروفائل'}},
+  {key: 'maintenance', icon: 'wrench', labels: {ar: 'ط§ظ„طµظٹط§ظ†ط©', en: 'Maintenance', hi: 'à¤°à¤–à¤°à¤–à¤¾à¤µ', bn: 'à¦°à¦•à§چà¦·à¦£à¦¾à¦¬à§‡à¦•à§چà¦·à¦£', ur: 'ط¯غŒع©ع¾ ط¨ع¾ط§ظ„'}},
+  {key: 'profile',     icon: 'account-outline', labels: {ar: 'ط­ط³ط§ط¨ظٹ', en: 'Profile', hi: 'à¤ھà¥چà¤°à¥‹à¤«à¤¾à¤‡à¤²', bn: 'à¦ھà§چà¦°à§‹à¦«à¦¾à¦‡à¦²', ur: 'ظ¾ط±ظˆظپط§ط¦ظ„'}},
 ];
 
 const ADMIN_TABS: TabItem[] = [
-  {key: 'dashboard', icon: 'view-grid-outline', labels: {ar: 'الرئيسية', en: 'Home',    hi: 'होम',      bn: 'হোম',      ur: 'ہوم'}},
-  {key: 'fleet',     icon: 'truck-outline',     labels: {ar: 'الأسطول',  en: 'Fleet',   hi: 'बेड़ा',     bn: 'ফ্লিট',    ur: 'بیڑا'}},
-  {key: 'trips',     icon: 'map-marker-path',   labels: {ar: 'الرحلات',  en: 'Trips',   hi: 'यात्राएं', bn: 'ট্রিপ',    ur: 'سفر'}},
-  {key: 'documents', icon: 'file-document-outline', labels: {ar: 'الوثائق', en: 'Docs', hi: 'दस्तावेज़', bn: 'নথি', ur: 'دستاویز'}},
-  {key: 'profile',   icon: 'account-outline',   labels: {ar: 'حسابي',    en: 'Profile', hi: 'प्रोफाइल', bn: 'প্রোফাइল', ur: 'پروفائل'}},
-];
-
-const ADMIN_AUDIT_TABS: TabItem[] = [
-  {key: 'dashboard', icon: 'view-grid-outline', labels: {ar: 'الرئيسية', en: 'Home',    hi: 'होम',      bn: 'হোম',      ur: 'ہوم'}},
-  {key: 'fleet',     icon: 'truck-outline',     labels: {ar: 'الأسطول',  en: 'Fleet',   hi: 'बेड़ा',     bn: 'ফ্লিট',    ur: 'بیڑا'}},
-  {key: 'trips',     icon: 'map-marker-path',   labels: {ar: 'الرحلات',  en: 'Trips',   hi: 'यात्राएं', bn: 'ট্রিপ',    ur: 'سفر'}},
-  {key: 'documents', icon: 'file-document-outline', labels: {ar: 'الوثائق', en: 'Docs', hi: 'दस्तावेज़', bn: 'নথি', ur: 'دستاویز'}},
-  {key: 'audit',     icon: 'clipboard-list-outline', labels: {ar: 'السجل', en: 'Log', hi: 'लॉग', bn: 'লগ', ur: 'لاگ'}},
-  {key: 'profile',   icon: 'account-outline',   labels: {ar: 'حسابي',    en: 'Profile', hi: 'प्रोफाइल', bn: 'প্রোফাइল', ur: 'پروفائل'}},
+  {key: 'dashboard', icon: 'view-grid-outline', labels: {ar: 'ط§ظ„ط±ط¦ظٹط³ظٹط©', en: 'Home',    hi: 'à¤¹à¥‹à¤®',      bn: 'à¦¹à§‹à¦®',      ur: 'غپظˆظ…'}},
+  {key: 'fleet',     icon: 'truck-outline',     labels: {ar: 'ط§ظ„ط£ط³ط·ظˆظ„',  en: 'Fleet',   hi: 'à¤¬à¥‡à¤،à¤¼à¤¾',     bn: 'à¦«à§چà¦²à¦؟à¦ں',    ur: 'ط¨غŒع‘ط§'}},
+  {key: 'trips',     icon: 'map-marker-path',   labels: {ar: 'ط§ظ„ط±ط­ظ„ط§طھ',  en: 'Trips',   hi: 'à¤¯à¤¾à¤¤à¥چà¤°à¤¾à¤ڈà¤‚', bn: 'à¦ںà§چà¦°à¦؟à¦ھ',    ur: 'ط³ظپط±'}},
+  {key: 'documents', icon: 'file-document-outline', labels: {ar: 'ط§ظ„ظˆط«ط§ط¦ظ‚', en: 'Docs', hi: 'à¤¦à¤¸à¥چà¤¤à¤¾à¤µà¥‡à¤œà¤¼', bn: 'à¦¨à¦¥à¦؟', ur: 'ط¯ط³طھط§ظˆغŒط²'}},
+  {key: 'profile',   icon: 'account-outline',   labels: {ar: 'ط­ط³ط§ط¨ظٹ',    en: 'Profile', hi: 'à¤ھà¥چà¤°à¥‹à¤«à¤¾à¤‡à¤²', bn: 'à¦ھà§چà¦°à§‹à¦«à¦¾à¤‡à¦²', ur: 'ظ¾ط±ظˆظپط§ط¦ظ„'}},
 ];
 
 function Navigator() {
@@ -127,6 +118,8 @@ function Navigator() {
   const [selectedMaintenanceId, setSelectedMaintenanceId] = useState<string | null>(null);
   const [maintenanceFormOpen, setMaintenanceFormOpen] = useState(false);
   const [maintenanceFormId, setMaintenanceFormId] = useState<string | null>(null);
+  // Audit log
+  const [auditLogOpen, setAuditLogOpen] = useState(false);
   // Fleet screen persisted state
   const [fleetSegment, setFleetSegment] = useState<'drivers' | 'vehicles'>('vehicles');
   const [fleetSearch, setFleetSearch] = useState('');
@@ -176,7 +169,7 @@ function Navigator() {
     loadUnreadNotificationsCount();
   }, [user?.id]);
 
-  // Register FCM notification tap handler — navigates to documents screen
+  // Register FCM notification tap handler â€” navigates to documents screen
   useEffect(() => {
     setNotificationTapHandler(data => {
       if (data.notificationType === 'DOCUMENT_EXPIRING') {
@@ -189,7 +182,7 @@ function Navigator() {
     return (
       <View style={styles.loader}>
         <View style={styles.loaderIcon}>
-          <Text style={styles.loaderTruck}>🚛</Text>
+          <Text style={styles.loaderTruck}>ًںڑ›</Text>
         </View>
         <ActivityIndicator size="large" color={Colors.primary} style={{marginTop: 24}} />
       </View>
@@ -280,7 +273,7 @@ function Navigator() {
     );
   }
 
-  // Full-screen driver detail — rendered as overlay inside admin shell (see below)
+  // Full-screen driver detail â€” rendered as overlay inside admin shell (see below)
 
   // Full-screen trip form
   if (tripFormOpen) {
@@ -410,7 +403,7 @@ function Navigator() {
   // Full-screen vehicle detail (hides tab bar)
   // NOTE: rendered as overlay inside admin shell instead (see below) so fleet screen stays mounted
 
-  // ── Maintenance Tech shell ────────────────────────────────────────────────────
+  // â”€â”€ Maintenance Tech shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (user?.role === 'MAINTENANCE_TECH') {
     return (
       <View style={styles.shell}>
@@ -437,7 +430,7 @@ function Navigator() {
     );
   }
 
-  // ── Driver shell ─────────────────────────────────────────────────────────────
+  // â”€â”€ Driver shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (!isAdmin) {
     // Driver trip detail view
     if (driverViewTripId) {
@@ -525,9 +518,13 @@ function Navigator() {
     );
   }
 
-  // ── Admin shell ──────────────────────────────────────────────────────────────
+  // â”€â”€ Admin shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const canSeeAuditLog = user?.role === 'FLEET_MANAGER' || user?.role === 'DISPATCHER' || user?.role === 'SUPER_ADMIN';
-  const activeAdminTabs = canSeeAuditLog ? ADMIN_AUDIT_TABS : ADMIN_TABS;
+
+  // Full-screen audit log (opened from Profile screen)
+  if (auditLogOpen) {
+    return <AuditLogScreen locale={locale} onBack={() => setAuditLogOpen(false)} />;
+  }
 
   return (
     <View style={styles.shell}>
@@ -537,16 +534,15 @@ function Navigator() {
         {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} onMaintenancePress={() => setMaintenanceOpen(true)} initialSegment={fleetSegment} initialSearch={fleetSearch} onStateChange={(seg, q) => { setFleetSegment(seg); setFleetSearch(q); }} initialVehicleScroll={fleetVehicleScroll} initialDriverScroll={fleetDriverScroll} onScrollChange={(seg, offset) => { if (seg === 'vehicles') setFleetVehicleScroll(offset); else setFleetDriverScroll(offset); }} />}
         {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onSelectTrip={setSelectedTripId} onAddTrip={() => { setTripFormId(null); setTripFormOpen(true); }} onSelectContract={setSelectedContractId} onAddContract={() => { setContractFormId(null); setContractFormOpen(true); setTripsHubSegment('contracts'); }} onSelectRental={setSelectedRentalId} onAddRental={() => { setRentalFormId(null); setRentalFormOpen(true); setTripsHubSegment('rentals'); }} segment={tripsHubSegment} onSegmentChange={setTripsHubSegment} />}
         {adminTab === 'documents'      && <AdminDocumentsScreen   locale={locale} onAddPress={() => { setDocFormId(null); setDocFormOpen(true); }} onSelectDoc={doc => setSelectedDocId(doc.id)} />}
-        {adminTab === 'audit'          && <AuditLogScreen locale={locale} />}
-        {adminTab === 'profile'        && <ProfileScreen locale={locale} onSetLocale={setLocale} onBack={() => setAdminTab('dashboard')} />}
+        {adminTab === 'profile'        && <ProfileScreen locale={locale} onSetLocale={setLocale} onBack={() => setAdminTab('dashboard')} onAuditLogPress={canSeeAuditLog ? () => setAuditLogOpen(true) : undefined} />}
       </View>
       <BottomTabBar
-        tabs={activeAdminTabs}
+        tabs={ADMIN_TABS}
         activeKey={adminTab}
         locale={locale}
         onPress={k => setAdminTab(k as AdminTab)}
       />
-      {/* Vehicle / driver detail overlays — rendered on top so fleet screen stays mounted */}
+      {/* Vehicle / driver detail overlays â€” rendered on top so fleet screen stays mounted */}
       {selectedVehicleId && (
         <View style={StyleSheet.absoluteFill}>
           <VehicleDetailScreen

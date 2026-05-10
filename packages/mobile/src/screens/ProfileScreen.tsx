@@ -9,6 +9,7 @@ interface Props {
   locale: Locale;
   onSetLocale: (locale: Locale) => void;
   onBack: () => void;
+  onAuditLogPress?: () => void;
 }
 
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
@@ -21,11 +22,14 @@ const LANGUAGE_OPTIONS = [
   {value: 'ur', label: 'اردو'},
 ] as const;
 
-export function ProfileScreen({locale, onSetLocale, onBack}: Props) {
+export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Props) {
   const {user, logout, updateLanguage} = useAuth();
   const i18n = t(locale);
   const isRTL = getIsRTL(locale);
   const [savingLanguage, setSavingLanguage] = useState<string | null>(null);
+  const canSeeAuditLog = onAuditLogPress && (
+    user?.role === 'FLEET_MANAGER' || user?.role === 'DISPATCHER' || user?.role === 'SUPER_ADMIN'
+  );
 
   function confirmLogout() {
     Alert.alert(i18n.logoutTitle, i18n.logoutConfirm, [
@@ -97,6 +101,16 @@ export function ProfileScreen({locale, onSetLocale, onBack}: Props) {
         </View>
 
         {/* Logout */}
+        {canSeeAuditLog && (
+          <TouchableOpacity style={styles.auditBtn} onPress={onAuditLogPress} activeOpacity={0.85}>
+            <View style={styles.auditIconWrap}>
+              <AppIcon name="clipboard-list-outline" size={18} color={Colors.primary} />
+            </View>
+            <Text style={styles.auditText}>{i18n.auditLog}</Text>
+            <AppIcon name="chevron-right" size={18} color={Colors.textMuted} />
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity style={styles.logoutBtn} onPress={confirmLogout} activeOpacity={0.85}>
           <AppIcon name="logout" size={18} color={Colors.danger} />
           <Text style={styles.logoutText}>{i18n.logout}</Text>
@@ -205,4 +219,20 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#FECACA',
   },
   logoutText: {fontSize: 15, fontWeight: '700' as const, color: Colors.danger},
+  auditBtn: {
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  auditIconWrap: {
+    width: 32, height: 32, borderRadius: 10,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  auditText: {flex: 1, fontSize: 14, fontWeight: '600' as const, color: Colors.textPrimary},
 });
