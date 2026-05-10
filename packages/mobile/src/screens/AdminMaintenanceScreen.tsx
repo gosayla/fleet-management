@@ -172,6 +172,7 @@ export function AdminMaintenanceScreen({locale, onSelectItem, onAddPress, onBack
           data={FILTERS}
           keyExtractor={f => f.key}
           showsHorizontalScrollIndicator={false}
+          style={{flexGrow: 0}}
           contentContainerStyle={styles.filterRow}
           renderItem={({item: f}) => (
             <TouchableOpacity
