@@ -69,6 +69,7 @@ export default function DriversPage() {
           <div className="p-8 text-center text-gray-400">{t.drivers.empty}</div>
         ) : (
               <>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
@@ -106,6 +107,7 @@ export default function DriversPage() {
               ))}
             </tbody>
           </table>
+          </div>
           <div className="border-t border-gray-100 px-4">
             <Pagination
               total={drivers.length}

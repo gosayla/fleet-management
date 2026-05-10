@@ -99,6 +99,7 @@ export default function FuelPage() {
           <div className="p-8 text-center text-gray-400">{t.fuel.empty}</div>
         ) : (
           <>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
@@ -130,6 +131,7 @@ export default function FuelPage() {
               ))}
             </tbody>
           </table>
+          </div>
           <div className="border-t border-gray-100 px-4">
             <Pagination
               total={logs.length}
