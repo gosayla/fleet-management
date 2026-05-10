@@ -109,12 +109,10 @@ export function ContractFormScreen({contractId, locale, onBack, onSuccess}: Prop
   }
 
   useEffect(() => {
-    Promise.all([
-      api.get<any>('/vehicles?limit=200'),
-      api.get<any>('/drivers?limit=200'),
-    ]).then(([v, d]) => {
-      setVehicles(Array.isArray(v) ? v : (v?.data ?? []));
-      setDrivers(Array.isArray(d) ? d : (d?.data ?? []));
+    api.get<DriverOption[]>('/drivers').then(d => setDrivers(Array.isArray(d) ? d : [])).catch(() => {});
+    api.get<any>('/vehicles?limit=100').then(res => {
+      const items = Array.isArray(res) ? res : (res?.data ?? []);
+      setVehicles(items);
     }).catch(() => {});
 
     if (isEdit) {

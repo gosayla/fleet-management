@@ -92,7 +92,10 @@ export function RentalFormScreen({rentalId, locale, onBack, onSuccess}: Props) {
   }
 
   useEffect(() => {
-    api.get<any>('/vehicles?limit=200').then(v => setVehicles(Array.isArray(v) ? v : (v?.data ?? []))).catch(() => {});
+    api.get<any>('/vehicles?limit=100').then(res => {
+      const items = Array.isArray(res) ? res : (res?.data ?? []);
+      setVehicles(items);
+    }).catch(() => {});
 
     if (isEdit) {
       api.get<any>(`/rentals/${rentalId}`)
