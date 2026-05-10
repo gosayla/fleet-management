@@ -8,7 +8,7 @@ import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('audit')
 @ApiBearerAuth()
-@Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER)
+@Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
 @Controller('audit-logs')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}

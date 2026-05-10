@@ -269,6 +269,12 @@ const messages = {
     deleteMaintenanceConfirm: 'هل تريد حذف هذا السجل؟',
     confirm: 'تأكيد', kmUnit: 'كم',
     maintenanceNavBtn: 'الصيانة',
+    // audit log
+    auditLog: 'سجل العمليات', alNavBtn: 'السجل',
+    alAction: 'الإجراء', alEntity: 'الكيان', alUser: 'المستخدم', alDate: 'التاريخ',
+    alAll: 'الكل', alEmpty: 'لا توجد سجلات', alLoadMore: 'تحميل المزيد', alLoading: 'جارٍ التحميل...',
+    alActionCreate: 'إضافة', alActionUpdate: 'تعديل', alActionDelete: 'حذف',
+    alActionLogin: 'تسجيل دخول', alActionLogout: 'خروج',
   },
   en: {
     appName: 'FleetSA',
@@ -533,6 +539,12 @@ const messages = {
     deleteMaintenanceConfirm: 'Delete this maintenance record?',
     confirm: 'Confirm', kmUnit: 'km',
     maintenanceNavBtn: 'Maintenance',
+    // audit log
+    auditLog: 'Activity Log', alNavBtn: 'Log',
+    alAction: 'Action', alEntity: 'Entity', alUser: 'User', alDate: 'Date',
+    alAll: 'All', alEmpty: 'No records found', alLoadMore: 'Load More', alLoading: 'Loading...',
+    alActionCreate: 'Create', alActionUpdate: 'Update', alActionDelete: 'Delete',
+    alActionLogin: 'Login', alActionLogout: 'Logout',
   },
   hi: {
     appName: 'FleetSA',
@@ -797,6 +809,12 @@ const messages = {
     deleteMaintenanceConfirm: 'यह रखरखाव रिकॉर्ड हटाएं?',
     confirm: 'पुष्टि करें', kmUnit: 'कि.मी.',
     maintenanceNavBtn: 'रखरखाव',
+    // audit log
+    auditLog: 'गतिविधि लॉग', alNavBtn: 'लॉग',
+    alAction: 'क्रिया', alEntity: 'इकाई', alUser: 'उपयोगकर्ता', alDate: 'तारीख',
+    alAll: 'सभी', alEmpty: 'कोई रिकॉर्ड नहीं', alLoadMore: 'और लोड करें', alLoading: 'लोड हो रहा है...',
+    alActionCreate: 'बनाएं', alActionUpdate: 'अपडेट', alActionDelete: 'हटाएं',
+    alActionLogin: 'लॉगिन', alActionLogout: 'लॉगआउट',
   },
   bn: {
     appName: 'FleetSA',
@@ -1061,6 +1079,12 @@ const messages = {
     deleteMaintenanceConfirm: 'এই রেকর্ড মুছবেন?',
     confirm: 'নিশ্চিত করুন', kmUnit: 'কি.মি.',
     maintenanceNavBtn: 'রক্ষণাবেক্ষণ',
+    // audit log
+    auditLog: 'কার্যকলাপ লগ', alNavBtn: 'লগ',
+    alAction: 'কার্য', alEntity: 'সত্তা', alUser: 'ব্যবহারকারী', alDate: 'তারিখ',
+    alAll: 'সব', alEmpty: 'কোনো রেকর্ড নেই', alLoadMore: 'আরো লোড করুন', alLoading: 'লোড হচ্ছে...',
+    alActionCreate: 'তৈরি', alActionUpdate: 'আপডেট', alActionDelete: 'মুছুন',
+    alActionLogin: 'লগইন', alActionLogout: 'লগআউট',
   },
   ur: {
     appName: 'FleetSA',
@@ -1325,6 +1349,12 @@ const messages = {
     deleteMaintenanceConfirm: 'یہ ریکارڈ حذف کریں؟',
     confirm: 'تصدیق کریں', kmUnit: 'کلومیٹر',
     maintenanceNavBtn: 'دیکھ بھال',
+    // audit log
+    auditLog: 'سرگرمی لاگ', alNavBtn: 'لاگ',
+    alAction: 'عمل', alEntity: 'ادارہ', alUser: 'صارف', alDate: 'تاریخ',
+    alAll: 'سب', alEmpty: 'کوئی ریکارڈ نہیں', alLoadMore: 'مزید لوڈ کریں', alLoading: 'لوڈ ہو رہا ہے...',
+    alActionCreate: 'بنائیں', alActionUpdate: 'اپ ڈیٹ', alActionDelete: 'حذف',
+    alActionLogin: 'لاگ ان', alActionLogout: 'لاگ آؤٹ',
   },
 } as const;
 

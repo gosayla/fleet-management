@@ -33,6 +33,7 @@ import {AdminMaintenanceScreen} from './screens/AdminMaintenanceScreen';
 import {MaintenanceFormScreen} from './screens/MaintenanceFormScreen';
 import {MaintenanceDetailScreen} from './screens/MaintenanceDetailScreen';
 import {DriverDocumentsScreen} from './screens/DriverDocumentsScreen';
+import {AuditLogScreen} from './screens/AuditLogScreen';
 import {Trip} from '@fleet/shared';
 import {Locale} from './lib/i18n';
 import {Colors} from './lib/theme';
@@ -41,7 +42,7 @@ import {api} from './lib/api';
 import {setNotificationTapHandler} from './lib/notifications';
 
 type DriverTab = 'dashboard' | 'trips' | 'documents' | 'profile';
-type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'documents' | 'profile';
+type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'documents' | 'audit' | 'profile';
 type MaintenanceTechTab = 'maintenance' | 'profile';
 
 // ── Tab config ───────────────────────────────────────────────────────────────
@@ -62,7 +63,16 @@ const ADMIN_TABS: TabItem[] = [
   {key: 'fleet',     icon: 'truck-outline',     labels: {ar: 'الأسطول',  en: 'Fleet',   hi: 'बेड़ा',     bn: 'ফ্লিট',    ur: 'بیڑا'}},
   {key: 'trips',     icon: 'map-marker-path',   labels: {ar: 'الرحلات',  en: 'Trips',   hi: 'यात्राएं', bn: 'ট্রিপ',    ur: 'سفر'}},
   {key: 'documents', icon: 'file-document-outline', labels: {ar: 'الوثائق', en: 'Docs', hi: 'दस्तावेज़', bn: 'নথি', ur: 'دستاویز'}},
-  {key: 'profile',   icon: 'account-outline',   labels: {ar: 'حسابي',    en: 'Profile', hi: 'प्रोफाइल', bn: 'প্রোফাইল', ur: 'پروفائل'}},
+  {key: 'profile',   icon: 'account-outline',   labels: {ar: 'حسابي',    en: 'Profile', hi: 'प्रोफाइल', bn: 'প্রোফাइল', ur: 'پروفائل'}},
+];
+
+const ADMIN_AUDIT_TABS: TabItem[] = [
+  {key: 'dashboard', icon: 'view-grid-outline', labels: {ar: 'الرئيسية', en: 'Home',    hi: 'होम',      bn: 'হোম',      ur: 'ہوم'}},
+  {key: 'fleet',     icon: 'truck-outline',     labels: {ar: 'الأسطول',  en: 'Fleet',   hi: 'बेड़ा',     bn: 'ফ্লিট',    ur: 'بیڑا'}},
+  {key: 'trips',     icon: 'map-marker-path',   labels: {ar: 'الرحلات',  en: 'Trips',   hi: 'यात्राएं', bn: 'ট্রিপ',    ur: 'سفر'}},
+  {key: 'documents', icon: 'file-document-outline', labels: {ar: 'الوثائق', en: 'Docs', hi: 'दस्तावेज़', bn: 'নথি', ur: 'دستاویز'}},
+  {key: 'audit',     icon: 'clipboard-list-outline', labels: {ar: 'السجل', en: 'Log', hi: 'लॉग', bn: 'লগ', ur: 'لاگ'}},
+  {key: 'profile',   icon: 'account-outline',   labels: {ar: 'حسابي',    en: 'Profile', hi: 'प्रोफाइल', bn: 'প্রোফাइল', ur: 'پروفائل'}},
 ];
 
 function Navigator() {
@@ -516,6 +526,9 @@ function Navigator() {
   }
 
   // ── Admin shell ──────────────────────────────────────────────────────────────
+  const canSeeAuditLog = user?.role === 'FLEET_MANAGER' || user?.role === 'DISPATCHER' || user?.role === 'SUPER_ADMIN';
+  const activeAdminTabs = canSeeAuditLog ? ADMIN_AUDIT_TABS : ADMIN_TABS;
+
   return (
     <View style={styles.shell}>
       <View style={styles.screenArea}>
@@ -524,10 +537,11 @@ function Navigator() {
         {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} onMaintenancePress={() => setMaintenanceOpen(true)} initialSegment={fleetSegment} initialSearch={fleetSearch} onStateChange={(seg, q) => { setFleetSegment(seg); setFleetSearch(q); }} initialVehicleScroll={fleetVehicleScroll} initialDriverScroll={fleetDriverScroll} onScrollChange={(seg, offset) => { if (seg === 'vehicles') setFleetVehicleScroll(offset); else setFleetDriverScroll(offset); }} />}
         {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onSelectTrip={setSelectedTripId} onAddTrip={() => { setTripFormId(null); setTripFormOpen(true); }} onSelectContract={setSelectedContractId} onAddContract={() => { setContractFormId(null); setContractFormOpen(true); setTripsHubSegment('contracts'); }} onSelectRental={setSelectedRentalId} onAddRental={() => { setRentalFormId(null); setRentalFormOpen(true); setTripsHubSegment('rentals'); }} segment={tripsHubSegment} onSegmentChange={setTripsHubSegment} />}
         {adminTab === 'documents'      && <AdminDocumentsScreen   locale={locale} onAddPress={() => { setDocFormId(null); setDocFormOpen(true); }} onSelectDoc={doc => setSelectedDocId(doc.id)} />}
+        {adminTab === 'audit'          && <AuditLogScreen locale={locale} />}
         {adminTab === 'profile'        && <ProfileScreen locale={locale} onSetLocale={setLocale} onBack={() => setAdminTab('dashboard')} />}
       </View>
       <BottomTabBar
-        tabs={ADMIN_TABS}
+        tabs={activeAdminTabs}
         activeKey={adminTab}
         locale={locale}
         onPress={k => setAdminTab(k as AdminTab)}
