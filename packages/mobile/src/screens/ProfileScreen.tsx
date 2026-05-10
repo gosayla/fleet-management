@@ -61,14 +61,11 @@ export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Pr
   const animAvatarOpacity = scrollY.interpolate({
     inputRange: [0, COLLAPSE * 0.6], outputRange: [1, 0], extrapolate: 'clamp',
   });
-  const animSubtitleOpacity = scrollY.interpolate({
-    inputRange: [0, COLLAPSE * 0.4], outputRange: [1, 0], extrapolate: 'clamp',
-  });
   const animNameSize = scrollY.interpolate({
-    inputRange: [0, COLLAPSE], outputRange: [20, 16], extrapolate: 'clamp',
+    inputRange: [0, COLLAPSE], outputRange: [20, 15], extrapolate: 'clamp',
   });
   const animTopPad = scrollY.interpolate({
-    inputRange: [0, COLLAPSE], outputRange: [SB_HEIGHT + 16, SB_HEIGHT + 12], extrapolate: 'clamp',
+    inputRange: [0, COLLAPSE], outputRange: [SB_HEIGHT + 20, SB_HEIGHT + 14], extrapolate: 'clamp',
   });
 
   return (
@@ -77,29 +74,14 @@ export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Pr
 
       {/* ── Collapsing teal header ── */}
       <Animated.View style={[styles.header, {height: animHeaderHeight}]}>
-        {/* Back button (top-left) */}
-        <Animated.View style={[styles.topBar, {paddingTop: animTopPad}]}>
-          <TouchableOpacity onPress={onBack} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-            <AppIcon name="chevron-left" size={24} color="#fff" />
-          </TouchableOpacity>
-          {/* Name shown in compact bar */}
-          <Animated.Text style={[styles.compactName, {fontSize: animNameSize}]} numberOfLines={1}>
-            {displayName}
-          </Animated.Text>
-          <View style={{width: 32}} />
-        </Animated.View>
+        {/* Name — always visible, shrinks slightly */}
+        <Animated.Text style={[styles.name, {fontSize: animNameSize, paddingTop: animTopPad}]} numberOfLines={1}>
+          {displayName}
+        </Animated.Text>
 
         {/* Avatar — fades + shrinks away */}
-        <Animated.View style={[styles.avatar, {width: animAvatarSize, height: animAvatarSize, borderRadius: 42, opacity: animAvatarOpacity, marginBottom: 8}]}>
+        <Animated.View style={[styles.avatar, {width: animAvatarSize, height: animAvatarSize, borderRadius: 42, opacity: animAvatarOpacity, marginTop: 12}]}>
           <Text style={styles.avatarText}>{initials}</Text>
-        </Animated.View>
-
-        {/* Subtitle: email + role badge — fades away */}
-        <Animated.View style={[styles.subtitleWrap, {opacity: animSubtitleOpacity}]}>
-          <Text style={styles.email}>{user?.email}</Text>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleBadgeText}>{user?.role?.replace(/_/g, ' ')}</Text>
-          </View>
         </Animated.View>
       </Animated.View>
 
@@ -199,20 +181,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
-  topBar: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingBottom: 8,
-  },
-  compactName: {
-    flex: 1,
-    textAlign: 'center',
+  name: {
     fontWeight: '700' as const,
     color: '#fff',
-    marginHorizontal: 8,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.md,
   },
   avatar: {
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -221,14 +194,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   avatarText: {fontSize: 34, fontWeight: '700' as const, color: Colors.white},
-  subtitleWrap: {alignItems: 'center', paddingBottom: 14},
-  email: {fontSize: 13, color: 'rgba(255,255,255,0.7)', textAlign: 'center'},
-  roleBadge: {
-    marginTop: Spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 20, paddingHorizontal: Spacing.md, paddingVertical: 5,
-  },
-  roleBadgeText: {fontSize: 12, fontWeight: '600' as const, color: Colors.white, textTransform: 'uppercase', letterSpacing: 1},
   panel: {
     flex: 1,
     backgroundColor: Colors.bg,
