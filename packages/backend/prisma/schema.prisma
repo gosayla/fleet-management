@@ -127,6 +127,14 @@ enum BloodType {
   O_NEG
 }
 
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model Company {
@@ -168,6 +176,28 @@ model User {
 
   @@index([companyId])
   @@map("users")
+}
+
+model AuditLog {
+  id           String      @id @default(uuid())
+  companyId    String?
+  userId       String?
+  userFullName String?
+  userRole     String?
+  action       AuditAction
+  entity       String      // e.g. "Vehicle", "Driver", "Trip"
+  entityId     String?     // ID of the affected record
+  changes      Json?       // request body / relevant payload
+  ipAddress    String?
+  route        String?     // e.g. "POST /api/v1/vehicles"
+  createdAt    DateTime    @default(now())
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([entity])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 model Vehicle {
