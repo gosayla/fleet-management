@@ -36,6 +36,15 @@ export function AdminVehiclesScreen({locale}: Props) {
     ? raw
     : ((raw as {data: VehicleCardData[]}).data ?? []);
 
+  // Debug: log raw response shape so we can diagnose empty list
+  React.useEffect(() => {
+    if (raw !== null) {
+      console.log('[Vehicles] raw type:', Array.isArray(raw) ? 'array' : typeof raw,
+        '| keys:', raw && !Array.isArray(raw) ? Object.keys(raw as object).join(',') : 'N/A',
+        '| count:', all.length);
+    }
+  }, [raw]);
+
   const total: number = raw == null
     ? 0
     : Array.isArray(raw)
@@ -86,6 +95,7 @@ export function AdminVehiclesScreen({locale}: Props) {
       <FlatList
         data={vehicles}
         keyExtractor={v => v.id}
+        style={styles.flatList}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} tintColor={Colors.primary} />}
@@ -103,6 +113,7 @@ export function AdminVehiclesScreen({locale}: Props) {
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: Colors.bg},
+  flatList: {flex: 1},
   filterWrap: {paddingHorizontal: Spacing.md, paddingTop: 10, paddingBottom: 4},
   filterScroll: {gap: 8, flexDirection: 'row'},
   chip: {

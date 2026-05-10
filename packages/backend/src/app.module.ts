@@ -17,6 +17,8 @@ import { GatewayModule } from './gateway/gateway.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { UsersModule } from './users/users.module';
 import { SettingsModule } from './settings/settings.module';
+import { ContractsModule } from './contracts/contracts.module';
+import { RentalsModule } from './rentals/rentals.module';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { SettingsModule } from './settings/settings.module';
     DashboardModule,
     UsersModule,
     SettingsModule,
+    ContractsModule,
+    RentalsModule,
   ],
 })
 export class AppModule {}

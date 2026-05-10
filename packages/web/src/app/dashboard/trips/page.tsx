@@ -22,7 +22,7 @@ const statusColors: Record<TripStatus, string> = {
 const typeColors: Record<TripType, string> = {
   ONE_TIME: 'bg-blue-50 text-blue-600',
   DAILY: 'bg-amber-50 text-amber-600',
-  MONTHLY_CONTRACT: 'bg-purple-50 text-purple-700',
+  CAR_RENT: 'bg-purple-50 text-purple-700',
 };
 
 const ALL_STATUS = 'ALL_STATUS';
@@ -63,7 +63,7 @@ export default function TripsPage() {
   const tripTypeLabelMap: Record<TripType, string> = {
     ONE_TIME: tt.typeOneTime,
     DAILY: tt.typeDaily,
-    MONTHLY_CONTRACT: tt.typeMonthlyContract,
+    CAR_RENT: tt.typeCarRent,
   };
 
   const filtered = trips.filter(tr => {
@@ -99,7 +99,7 @@ export default function TripsPage() {
 
       {/* Type + Status filter row */}
       <div className="flex gap-2 flex-wrap items-center">
-        {([ALL_TYPE, 'ONE_TIME', 'DAILY', 'MONTHLY_CONTRACT'] as TypeFilter[]).map(tp => (
+        {([ALL_TYPE, 'ONE_TIME', 'DAILY', 'CAR_RENT'] as TypeFilter[]).map(tp => (
           <button
             key={tp}
             onClick={() => { setTypeFilter(tp); setPage(1); }}

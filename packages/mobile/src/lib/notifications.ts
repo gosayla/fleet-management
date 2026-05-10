@@ -9,6 +9,19 @@
 import messaging from '@react-native-firebase/messaging';
 import {Alert, Platform} from 'react-native';
 
+export interface NotificationTapData {
+  notificationType?: string;
+  referenceId?: string;
+  [key: string]: string | undefined;
+}
+
+let _onNotificationTap: ((data: NotificationTapData) => void) | null = null;
+
+/** Register a handler that fires whenever the user taps a push notification. */
+export function setNotificationTapHandler(handler: (data: NotificationTapData) => void) {
+  _onNotificationTap = handler;
+}
+
 export async function initNotifications(): Promise<string | null> {
   try {
     // Request permission (iOS asks, Android 13+ asks)
@@ -31,13 +44,15 @@ export async function initNotifications(): Promise<string | null> {
 
     // Handle background/quit tap — app was opened from notification
     messaging().onNotificationOpenedApp(remoteMessage => {
-      console.log('Notification opened app from background:', remoteMessage);
+      if (_onNotificationTap && remoteMessage.data) {
+        _onNotificationTap(remoteMessage.data as NotificationTapData);
+      }
     });
 
     // Check if app was opened from a quit-state notification
     const initial = await messaging().getInitialNotification();
-    if (initial) {
-      console.log('App opened from quit-state notification:', initial);
+    if (initial?.data && _onNotificationTap) {
+      _onNotificationTap(initial.data as NotificationTapData);
     }
 
     return token;

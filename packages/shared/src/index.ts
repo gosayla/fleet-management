@@ -35,7 +35,19 @@ export enum TripStatus {
 export enum TripType {
   ONE_TIME = 'ONE_TIME',
   DAILY = 'DAILY',
-  MONTHLY_CONTRACT = 'MONTHLY_CONTRACT',
+  CAR_RENT = 'CAR_RENT',
+}
+
+export enum TripLeg {
+  OUTBOUND = 'OUTBOUND',
+  RETURN = 'RETURN',
+}
+
+export enum RentalStatus {
+  ACTIVE = 'ACTIVE',
+  RETURNED = 'RETURNED',
+  OVERDUE = 'OVERDUE',
+  CANCELLED = 'CANCELLED',
 }
 
 export enum MaintenanceType {

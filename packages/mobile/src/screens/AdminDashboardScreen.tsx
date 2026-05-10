@@ -16,6 +16,7 @@ import {Locale, t, isRTL} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {useCachedFetch} from '../hooks/useCachedFetch';
+import {formatDateSmart} from '../lib/dates';
 
 interface DashboardPayload {
   stats: FleetStats;
@@ -287,7 +288,7 @@ export function AdminDashboardScreen({locale, onSelectTrip, onNotificationsPress
               const isExpired = expiry < now;
               const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
               const subject = doc.vehicles?.[0]?.plateNumber ?? doc.drivers?.[0]?.fullName ?? '—';
-              const expiryStr = expiry.toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'});
+              const expiryStr = formatDateSmart(doc.expiryDate, locale);
               return (
                 <View key={doc.id} style={[styles.deadlineRow, isExpired && {borderLeftWidth: 3, borderLeftColor: '#e74c3c'}]}>
                   <View style={[styles.deadlineIcon, {backgroundColor: isExpired ? '#fdecea' : '#fff3e0'}]}>

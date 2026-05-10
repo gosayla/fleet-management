@@ -100,7 +100,7 @@ export class NotificationsService implements OnModuleInit {
     return [...new Map(users.map((user) => [user.id, user])).values()];
   }
 
-  private async sendPush(user: StoredUser, title: string, body: string) {
+  private async sendPush(user: StoredUser, title: string, body: string, data?: Record<string, string>) {
     if (!this.fcmEnabled || !user.fcmToken) return;
 
     try {
@@ -108,6 +108,7 @@ export class NotificationsService implements OnModuleInit {
         token: user.fcmToken,
         notification: { title, body },
         android: { priority: 'high' },
+        ...(data ? { data } : {}),
       });
       this.logger.log(`FCM push sent to user ${user.id}: messageId=${msgId}`);
     } catch (err) {
@@ -151,7 +152,10 @@ export class NotificationsService implements OnModuleInit {
       },
     });
 
-    await this.sendPush(user, message.title, message.body);
+    await this.sendPush(user, message.title, message.body, {
+      notificationType: type,
+      referenceId: referenceId ?? '',
+    });
     return created;
   }
 
@@ -233,19 +237,21 @@ export class NotificationsService implements OnModuleInit {
     language: PreferredLanguage,
     documentType: string,
     daysLeft: number,
+    plateNumbers: string[],
   ): NotificationMessage {
     const documentLabel = this.docTypeLabel(documentType, language);
+    const plate = plateNumbers.length > 0 ? ` (${plateNumbers.join(', ')})` : '';
     switch (language) {
       case 'en':
-        return { title: 'Document Expiring Soon', body: `${documentLabel} expires in ${daysLeft} day(s)` };
+        return { title: 'Document Expiring Soon', body: `${documentLabel}${plate} expires in ${daysLeft} day(s)` };
       case 'hi':
-        return { title: 'दस्तावेज़ जल्द समाप्त होगा', body: `${documentLabel} ${daysLeft} दिन में समाप्त होगा` };
+        return { title: 'दस्तावेज़ जल्द समाप्त होगा', body: `${documentLabel}${plate} ${daysLeft} दिन में समाप्त होगा` };
       case 'bn':
-        return { title: 'ডকুমেন্টের মেয়াদ শীঘ্রই শেষ হবে', body: `${documentLabel} ${daysLeft} দিনের মধ্যে শেষ হবে` };
+        return { title: 'ডকুমেন্টের মেয়াদ শীঘ্রই শেষ হবে', body: `${documentLabel}${plate} ${daysLeft} দিনের মধ্যে শেষ হবে` };
       case 'ur':
-        return { title: 'دستاویز جلد ختم ہونے والی ہے', body: `${documentLabel} ${daysLeft} دن میں ختم ہو جائے گی` };
+        return { title: 'دستاویز جلد ختم ہونے والی ہے', body: `${documentLabel}${plate} ${daysLeft} دن میں ختم ہو جائے گی` };
       default:
-        return { title: 'مستند على وشك الانتهاء', body: `ستنتهي صلاحية ${documentLabel} خلال ${daysLeft} يوم` };
+        return { title: 'مستند على وشك الانتهاء', body: `ستنتهي صلاحية ${documentLabel}${plate} خلال ${daysLeft} يوم` };
     }
   }
 
@@ -408,13 +414,17 @@ export class NotificationsService implements OnModuleInit {
 
     const expiringDocs = await this.prisma.fleetDocument.findMany({
       where: { expiryDate: { lte: threshold, gte: now } },
-      include: { drivers: { select: { id: true } } },
+      include: {
+        drivers: { select: { id: true } },
+        vehicles: { select: { plateNumber: true } },
+      },
     });
 
     for (const doc of expiringDocs) {
       const daysLeft = Math.ceil(
         (doc.expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
       );
+      const plateNumbers = doc.vehicles.map(v => v.plateNumber);
       const opsUsers = await this.getCompanyOpsUsers(doc.companyId);
       const driverUsers = doc.type === 'DRIVER_LICENSE'
         ? await this.getDriverUsers(doc.drivers.map((driver) => driver.id))
@@ -424,7 +434,7 @@ export class NotificationsService implements OnModuleInit {
         [...opsUsers, ...driverUsers],
         'DOCUMENT_EXPIRING',
         doc.id,
-        (language) => this.documentExpiringMessage(language, doc.type, daysLeft),
+        (language) => this.documentExpiringMessage(language, doc.type, daysLeft, plateNumbers),
       );
     }
 

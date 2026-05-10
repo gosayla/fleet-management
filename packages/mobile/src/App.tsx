@@ -22,14 +22,22 @@ import {DriverFormScreen} from './screens/DriverFormScreen';
 import {TripDetailScreen} from './screens/TripDetailScreen';
 import {TripFormScreen} from './screens/TripFormScreen';
 import {DriverDashboardScreen} from './screens/DriverDashboardScreen';
+import {AdminDocumentsScreen} from './screens/AdminDocumentsScreen';
+import {DocumentFormScreen} from './screens/DocumentFormScreen';
+import {DocumentDetailScreen} from './screens/DocumentDetailScreen';
+import {ContractFormScreen} from './screens/ContractFormScreen';
+import {ContractDetailScreen} from './screens/ContractDetailScreen';
+import {RentalFormScreen} from './screens/RentalFormScreen';
+import {RentalDetailScreen} from './screens/RentalDetailScreen';
 import {Trip} from '@fleet/shared';
 import {Locale} from './lib/i18n';
 import {Colors} from './lib/theme';
 import {BottomTabBar, TabItem} from './components/ui/BottomTabBar';
 import {api} from './lib/api';
+import {setNotificationTapHandler} from './lib/notifications';
 
 type DriverTab = 'dashboard' | 'trips' | 'profile';
-type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'profile';
+type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'documents' | 'profile';
 
 // ── Tab config ───────────────────────────────────────────────────────────────
 const DRIVER_TABS: TabItem[] = [
@@ -42,6 +50,7 @@ const ADMIN_TABS: TabItem[] = [
   {key: 'dashboard', icon: 'view-grid-outline', labels: {ar: 'الرئيسية', en: 'Home',    hi: 'होम',      bn: 'হোম',      ur: 'ہوم'}},
   {key: 'fleet',     icon: 'truck-outline',     labels: {ar: 'الأسطول',  en: 'Fleet',   hi: 'बेड़ा',     bn: 'ফ্লিট',    ur: 'بیڑا'}},
   {key: 'trips',     icon: 'map-marker-path',   labels: {ar: 'الرحلات',  en: 'Trips',   hi: 'यात्राएं', bn: 'ট্রিপ',    ur: 'سفر'}},
+  {key: 'documents', icon: 'file-document-outline', labels: {ar: 'الوثائق', en: 'Docs', hi: 'दस्तावेज़', bn: 'নথি', ur: 'دستاویز'}},
   {key: 'profile',   icon: 'account-outline',   labels: {ar: 'حسابي',    en: 'Profile', hi: 'प्रोफाइल', bn: 'প্রোফাইল', ur: 'پروفائل'}},
 ];
 
@@ -76,9 +85,24 @@ function Navigator() {
   const [tripFormId, setTripFormId] = useState<string | null>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  // Documents screen
+  const [documentsOpen, setDocumentsOpen] = useState(false);
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [docFormOpen, setDocFormOpen] = useState(false);
+  const [docFormId, setDocFormId] = useState<string | null>(null);
+  // Contracts (trips tab sub-nav)
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
+  const [contractFormOpen, setContractFormOpen] = useState(false);
+  const [contractFormId, setContractFormId] = useState<string | null>(null);
+  // Rentals (trips tab sub-nav)
+  const [selectedRentalId, setSelectedRentalId] = useState<string | null>(null);
+  const [rentalFormOpen, setRentalFormOpen] = useState(false);
+  const [rentalFormId, setRentalFormId] = useState<string | null>(null);
   // Fleet screen persisted state
   const [fleetSegment, setFleetSegment] = useState<'drivers' | 'vehicles'>('vehicles');
   const [fleetSearch, setFleetSearch] = useState('');
+  const [fleetVehicleScroll, setFleetVehicleScroll] = useState(0);
+  const [fleetDriverScroll, setFleetDriverScroll] = useState(0);
   // Driver trip detail (separate from admin selectedTripId so back nav is scoped)
   const [driverViewTripId, setDriverViewTripId] = useState<string | null>(null);
 
@@ -119,6 +143,15 @@ function Navigator() {
     loadUnreadNotificationsCount();
   }, [user?.id]);
 
+  // Register FCM notification tap handler — navigates to documents screen
+  useEffect(() => {
+    setNotificationTapHandler(data => {
+      if (data.notificationType === 'DOCUMENT_EXPIRING') {
+        setDocumentsOpen(true);
+      }
+    });
+  }, []);
+
   if (isLoading) {
     return (
       <View style={styles.loader}>
@@ -153,6 +186,37 @@ function Navigator() {
     );
   }
 
+  if (documentsOpen) {
+    if (docFormOpen) {
+      return (
+        <DocumentFormScreen
+          documentId={docFormId ?? undefined}
+          locale={locale}
+          onBack={() => setDocFormOpen(false)}
+          onSuccess={() => { setDocFormOpen(false); }}
+        />
+      );
+    }
+    if (selectedDocId) {
+      return (
+        <DocumentDetailScreen
+          documentId={selectedDocId}
+          locale={locale}
+          onBack={() => setSelectedDocId(null)}
+          onEdit={() => { setDocFormId(selectedDocId); setDocFormOpen(true); }}
+          onDeleted={() => setSelectedDocId(null)}
+        />
+      );
+    }
+    return (
+      <AdminDocumentsScreen
+        locale={locale}
+        onAddPress={() => { setDocFormId(null); setDocFormOpen(true); }}
+        onSelectDoc={doc => setSelectedDocId(doc.id)}
+      />
+    );
+  }
+
   // Full-screen vehicle form (hides tab bar)
   if (vehicleFormOpen) {
     return (
@@ -183,20 +247,7 @@ function Navigator() {
     );
   }
 
-  // Full-screen driver detail (hides tab bar)
-  if (selectedDriverId) {
-    return (
-      <DriverDetailScreen
-        driverId={selectedDriverId}
-        locale={locale}
-        onBack={() => setSelectedDriverId(null)}
-        onEdit={() => {
-          setDriverFormId(selectedDriverId);
-          setDriverFormOpen(true);
-        }}
-      />
-    );
-  }
+  // Full-screen driver detail — rendered as overlay inside admin shell (see below)
 
   // Full-screen trip form
   if (tripFormOpen) {
@@ -225,20 +276,66 @@ function Navigator() {
     );
   }
 
-  // Full-screen vehicle detail (hides tab bar)
-  if (selectedVehicleId) {
+  // Full-screen contract form
+  if (contractFormOpen) {
     return (
-      <VehicleDetailScreen
-        vehicleId={selectedVehicleId}
+      <ContractFormScreen
+        contractId={contractFormId ?? undefined}
         locale={locale}
-        onBack={() => setSelectedVehicleId(null)}
+        onBack={() => setContractFormOpen(false)}
+        onSuccess={() => setContractFormOpen(false)}
+      />
+    );
+  }
+
+  // Full-screen contract detail
+  if (selectedContractId) {
+    return (
+      <ContractDetailScreen
+        contractId={selectedContractId}
+        locale={locale}
+        onBack={() => setSelectedContractId(null)}
         onEdit={() => {
-          setVehicleFormId(selectedVehicleId);
-          setVehicleFormOpen(true);
+          setContractFormId(selectedContractId);
+          setContractFormOpen(true);
+        }}
+        onSelectTrip={tripId => {
+          setSelectedContractId(null);
+          setSelectedTripId(tripId);
         }}
       />
     );
   }
+
+  // Full-screen rental form
+  if (rentalFormOpen) {
+    return (
+      <RentalFormScreen
+        rentalId={rentalFormId ?? undefined}
+        locale={locale}
+        onBack={() => setRentalFormOpen(false)}
+        onSuccess={() => setRentalFormOpen(false)}
+      />
+    );
+  }
+
+  // Full-screen rental detail
+  if (selectedRentalId) {
+    return (
+      <RentalDetailScreen
+        rentalId={selectedRentalId}
+        locale={locale}
+        onBack={() => setSelectedRentalId(null)}
+        onEdit={() => {
+          setRentalFormId(selectedRentalId);
+          setRentalFormOpen(true);
+        }}
+      />
+    );
+  }
+
+  // Full-screen vehicle detail (hides tab bar)
+  // NOTE: rendered as overlay inside admin shell instead (see below) so fleet screen stays mounted
 
   // ── Driver shell ─────────────────────────────────────────────────────────────
   if (!isAdmin) {
@@ -296,8 +393,10 @@ function Navigator() {
     <View style={styles.shell}>
       <View style={styles.screenArea}>
         {adminTab === 'dashboard'     && <AdminDashboardScreen locale={locale} onSelectTrip={setSelectedTripId} onNotificationsPress={() => setNotificationsOpen(true)} unreadNotifications={unreadNotifications} />}
-        {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} initialSegment={fleetSegment} initialSearch={fleetSearch} onStateChange={(seg, q) => { setFleetSegment(seg); setFleetSearch(q); }} />}
-        {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onSelectTrip={setSelectedTripId} onAddTrip={() => { setTripFormId(null); setTripFormOpen(true); }} />}
+        {/* Fleet screen is always kept mounted when tab is active so scroll position survives navigation */}
+        {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} initialSegment={fleetSegment} initialSearch={fleetSearch} onStateChange={(seg, q) => { setFleetSegment(seg); setFleetSearch(q); }} initialVehicleScroll={fleetVehicleScroll} initialDriverScroll={fleetDriverScroll} onScrollChange={(seg, offset) => { if (seg === 'vehicles') setFleetVehicleScroll(offset); else setFleetDriverScroll(offset); }} />}
+        {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onSelectTrip={setSelectedTripId} onAddTrip={() => { setTripFormId(null); setTripFormOpen(true); }} onSelectContract={setSelectedContractId} onAddContract={() => { setContractFormId(null); setContractFormOpen(true); }} onSelectRental={setSelectedRentalId} onAddRental={() => { setRentalFormId(null); setRentalFormOpen(true); }} />}
+        {adminTab === 'documents'      && <AdminDocumentsScreen   locale={locale} onAddPress={() => { setDocFormId(null); setDocFormOpen(true); }} onSelectDoc={doc => setSelectedDocId(doc.id)} />}
         {adminTab === 'profile'        && <ProfileScreen locale={locale} onSetLocale={setLocale} onBack={() => setAdminTab('dashboard')} />}
       </View>
       <BottomTabBar
@@ -306,6 +405,56 @@ function Navigator() {
         locale={locale}
         onPress={k => setAdminTab(k as AdminTab)}
       />
+      {/* Vehicle / driver detail overlays — rendered on top so fleet screen stays mounted */}
+      {selectedVehicleId && (
+        <View style={StyleSheet.absoluteFill}>
+          <VehicleDetailScreen
+            vehicleId={selectedVehicleId}
+            locale={locale}
+            onBack={() => setSelectedVehicleId(null)}
+            onEdit={() => {
+              setVehicleFormId(selectedVehicleId);
+              setVehicleFormOpen(true);
+            }}
+          />
+        </View>
+      )}
+      {selectedDriverId && (
+        <View style={StyleSheet.absoluteFill}>
+          <DriverDetailScreen
+            driverId={selectedDriverId}
+            locale={locale}
+            onBack={() => setSelectedDriverId(null)}
+            onEdit={() => {
+              setDriverFormId(selectedDriverId);
+              setDriverFormOpen(true);
+            }}
+          />
+        </View>
+      )}
+      {/* Document detail overlay */}
+      {adminTab === 'documents' && selectedDocId && !docFormOpen && (
+        <View style={StyleSheet.absoluteFill}>
+          <DocumentDetailScreen
+            documentId={selectedDocId}
+            locale={locale}
+            onBack={() => setSelectedDocId(null)}
+            onEdit={() => { setDocFormId(selectedDocId); setDocFormOpen(true); }}
+            onDeleted={() => setSelectedDocId(null)}
+          />
+        </View>
+      )}
+      {/* Document form overlay */}
+      {adminTab === 'documents' && docFormOpen && (
+        <View style={StyleSheet.absoluteFill}>
+          <DocumentFormScreen
+            documentId={docFormId ?? undefined}
+            locale={locale}
+            onBack={() => setDocFormOpen(false)}
+            onSuccess={() => { setDocFormOpen(false); setSelectedDocId(null); }}
+          />
+        </View>
+      )}
     </View>
   );
 }

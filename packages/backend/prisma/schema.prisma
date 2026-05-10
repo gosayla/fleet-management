@@ -56,7 +56,19 @@ enum TripStatus {
 enum TripType {
   ONE_TIME
   DAILY
-  MONTHLY_CONTRACT
+  CAR_RENT
+}
+
+enum TripLeg {
+  OUTBOUND
+  RETURN
+}
+
+enum RentalStatus {
+  ACTIVE
+  RETURNED
+  OVERDUE
+  CANCELLED
 }
 
 enum MaintenanceType {
@@ -130,6 +142,8 @@ model Company {
   trips     Trip[]
   documents FleetDocument[]
   permits   NaqlPermit[]
+  contracts TripContract[]
+  rentals   VehicleRental[]
 
   @@map("companies")
 }
@@ -211,6 +225,8 @@ model Vehicle {
   documents        FleetDocument[]
   violations       TammViolation[]
   photos           VehiclePhoto[]
+  contracts        TripContract[]
+  rentals          VehicleRental[]
 
   @@unique([companyId, plateNumber])
   @@index([companyId])
@@ -238,6 +254,7 @@ model Driver {
   trips           Trip[]
   fuelLogs        FuelLog[]
   documents       FleetDocument[]
+  contracts       TripContract[]
 
   @@unique([companyId, nationalId])
   @@index([companyId])
@@ -270,14 +287,21 @@ model Trip {
   contractNumber     String?    // contract reference number
   contractStart      DateTime?  // billing period start
   contractEnd        DateTime?  // billing period end
+  // DAILY contract link
+  contractId         String?    // FK to TripContract for DAILY trips
+  leg                TripLeg?   // OUTBOUND | RETURN for DAILY two-way trips
+  tripDate           DateTime?  // specific calendar date for this DAILY instance
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  company  Company @relation(fields: [companyId], references: [id])
-  vehicle  Vehicle @relation(fields: [vehicleId], references: [id])
-  driver   Driver  @relation(fields: [driverId], references: [id])
-  permit   NaqlPermit? @relation(fields: [naqlPermitId], references: [id])
+  company  Company      @relation(fields: [companyId], references: [id])
+  vehicle  Vehicle      @relation(fields: [vehicleId], references: [id])
+  driver   Driver       @relation(fields: [driverId], references: [id])
+  permit   NaqlPermit?  @relation(fields: [naqlPermitId], references: [id])
+  contract TripContract? @relation(fields: [contractId], references: [id])
   locations TripLocation[]
+
+  @@index([contractId])
 
   @@index([companyId])
   @@index([vehicleId])
@@ -378,6 +402,83 @@ model TripLocation {
 
   @@index([tripId])
   @@map("trip_locations")
+}
+
+// ─── Trip Contracts (DAILY recurring) ───────────────────────────────────────
+
+model TripContract {
+  id               String    @id @default(uuid())
+  companyId        String
+  vehicleId        String
+  driverId         String
+  clientName       String
+  clientPhone      String?
+  contractNumber   String?
+  origin           String
+  destination      String
+  contractStart    DateTime
+  contractEnd      DateTime
+  departureTime    String    // "HH:MM" — daily pickup time
+  returnTime       String?   // "HH:MM" — return leg time, null if one-way
+  isTwoWay         Boolean   @default(true)
+  excludeFridays   Boolean   @default(true)
+  excludeSaturdays Boolean   @default(false)
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  company   Company          @relation(fields: [companyId], references: [id])
+  vehicle   Vehicle          @relation(fields: [vehicleId], references: [id])
+  driver    Driver           @relation(fields: [driverId], references: [id])
+  trips     Trip[]
+  vacations ContractVacation[]
+
+  @@index([companyId])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@map("trip_contracts")
+}
+
+model ContractVacation {
+  id         String       @id @default(uuid())
+  contractId String
+  date       DateTime     // excluded date (time part ignored)
+  reason     String?
+  createdAt  DateTime     @default(now())
+
+  contract TripContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+  @@map("contract_vacations")
+}
+
+// ─── Vehicle Rentals (CAR_RENT) ───────────────────────────────────────────────
+
+model VehicleRental {
+  id               String       @id @default(uuid())
+  companyId        String
+  vehicleId        String
+  clientName       String
+  clientPhone      String?
+  clientNationalId String?
+  contractNumber   String?
+  rentalStart      DateTime
+  rentalEnd        DateTime
+  odometerOut      Float?
+  odometerIn       Float?
+  dailyRateSar     Float?
+  contractFileUrl  String?
+  status           RentalStatus @default(ACTIVE)
+  notes            String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@index([companyId])
+  @@index([vehicleId])
+  @@map("vehicle_rentals")
 }
 
 // ─── Tamm Integration ─────────────────────────────────────────────────────────

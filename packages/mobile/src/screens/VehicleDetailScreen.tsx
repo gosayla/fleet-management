@@ -20,6 +20,7 @@ import {api, resolveApiAssetUrls, resolvePhotoUrl} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {Locale, t} from '../lib/i18n';
+import {formatDateSmart} from '../lib/dates';
 import {subscribeToVehicleLocation} from '../lib/socket';
 import {OsmMapView} from '../components/maps/OsmMapView';
 
@@ -241,9 +242,7 @@ export function VehicleDetailScreen({vehicleId, locale, onBack, onEdit}: Props) 
   const profilePhoto = photos.find(p => p.isProfile) ?? photos[0] ?? null;
 
   const vehicleCheck = vehicle.inspectionExpiryDate
-    ? new Date(vehicle.inspectionExpiryDate).toLocaleDateString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric',
-      })
+    ? formatDateSmart(vehicle.inspectionExpiryDate, locale)
     : '—';
 
   const totalFuelLiters = vehicle.fuelLogs?.reduce((s, l) => s + (l.liters ?? 0), 0) ?? 0;

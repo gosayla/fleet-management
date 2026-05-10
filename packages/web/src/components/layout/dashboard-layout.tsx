@@ -19,6 +19,8 @@ import {
   UserCog,
   Settings,
   UserCircle2,
+  CalendarDays,
+  Key,
 } from 'lucide-react';
 import { useLocale } from '@/providers/locale-provider';
 
@@ -50,6 +52,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     { path: '/dashboard/operation-cards', label: t.nav.operationCards, icon: CreditCard },
     { path: '/dashboard/tamm', label: t.nav.tamm, icon: Shield },
     { path: '/dashboard/naql', label: t.nav.naql, icon: Package },
+    { path: '/dashboard/contracts', label: t.nav.contracts, icon: CalendarDays },
+    { path: '/dashboard/rentals', label: t.nav.rentals, icon: Key },
     { path: '/dashboard/documents', label: t.nav.documents, icon: FileText },
     { path: '/dashboard/users', label: t.nav.users, icon: UserCog },
     { path: '/dashboard/settings', label: t.nav.settings, icon: Settings },

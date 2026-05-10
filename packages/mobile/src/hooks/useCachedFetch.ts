@@ -42,8 +42,9 @@ export function useCachedFetch<T>(
         setData(fresh);
         setLoading(false);
         AsyncStorage.setItem(storageKey, JSON.stringify(fresh)).catch(() => {});
-      } catch {
+      } catch (err) {
         // network error — keep showing the cached data
+        console.error(`[useCachedFetch] ${storageKey} failed:`, err);
         setLoading(false);
       } finally {
         if (manual) setRefreshing(false);

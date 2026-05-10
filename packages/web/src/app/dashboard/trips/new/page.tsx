@@ -14,8 +14,8 @@ type TripType = NonNullable<CreateTripDto['tripType']>;
 
 const TRIP_TYPE_LABELS: Record<TripType, { en: string; ar: string }> = {
   ONE_TIME: { en: 'One-Time', ar: 'رحلة واحدة' },
-  DAILY: { en: 'Daily', ar: 'يومي' },
-  MONTHLY_CONTRACT: { en: 'Monthly Contract', ar: 'عقد شهري' },
+  DAILY: { en: 'Daily Contract', ar: 'عقد يومي' },
+  CAR_RENT: { en: 'Car Rental', ar: 'إيجار سيارة' },
 };
 
 function Field({
@@ -179,7 +179,7 @@ export default function NewTripPage() {
     createMutation.mutate(payload);
   }
 
-  const isContractType = tripType === 'MONTHLY_CONTRACT' || tripType === 'DAILY';
+  const isContractType = false; // DAILY trips managed via /contracts, CAR_RENT via /rentals
   const canSubmit =
     vehicles.length > 0 &&
     drivers.length > 0 &&
@@ -227,7 +227,8 @@ export default function NewTripPage() {
           </div>
         </div>
 
-        {/* Core trip fields */}
+        {/* Core trip fields — ONE_TIME only */}
+        {(tripType as string) === 'ONE_TIME' && (<>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
           <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
             {locale === 'ar' ? 'تفاصيل الرحلة' : 'Trip Details'}
@@ -436,44 +437,43 @@ export default function NewTripPage() {
           </div>
         </div>
 
-        {/* Contract / client fields — shown for DAILY and MONTHLY_CONTRACT */}
-        {isContractType && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-              {locale === 'ar' ? 'بيانات العميل والعقد' : 'Client & Contract Details'}
+        {/* Redirect banner for DAILY — use Contracts section */}
+        {(tripType as string) === 'DAILY' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+            <p className="text-sm font-semibold text-amber-800 mb-1">
+              {locale === 'ar' ? 'العقود اليومية تُدار عبر قسم العقود' : 'Daily trips are managed via Contracts'}
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field
-                label={tt.clientName}
-                name="clientName"
-                placeholder={locale === 'ar' ? 'اسم العميل أو الراكب' : 'Client or passenger name'}
-              />
-              <Field
-                label={tt.contractNumber}
-                name="contractNumber"
-                placeholder={locale === 'ar' ? 'رقم العقد' : 'e.g. CNT-2026-001'}
-              />
-              <div>
-                <DatePicker
-                  label={tt.contractStart}
-                  value={contractStartDate}
-                  onChange={setContractStartDate}
-                  placeholder={tt.contractStart}
-                  isRTL={isRTL}
-                  outputCalendar="gregorian"
-                />
-              </div>
-              <div>
-                <DatePicker
-                  label={tt.contractEnd}
-                  value={contractEndDate}
-                  onChange={setContractEndDate}
-                  placeholder={tt.contractEnd}
-                  isRTL={isRTL}
-                  outputCalendar="gregorian"
-                />
-              </div>
-            </div>
+            <p className="text-xs text-amber-700 mb-3">
+              {locale === 'ar'
+                ? 'أنشئ عقداً يومياً لتوليد رحلات متعددة بشكل تلقائي بناءً على جدول أسبوعي.'
+                : 'Create a daily contract to automatically generate trips based on a weekly schedule.'}
+            </p>
+            <Link
+              href={`/${locale}/dashboard/contracts/new`}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
+            >
+              {locale === 'ar' ? 'إضافة عقد يومي' : 'Create Daily Contract'}
+            </Link>
+          </div>
+        )}
+
+        {/* Redirect banner for CAR_RENT — use Rentals section */}
+        {(tripType as string) === 'CAR_RENT' && (
+          <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
+            <p className="text-sm font-semibold text-purple-800 mb-1">
+              {locale === 'ar' ? 'تأجير السيارات يُدار عبر قسم الإيجار' : 'Car rentals are managed via Rentals'}
+            </p>
+            <p className="text-xs text-purple-700 mb-3">
+              {locale === 'ar'
+                ? 'أنشئ سجل إيجار لتتبع استلام وإعادة المركبة مع بيانات العميل والأجرة.'
+                : 'Create a rental record to track vehicle pickup, return, client info, and daily rate.'}
+            </p>
+            <Link
+              href={`/${locale}/dashboard/rentals/new`}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              {locale === 'ar' ? 'إضافة إيجار سيارة' : 'Create Car Rental'}
+            </Link>
           </div>
         )}
 
@@ -500,6 +500,7 @@ export default function NewTripPage() {
             {tc.confirmNo}
           </Link>
         </div>
+        </>)}
       </form>
     </div>
   );

@@ -25,12 +25,12 @@ const statusColors: Record<TripStatus, string> = {
 const typeColors: Record<TripType, string> = {
   ONE_TIME: 'bg-blue-50 text-blue-700',
   DAILY: 'bg-amber-50 text-amber-700',
-  MONTHLY_CONTRACT: 'bg-purple-50 text-purple-700',
+  CAR_RENT: 'bg-purple-50 text-purple-700',
 };
 
 function tripTypeLabel(type: TripType, locale: string, t: any) {
   if (type === 'DAILY') return t.trips.typeDaily;
-  if (type === 'MONTHLY_CONTRACT') return t.trips.typeMonthlyContract;
+  if (type === 'CAR_RENT') return t.trips.typeCarRent;
   return t.trips.typeOneTime;
 }
 
@@ -131,7 +131,7 @@ export default function TripDetailPage() {
         </dl>
       </div>
 
-      {(tripType === 'DAILY' || tripType === 'MONTHLY_CONTRACT') && (
+      {(tripType === 'DAILY') && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
             {locale === 'ar' ? 'العقد والعميل' : 'Contract & Client'}
