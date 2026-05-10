@@ -226,14 +226,22 @@ export function DocumentFormScreen({documentId, locale, onBack, onSuccess, drive
 
   // ── Load options + existing doc on edit ────────────────────────────────────
   useEffect(() => {
-    api.get<any>('/vehicles?limit=100').then(vs => {
-      const vehicleList: VehicleOption[] = Array.isArray(vs) ? vs : (vs?.data ?? []);
-      setVehicles(vehicleList);
-    }).catch(() => {});
+    if (driverOnly) {
+      // For driver-only form: just get the driver's own record to auto-link themselves
+      api.get<{id: string}>('/drivers/me')
+        .then(me => { if (me?.id) setForm(prev => ({...prev, driverIds: [me.id]})); })
+        .catch(() => {})
+        .finally(() => setLoadingOptions(false));
+    } else {
+      api.get<any>('/vehicles?limit=100').then(vs => {
+        const vehicleList: VehicleOption[] = Array.isArray(vs) ? vs : (vs?.data ?? []);
+        setVehicles(vehicleList);
+      }).catch(() => {});
 
-    api.get<DriverOption[]>('/drivers').then(ds => {
-      setDrivers(Array.isArray(ds) ? ds : []);
-    }).catch(() => {}).finally(() => setLoadingOptions(false));
+      api.get<DriverOption[]>('/drivers').then(ds => {
+        setDrivers(Array.isArray(ds) ? ds : []);
+      }).catch(() => {}).finally(() => setLoadingOptions(false));
+    }
 
     if (!isEdit) return;
     api.get<any>(`/documents/${documentId}`)
@@ -488,64 +496,76 @@ export function DocumentFormScreen({documentId, locale, onBack, onSuccess, drive
           </View>
 
           {/* ── Linked Vehicles ── */}
-          <SectionTitle title={i18n.linkedVehicles} />
-          <View style={styles.card}>
-            <TouchableOpacity
-              style={[styles.pickerRow, isRTL && styles.rowReverse]}
-              onPress={() => setVehiclePickerOpen(true)}
-              activeOpacity={0.8}>
-              <Text style={[styles.pickerText, !selectedVehicleLabels && {color: Colors.textMuted}, isRTL && styles.rtlText]} numberOfLines={1}>
-                {selectedVehicleLabels || i18n.noneSelected}
-              </Text>
-              <AppIcon name="chevron-down" size={18} color={Colors.textMuted} />
-            </TouchableOpacity>
-          </View>
+          {!driverOnly && (
+            <>
+              <SectionTitle title={i18n.linkedVehicles} />
+              <View style={styles.card}>
+                <TouchableOpacity
+                  style={[styles.pickerRow, isRTL && styles.rowReverse]}
+                  onPress={() => setVehiclePickerOpen(true)}
+                  activeOpacity={0.8}>
+                  <Text style={[styles.pickerText, !selectedVehicleLabels && {color: Colors.textMuted}, isRTL && styles.rtlText]} numberOfLines={1}>
+                    {selectedVehicleLabels || i18n.noneSelected}
+                  </Text>
+                  <AppIcon name="chevron-down" size={18} color={Colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
 
           {/* ── Linked Drivers ── */}
-          <SectionTitle title={i18n.linkedDrivers} />
-          <View style={styles.card}>
-            <TouchableOpacity
-              style={[styles.pickerRow, isRTL && styles.rowReverse]}
-              onPress={() => setDriverPickerOpen(true)}
-              activeOpacity={0.8}>
-              <Text style={[styles.pickerText, !selectedDriverLabels && {color: Colors.textMuted}, isRTL && styles.rtlText]} numberOfLines={1}>
-                {selectedDriverLabels || i18n.noneSelected}
-              </Text>
-              <AppIcon name="chevron-down" size={18} color={Colors.textMuted} />
-            </TouchableOpacity>
-          </View>
+          {!driverOnly && (
+            <>
+              <SectionTitle title={i18n.linkedDrivers} />
+              <View style={styles.card}>
+                <TouchableOpacity
+                  style={[styles.pickerRow, isRTL && styles.rowReverse]}
+                  onPress={() => setDriverPickerOpen(true)}
+                  activeOpacity={0.8}>
+                  <Text style={[styles.pickerText, !selectedDriverLabels && {color: Colors.textMuted}, isRTL && styles.rtlText]} numberOfLines={1}>
+                    {selectedDriverLabels || i18n.noneSelected}
+                  </Text>
+                  <AppIcon name="chevron-down" size={18} color={Colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
 
           <View style={{height: 40}} />
         </ScrollView>
       </KeyboardAvoidingView>
 
       {/* ── Vehicle multi-select ── */}
-      <MultiSelectModal
-        visible={vehiclePickerOpen}
-        title={i18n.selectVehicles}
-        items={vehicles}
-        selectedIds={form.vehicleIds}
-        getLabel={v => `${v.plateNumber} — ${v.make} ${v.model}`}
-        onClose={() => setVehiclePickerOpen(false)}
-        onConfirm={ids => set('vehicleIds', ids)}
-        locale={locale}
-        searchPlaceholder={i18n.searchVehicles}
-        loading={loadingOptions}
-      />
+      {!driverOnly && (
+        <MultiSelectModal
+          visible={vehiclePickerOpen}
+          title={i18n.selectVehicles}
+          items={vehicles}
+          selectedIds={form.vehicleIds}
+          getLabel={v => `${v.plateNumber} — ${v.make} ${v.model}`}
+          onClose={() => setVehiclePickerOpen(false)}
+          onConfirm={ids => set('vehicleIds', ids)}
+          locale={locale}
+          searchPlaceholder={i18n.searchVehicles}
+          loading={loadingOptions}
+        />
+      )}
 
       {/* ── Driver multi-select ── */}
-      <MultiSelectModal
-        visible={driverPickerOpen}
-        title={i18n.selectDrivers}
-        items={drivers}
-        selectedIds={form.driverIds}
-        getLabel={d => d.fullName}
-        onClose={() => setDriverPickerOpen(false)}
-        onConfirm={ids => set('driverIds', ids)}
-        locale={locale}
-        searchPlaceholder={i18n.searchDrivers}
-        loading={loadingOptions}
-      />
+      {!driverOnly && (
+        <MultiSelectModal
+          visible={driverPickerOpen}
+          title={i18n.selectDrivers}
+          items={drivers}
+          selectedIds={form.driverIds}
+          getLabel={d => d.fullName}
+          onClose={() => setDriverPickerOpen(false)}
+          onConfirm={ids => set('driverIds', ids)}
+          locale={locale}
+          searchPlaceholder={i18n.searchDrivers}
+          loading={loadingOptions}
+        />
+      )}
 
       {/* ── Date Wheel Picker ── */}
       <DateWheelModal
