@@ -48,6 +48,7 @@ type MaintenanceTechTab = 'maintenance' | 'profile';
 const DRIVER_TABS: TabItem[] = [
   {key: 'dashboard', icon: 'view-grid-outline', labels: {ar: 'الرئيسية', en: 'Home',    hi: 'होम',      bn: 'হোম',      ur: 'ہوم'}},
   {key: 'trips',     icon: 'truck-outline',     labels: {ar: 'رحلاتي',   en: 'Trips',   hi: 'यात्राएं', bn: 'ট্রিপ',    ur: 'سفر'}},
+  {key: 'documents', icon: 'file-document-outline', labels: {ar: 'وثائقي', en: 'My Docs', hi: 'दस्तावेज़', bn: 'নথি', ur: 'دستاویز'}},
   {key: 'profile',   icon: 'account-outline',   labels: {ar: 'حسابي',    en: 'Profile', hi: 'प्रोफाइल', bn: 'প্রোফাইল', ur: 'پروفائل'}},
 ];
 
@@ -488,9 +489,6 @@ function Navigator() {
             <TripsListScreen
               locale={locale}
               onSelectTrip={trip => setDriverViewTripId(trip.id)}
-              onNotificationsPress={() => setNotificationsOpen(true)}
-              unreadNotifications={unreadNotifications}
-              onDashboardPress={() => setDriverTab('dashboard')}
             />
           )}
           {driverTab === 'documents' && (
