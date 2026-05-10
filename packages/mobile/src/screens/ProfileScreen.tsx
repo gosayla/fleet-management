@@ -1,8 +1,8 @@
-﻿import React, {useState} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, StatusBar, Platform, ActivityIndicator} from 'react-native';
+﻿import React, {useRef, useState} from 'react';
+import {View, Text, StyleSheet, TouchableOpacity, Alert, StatusBar, Platform, ActivityIndicator, Animated} from 'react-native';
 import {useAuth} from '../context/AuthContext';
-import {Locale, t, isRTL as getIsRTL} from '../lib/i18n';
-import {Colors, Spacing, Typography} from '../lib/theme';
+import {Locale, t} from '../lib/i18n';
+import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 
 interface Props {
@@ -13,6 +13,9 @@ interface Props {
 }
 
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
+const HEADER_FULL = 220;
+const HEADER_MIN  = SB_HEIGHT + 56; // compact bar: status bar + row height
+const COLLAPSE    = HEADER_FULL - HEADER_MIN;
 
 const LANGUAGE_OPTIONS = [
   {value: 'ar', label: 'العربية'},
@@ -25,8 +28,8 @@ const LANGUAGE_OPTIONS = [
 export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Props) {
   const {user, logout, updateLanguage} = useAuth();
   const i18n = t(locale);
-  const isRTL = getIsRTL(locale);
   const [savingLanguage, setSavingLanguage] = useState<string | null>(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
   const canSeeAuditLog = onAuditLogPress && (
     user?.role === 'FLEET_MANAGER' || user?.role === 'DISPATCHER' || user?.role === 'SUPER_ADMIN'
   );
@@ -40,36 +43,77 @@ export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Pr
 
   const initials = ((user as any)?.fullName ?? user?.email ?? '?')[0].toUpperCase();
   const displayName = (user as any)?.fullName ?? user?.email ?? '';
-  const preferredLanguage = (user as any)?.language ?? 'ar';
 
   async function handleLanguageChange(language: 'ar' | 'en' | 'hi' | 'bn' | 'ur') {
     if (language === locale) return;
-    // Change UI immediately (optimistic)
     onSetLocale(language);
     setSavingLanguage(language);
-    // Sync to backend in background — don't block or show error if offline
     updateLanguage(language).catch(() => {}).finally(() => setSavingLanguage(null));
   }
+
+  // ── Animated interpolations ───────────────────────────────────────────────
+  const animHeaderHeight = scrollY.interpolate({
+    inputRange: [0, COLLAPSE], outputRange: [HEADER_FULL, HEADER_MIN], extrapolate: 'clamp',
+  });
+  const animAvatarSize = scrollY.interpolate({
+    inputRange: [0, COLLAPSE], outputRange: [84, 0], extrapolate: 'clamp',
+  });
+  const animAvatarOpacity = scrollY.interpolate({
+    inputRange: [0, COLLAPSE * 0.6], outputRange: [1, 0], extrapolate: 'clamp',
+  });
+  const animSubtitleOpacity = scrollY.interpolate({
+    inputRange: [0, COLLAPSE * 0.4], outputRange: [1, 0], extrapolate: 'clamp',
+  });
+  const animNameSize = scrollY.interpolate({
+    inputRange: [0, COLLAPSE], outputRange: [20, 16], extrapolate: 'clamp',
+  });
+  const animTopPad = scrollY.interpolate({
+    inputRange: [0, COLLAPSE], outputRange: [SB_HEIGHT + 16, SB_HEIGHT + 12], extrapolate: 'clamp',
+  });
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
-      {/* Teal header */}
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
-        <Text style={styles.name}>{displayName}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleText}>{user?.role?.replace(/_/g, ' ')}</Text>
-        </View>
-      </View>
+      {/* ── Collapsing teal header ── */}
+      <Animated.View style={[styles.header, {height: animHeaderHeight}]}>
+        {/* Back button (top-left) */}
+        <Animated.View style={[styles.topBar, {paddingTop: animTopPad}]}>
+          <TouchableOpacity onPress={onBack} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+            <AppIcon name="chevron-left" size={24} color="#fff" />
+          </TouchableOpacity>
+          {/* Name shown in compact bar */}
+          <Animated.Text style={[styles.compactName, {fontSize: animNameSize}]} numberOfLines={1}>
+            {displayName}
+          </Animated.Text>
+          <View style={{width: 32}} />
+        </Animated.View>
 
-      {/* White curved panel */}
-      <View style={styles.panel}>
-        <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        {/* Avatar — fades + shrinks away */}
+        <Animated.View style={[styles.avatar, {width: animAvatarSize, height: animAvatarSize, borderRadius: 42, opacity: animAvatarOpacity, marginBottom: 8}]}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </Animated.View>
+
+        {/* Subtitle: email + role badge — fades away */}
+        <Animated.View style={[styles.subtitleWrap, {opacity: animSubtitleOpacity}]}>
+          <Text style={styles.email}>{user?.email}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>{user?.role?.replace(/_/g, ' ')}</Text>
+          </View>
+        </Animated.View>
+      </Animated.View>
+
+      {/* ── White curved panel ── */}
+      <Animated.ScrollView
+        style={styles.panel}
+        contentContainerStyle={styles.body}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{nativeEvent: {contentOffset: {y: scrollY}}}],
+          {useNativeDriver: false},
+        )}
+      >
         {/* Info section */}
         <View style={styles.section}>
           <InfoRow icon="phone-outline" label={locale === 'ar' ? 'رقم الجوال' : 'Phone'} value={(user as any)?.phone ?? ''} />
@@ -101,7 +145,6 @@ export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Pr
           </View>
         </View>
 
-        {/* Logout */}
         {canSeeAuditLog && (
           <TouchableOpacity style={styles.auditBtn} onPress={onAuditLogPress} activeOpacity={0.85}>
             <View style={styles.auditIconWrap}>
@@ -116,8 +159,7 @@ export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Pr
           <AppIcon name="logout" size={18} color={Colors.danger} />
           <Text style={styles.logoutText}>{i18n.logout}</Text>
         </TouchableOpacity>
-        </ScrollView>
-      </View>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -146,7 +188,7 @@ const row = StyleSheet.create({
   },
   content: {flex: 1},
   label: {fontSize: 11, fontWeight: '600' as const, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2},
-  value: {...Typography.bodyMd, color: Colors.textPrimary},
+  value: {fontSize: 14, fontWeight: '500' as const, color: Colors.textPrimary},
 });
 
 const SB = SB_HEIGHT;
@@ -155,34 +197,45 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: Colors.primary,
     alignItems: 'center',
-    paddingTop: SB + 8,
-    paddingBottom: Spacing.xl + 20,  // extra so panel overlaps nicely
-    paddingHorizontal: Spacing.md,
-  },
-  panel: {
-    flex: 1,
-    backgroundColor: Colors.bg,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    marginTop: -28,
     overflow: 'hidden',
   },
+  topBar: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingBottom: 8,
+  },
+  compactName: {
+    flex: 1,
+    textAlign: 'center',
+    fontWeight: '700' as const,
+    color: '#fff',
+    marginHorizontal: 8,
+  },
   avatar: {
-    width: 84, height: 84, borderRadius: 42,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.35)',
-    marginBottom: Spacing.sm,
+    overflow: 'hidden',
   },
   avatarText: {fontSize: 34, fontWeight: '700' as const, color: Colors.white},
-  name: {...Typography.h2, color: Colors.white, marginBottom: 4, textAlign: 'center'},
+  subtitleWrap: {alignItems: 'center', paddingBottom: 14},
   email: {fontSize: 13, color: 'rgba(255,255,255,0.7)', textAlign: 'center'},
   roleBadge: {
     marginTop: Spacing.sm,
     backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: 20, paddingHorizontal: Spacing.md, paddingVertical: 5,
   },
-  roleText: {fontSize: 12, fontWeight: '600' as const, color: Colors.white, textTransform: 'uppercase', letterSpacing: 1},
+  roleBadgeText: {fontSize: 12, fontWeight: '600' as const, color: Colors.white, textTransform: 'uppercase', letterSpacing: 1},
+  panel: {
+    flex: 1,
+    backgroundColor: Colors.bg,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
+  },
   body: {padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl},
   sectionLabel: {fontSize: 12, fontWeight: '700' as const, color: Colors.textMuted, marginBottom: 12, textTransform: 'uppercase'},
   section: {
