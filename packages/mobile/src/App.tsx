@@ -41,12 +41,18 @@ import {setNotificationTapHandler} from './lib/notifications';
 
 type DriverTab = 'dashboard' | 'trips' | 'profile';
 type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'documents' | 'profile';
+type MaintenanceTechTab = 'maintenance' | 'profile';
 
 // ── Tab config ───────────────────────────────────────────────────────────────
 const DRIVER_TABS: TabItem[] = [
   {key: 'dashboard', icon: 'view-grid-outline', labels: {ar: 'الرئيسية', en: 'Home',    hi: 'होम',      bn: 'হোম',      ur: 'ہوم'}},
   {key: 'trips',     icon: 'truck-outline',     labels: {ar: 'رحلاتي',   en: 'Trips',   hi: 'यात्राएं', bn: 'ট্রিপ',    ur: 'سفر'}},
   {key: 'profile',   icon: 'account-outline',   labels: {ar: 'حسابي',    en: 'Profile', hi: 'प्रोफाइल', bn: 'প্রোফাইল', ur: 'پروفائل'}},
+];
+
+const MAINTENANCE_TECH_TABS: TabItem[] = [
+  {key: 'maintenance', icon: 'wrench', labels: {ar: 'الصيانة', en: 'Maintenance', hi: 'रखरखाव', bn: 'রক্ষণাবেক্ষণ', ur: 'دیکھ بھال'}},
+  {key: 'profile',     icon: 'account-outline', labels: {ar: 'حسابي', en: 'Profile', hi: 'प्रोफाइल', bn: 'প্রোফাইল', ur: 'پروفائل'}},
 ];
 
 const ADMIN_TABS: TabItem[] = [
@@ -77,6 +83,7 @@ function Navigator() {
   }
   const [driverTab, setDriverTab] = useState<DriverTab>('dashboard');
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
+  const [techTab, setTechTab] = useState<MaintenanceTechTab>('maintenance');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
   const [vehicleFormId, setVehicleFormId] = useState<string | null>(null);
@@ -124,7 +131,7 @@ function Navigator() {
     }
   }, [(user as any)?.language]);
 
-  const isAdmin = user && user.role !== 'DRIVER';
+  const isAdmin = user && user.role !== 'DRIVER' && user.role !== 'MAINTENANCE_TECH';
 
   async function loadUnreadNotificationsCount() {
     if (!user) return;
@@ -386,6 +393,33 @@ function Navigator() {
 
   // Full-screen vehicle detail (hides tab bar)
   // NOTE: rendered as overlay inside admin shell instead (see below) so fleet screen stays mounted
+
+  // ── Maintenance Tech shell ────────────────────────────────────────────────────
+  if (user?.role === 'MAINTENANCE_TECH') {
+    return (
+      <View style={styles.shell}>
+        <View style={styles.screenArea}>
+          {techTab === 'maintenance' && (
+            <AdminMaintenanceScreen
+              locale={locale}
+              onBack={() => setTechTab('profile')}
+              onSelectItem={id => setSelectedMaintenanceId(id)}
+              onAddPress={() => { setMaintenanceFormId(null); setMaintenanceFormOpen(true); }}
+            />
+          )}
+          {techTab === 'profile' && (
+            <ProfileScreen locale={locale} onSetLocale={setLocale} onBack={() => setTechTab('maintenance')} />
+          )}
+        </View>
+        <BottomTabBar
+          tabs={MAINTENANCE_TECH_TABS}
+          activeKey={techTab}
+          locale={locale}
+          onPress={k => setTechTab(k as MaintenanceTechTab)}
+        />
+      </View>
+    );
+  }
 
   // ── Driver shell ─────────────────────────────────────────────────────────────
   if (!isAdmin) {

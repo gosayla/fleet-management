@@ -15,6 +15,7 @@ export enum ManageableRole {
   DISPATCHER = 'DISPATCHER',
   DRIVER = 'DRIVER',
   VIEWER = 'VIEWER',
+  MAINTENANCE_TECH = 'MAINTENANCE_TECH',
 }
 
 const SUPPORTED_LANGUAGES = ['ar', 'en', 'hi', 'bn', 'ur'] as const;

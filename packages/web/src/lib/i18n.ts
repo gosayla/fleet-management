@@ -348,6 +348,7 @@ export const messages = {
         DISPATCHER: 'مشغّل',
         DRIVER: 'سائق',
         VIEWER: 'مشاهد',
+        MAINTENANCE_TECH: 'فني صيانة',
       },
     },
     contracts: {
@@ -777,6 +778,7 @@ export const messages = {
         DISPATCHER: 'Dispatcher',
         DRIVER: 'Driver',
         VIEWER: 'Viewer',
+        MAINTENANCE_TECH: 'Maintenance Tech',
       },
     },
     contracts: {

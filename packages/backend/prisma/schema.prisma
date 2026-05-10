@@ -19,6 +19,7 @@ enum UserRole {
   DISPATCHER
   DRIVER
   VIEWER
+  MAINTENANCE_TECH
 }
 
 enum VehicleStatus {

@@ -23,11 +23,12 @@ const USER_SELECT = {
 
 /** Roles a given requester role is allowed to see and manage */
 const MANAGEABLE_ROLES: Partial<Record<UserRole, UserRole[]>> = {
-  SUPER_ADMIN:    ['FLEET_MANAGER', 'DISPATCHER', 'DRIVER', 'VIEWER'],
-  FLEET_MANAGER:  ['FLEET_MANAGER', 'DISPATCHER', 'DRIVER', 'VIEWER'],
-  DISPATCHER:     ['DISPATCHER', 'DRIVER', 'VIEWER'],
-  DRIVER:         ['DRIVER', 'VIEWER'],
-  VIEWER:         ['VIEWER'],
+  SUPER_ADMIN:       ['FLEET_MANAGER', 'DISPATCHER', 'DRIVER', 'VIEWER', 'MAINTENANCE_TECH'],
+  FLEET_MANAGER:     ['FLEET_MANAGER', 'DISPATCHER', 'DRIVER', 'VIEWER', 'MAINTENANCE_TECH'],
+  DISPATCHER:        ['DISPATCHER', 'DRIVER', 'VIEWER', 'MAINTENANCE_TECH'],
+  DRIVER:            ['DRIVER', 'VIEWER'],
+  VIEWER:            ['VIEWER'],
+  MAINTENANCE_TECH:  [],
 };
 
 function getManageableRoles(requesterRole: string): UserRole[] {

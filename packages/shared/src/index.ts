@@ -79,6 +79,7 @@ export enum UserRole {
   DISPATCHER = 'DISPATCHER',
   DRIVER = 'DRIVER',
   VIEWER = 'VIEWER',
+  MAINTENANCE_TECH = 'MAINTENANCE_TECH',
 }
 
 export type PreferredLanguage = 'ar' | 'en' | 'hi' | 'bn' | 'ur';

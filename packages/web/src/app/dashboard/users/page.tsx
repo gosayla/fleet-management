@@ -6,7 +6,7 @@ import { UserCog, Plus, Pencil, Trash2, X } from 'lucide-react';
 import api from '@/lib/api';
 import { useLocale } from '@/providers/locale-provider';
 
-type UserRole = 'FLEET_MANAGER' | 'DISPATCHER' | 'DRIVER' | 'VIEWER';
+type UserRole = 'FLEET_MANAGER' | 'DISPATCHER' | 'DRIVER' | 'VIEWER' | 'MAINTENANCE_TECH';
 
 function getCurrentRole(): UserRole | null {
   if (typeof window === 'undefined') return null;
@@ -32,10 +32,11 @@ interface UserFormValues {
 
 /** Roles a given role is allowed to see and manage — mirrors the backend */
 const MANAGEABLE_ROLES: Record<UserRole, UserRole[]> = {
-  FLEET_MANAGER: ['FLEET_MANAGER', 'DISPATCHER', 'DRIVER', 'VIEWER'],
-  DISPATCHER:    ['DISPATCHER', 'DRIVER', 'VIEWER'],
-  DRIVER:        ['DRIVER', 'VIEWER'],
-  VIEWER:        ['VIEWER'],
+  FLEET_MANAGER:    ['FLEET_MANAGER', 'DISPATCHER', 'DRIVER', 'VIEWER', 'MAINTENANCE_TECH'],
+  DISPATCHER:       ['DISPATCHER', 'DRIVER', 'VIEWER', 'MAINTENANCE_TECH'],
+  DRIVER:           ['DRIVER', 'VIEWER'],
+  VIEWER:           ['VIEWER'],
+  MAINTENANCE_TECH: [],
 };
 
 function getAvailableRoles(currentRole: UserRole | null): UserRole[] {
@@ -140,10 +141,11 @@ export default function UsersPage() {
   }
 
   const roleBadgeColor: Record<UserRole, string> = {
-    FLEET_MANAGER: 'bg-blue-100 text-blue-700',
-    DISPATCHER: 'bg-purple-100 text-purple-700',
-    DRIVER: 'bg-green-100 text-green-700',
-    VIEWER: 'bg-gray-100 text-gray-600',
+    FLEET_MANAGER:    'bg-blue-100 text-blue-700',
+    DISPATCHER:       'bg-purple-100 text-purple-700',
+    DRIVER:           'bg-green-100 text-green-700',
+    VIEWER:           'bg-gray-100 text-gray-600',
+    MAINTENANCE_TECH: 'bg-orange-100 text-orange-700',
   };
 
   return (
