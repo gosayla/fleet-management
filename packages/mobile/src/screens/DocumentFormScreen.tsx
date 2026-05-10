@@ -27,6 +27,7 @@ import {DocumentType} from '@fleet/shared';
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
 const ALL_DOC_TYPES = Object.values(DocumentType);
+const DRIVER_DOC_TYPES = [DocumentType.DRIVER_LICENSE, DocumentType.DRIVER_CARD];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,7 @@ interface Props {
   locale: Locale;
   onBack: () => void;
   onSuccess: () => void;
+  driverOnly?: boolean; // restrict doc types to driver-relevant ones
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -69,6 +71,7 @@ interface Props {
 function docTypeLabel(type: string, i18n: ReturnType<typeof t>): string {
   const map: Record<string, string> = {
     DRIVER_LICENSE: i18n.docTypeDriverLicense,
+    DRIVER_CARD: i18n.docTypeDriverCard,
     VEHICLE_INSURANCE: i18n.docTypeVehicleInsurance,
     PERIODIC_INSPECTION: i18n.docTypePeriodicInspection,
     VEHICLE_REGISTRATION: i18n.docTypeVehicleRegistration,
@@ -196,12 +199,14 @@ function MultiSelectModal<T extends {id: string}>({
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
-export function DocumentFormScreen({documentId, locale, onBack, onSuccess}: Props) {
+export function DocumentFormScreen({documentId, locale, onBack, onSuccess, driverOnly}: Props) {
   const i18n = t(locale);
   const isRTL = isRTLFn(locale);
   const isEdit = !!documentId;
 
-  const [form, setForm] = useState<FormState>(EMPTY);
+  const [form, setForm] = useState<FormState>(
+    driverOnly ? {...EMPTY, type: DocumentType.DRIVER_LICENSE} : EMPTY,
+  );
   const [loadingDoc, setLoadingDoc] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -349,7 +354,7 @@ export function DocumentFormScreen({documentId, locale, onBack, onSuccess}: Prop
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.typePillRow}>
-            {ALL_DOC_TYPES.map(type => (
+            {(driverOnly ? DRIVER_DOC_TYPES : ALL_DOC_TYPES).map(type => (
               <TouchableOpacity
                 key={type}
                 style={[styles.typePill, form.type === type && styles.typePillActive]}

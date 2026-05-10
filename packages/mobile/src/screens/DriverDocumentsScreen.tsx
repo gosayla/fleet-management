@@ -65,6 +65,7 @@ interface Props {
 function docTypeLabel(type: string, i18n: ReturnType<typeof t>): string {
   const map: Record<string, string> = {
     DRIVER_LICENSE:      i18n.docTypeDriverLicense,
+    DRIVER_CARD:         i18n.docTypeDriverCard,
     VEHICLE_INSURANCE:   i18n.docTypeVehicleInsurance,
     PERIODIC_INSPECTION: i18n.docTypePeriodicInspection,
     VEHICLE_REGISTRATION:i18n.docTypeVehicleRegistration,

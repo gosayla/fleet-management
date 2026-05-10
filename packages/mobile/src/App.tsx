@@ -451,6 +451,7 @@ function Navigator() {
         <DocumentFormScreen
           locale={locale}
           documentId={driverDocFormId ?? undefined}
+          driverOnly
           onBack={() => { setDriverDocFormOpen(false); setDriverDocFormId(null); }}
           onSuccess={() => { setDriverDocFormOpen(false); setDriverDocFormId(null); }}
         />
