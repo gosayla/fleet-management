@@ -28,6 +28,7 @@ interface AuditLog {
   action: AuditAction;
   entity: string;
   entityId: string | null;
+  changes: Record<string, unknown> | null;
   ipAddress: string | null;
   route: string | null;
   createdAt: string;
@@ -51,12 +52,54 @@ const ACTION_COLORS: Record<AuditAction, {bg: string; text: string}> = {
 
 const ROLE_SHORT: Record<string, string> = {
   SUPER_ADMIN:      'Super Admin',
-  FLEET_MANAGER:    'Fleet Mgr',
+  FLEET_MANAGER:    'Fleet Manager',
   DISPATCHER:       'Dispatcher',
   DRIVER:           'Driver',
   VIEWER:           'Viewer',
-  MAINTENANCE_TECH: 'Maint. Tech',
+  MAINTENANCE_TECH: 'Maintenance Tech',
 };
+
+const ENTITY_LABEL: Record<string, string> = {
+  Vehicle:        'Vehicle',
+  Driver:         'Driver',
+  Trip:           'Trip',
+  MaintenanceLog: 'Maintenance Record',
+  FuelLog:        'Fuel Log',
+  Document:       'Document',
+  User:           'User',
+  VehicleRental:  'Rental',
+  TripContract:   'Contract',
+  Settings:       'Settings',
+  AuditLog:       'Activity Log',
+  Authentication: 'Authentication',
+  auth:           'Authentication',
+};
+
+function describeLog(item: AuditLog): string {
+  const actor =
+    item.userFullName ??
+    (item.userRole ? (ROLE_SHORT[item.userRole] ?? item.userRole) : null) ??
+    'Unknown User';
+  const entity = ENTITY_LABEL[item.entity] ?? item.entity;
+  switch (item.action) {
+    case 'LOGIN':  return `${actor} signed in`;
+    case 'LOGOUT': return `${actor} signed out`;
+    case 'CREATE': return `${actor} created a ${entity}`;
+    case 'UPDATE': return `${actor} updated ${entity}`;
+    case 'DELETE': return `${actor} deleted a ${entity}`;
+    default:       return `${actor} performed a ${entity} action`;
+  }
+}
+
+function changesText(changes: Record<string, unknown> | null): string | null {
+  if (!changes || typeof changes !== 'object') return null;
+  const keys = Object.keys(changes);
+  if (keys.length === 0) return null;
+  const readable = keys.map(k =>
+    k.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()).trim(),
+  );
+  return readable.join(', ');
+}
 
 const FILTERS: ActionFilter[] = ['ALL', 'CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT'];
 const PAGE_SIZE = 25;
@@ -153,39 +196,35 @@ export function AuditLogScreen({locale, onBack}: Props) {
 
   function renderItem({item}: {item: AuditLog}) {
     const colors = ACTION_COLORS[item.action] ?? {bg: '#f1f5f9', text: '#475569'};
+    const description = describeLog(item);
+    const details = changesText(item.changes);
     return (
       <View style={[styles.card, rtl && styles.cardRTL]}>
-        {/* Action badge */}
+        {/* Left: action badge */}
         <View style={[styles.badge, {backgroundColor: colors.bg}]}>
           <Text style={[styles.badgeText, {color: colors.text}]}>
             {filterLabel(item.action as ActionFilter)}
           </Text>
         </View>
 
-        {/* Main content */}
+        {/* Right: description + details + time */}
         <View style={styles.cardBody}>
-          <View style={[styles.row, rtl && styles.rowRTL]}>
-            <AppIcon name="account-outline" size={13} color={Colors.textSecondary} />
-            <Text style={[styles.userName, rtl && styles.textRTL]} numberOfLines={1}>
-              {item.userFullName ?? '—'}
-              {item.userRole ? (
-                <Text style={styles.roleText}>  {ROLE_SHORT[item.userRole] ?? item.userRole}</Text>
-              ) : null}
-            </Text>
-          </View>
+          {/* What happened — human-readable sentence */}
+          <Text style={[styles.description, rtl && styles.textRTL]} numberOfLines={2}>
+            {description}
+          </Text>
 
-          <View style={[styles.row, rtl && styles.rowRTL]}>
-            <AppIcon name="tag-outline" size={13} color={Colors.textSecondary} />
-            <Text style={styles.entityText} numberOfLines={1}>
-              {item.entity}
-              {item.entityId ? (
-                <Text style={styles.entityIdText}>  #{item.entityId.slice(0, 8)}</Text>
-              ) : null}
-            </Text>
-          </View>
+          {/* What fields changed (only for mutations that carried a body) */}
+          {details ? (
+            <View style={[styles.row, rtl && styles.rowRTL]}>
+              <AppIcon name="pencil-outline" size={12} color={Colors.textSecondary} />
+              <Text style={styles.changesText} numberOfLines={1}>{details}</Text>
+            </View>
+          ) : null}
 
+          {/* Timestamp */}
           <View style={[styles.row, rtl && styles.rowRTL]}>
-            <AppIcon name="clock-outline" size={13} color={Colors.textSecondary} />
+            <AppIcon name="clock-outline" size={12} color={Colors.textSecondary} />
             <Text style={styles.dateText}>{fmtDate(item.createdAt)}</Text>
           </View>
         </View>
@@ -331,10 +370,8 @@ const styles = StyleSheet.create({
   row: {flexDirection: 'row', alignItems: 'center', gap: 5},
   rowRTL: {flexDirection: 'row-reverse'},
   textRTL: {textAlign: 'right'},
-  userName: {fontSize: 13, fontWeight: '600', color: Colors.text, flex: 1},
-  roleText: {fontSize: 11, fontWeight: '400', color: Colors.textSecondary},
-  entityText: {fontSize: 12, color: '#374151', fontWeight: '500'},
-  entityIdText: {fontSize: 11, color: Colors.textSecondary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace'},
+  description: {fontSize: 13, fontWeight: '600', color: Colors.text, lineHeight: 19},
+  changesText: {fontSize: 11, color: '#6b7280', flex: 1},
   dateText: {fontSize: 11, color: Colors.textSecondary},
   loadMoreBtn: {
     alignSelf: 'center',

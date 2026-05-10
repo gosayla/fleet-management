@@ -23,6 +23,7 @@ const PATH_TO_ENTITY: Record<string, string> = {
   contracts: 'TripContract',
   settings: 'Settings',
   'audit-logs': 'AuditLog',
+  auth: 'Authentication',
 };
 
 /** Maps HTTP method → AuditAction */
