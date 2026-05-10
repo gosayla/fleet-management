@@ -12,10 +12,12 @@ import {
   StatusBar,
   Platform,
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Modal,
   FlatList,
 } from 'react-native';
+import {launchImageLibrary} from 'react-native-image-picker';
 import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
@@ -72,6 +74,8 @@ export function RentalFormScreen({rentalId, locale, onBack, onSuccess}: Props) {
   const [error, setError] = useState('');
 
   const [datePickerField, setDatePickerField] = useState<'rentalStart' | 'rentalEnd' | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState('');
 
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false);
@@ -88,7 +92,7 @@ export function RentalFormScreen({rentalId, locale, onBack, onSuccess}: Props) {
   }
 
   useEffect(() => {
-    api.get<VehicleOption[]>('/vehicles').then(v => setVehicles(Array.isArray(v) ? v : [])).catch(() => {});
+    api.get<any>('/vehicles?limit=200').then(v => setVehicles(Array.isArray(v) ? v : (v?.data ?? []))).catch(() => {});
 
     if (isEdit) {
       api.get<any>(`/rentals/${rentalId}`)
@@ -289,16 +293,49 @@ export function RentalFormScreen({rentalId, locale, onBack, onSuccess}: Props) {
           </FormField>
           <FieldDivider />
           <FormField label={i18n.rentalContractFile}>
-            <TextInput
-              style={styles.input}
-              value={form.contractFileUrl}
-              onChangeText={v => set('contractFileUrl', v)}
-              placeholder="https://..."
-              placeholderTextColor={Colors.textMuted}
-              keyboardType="url"
-              autoCapitalize="none"
-              textAlign={isRTL ? 'right' : 'left'}
-            />
+            <TouchableOpacity
+              style={styles.uploadBtn}
+              activeOpacity={0.8}
+              disabled={uploading}
+              onPress={() => {
+                launchImageLibrary(
+                  {mediaType: 'mixed', quality: 0.9, selectionLimit: 1},
+                  async result => {
+                    const asset = result.assets?.[0];
+                    if (!asset?.uri) return;
+                    setUploading(true);
+                    try {
+                      const fd = new FormData();
+                      fd.append('file', {
+                        uri: asset.uri,
+                        name: asset.fileName ?? 'contract.jpg',
+                        type: asset.type ?? 'image/jpeg',
+                      } as any);
+                      const res = await api.upload<{fileUrl: string}>('/documents/files', fd);
+                      set('contractFileUrl', res.fileUrl);
+                      setUploadedFileName(asset.fileName ?? res.fileUrl.split('/').pop() ?? 'file');
+                    } catch (e: any) {
+                      Alert.alert('Error', e?.message ?? 'Upload failed');
+                    } finally {
+                      setUploading(false);
+                    }
+                  },
+                );
+              }}>
+              {uploading ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <AppIcon name={form.contractFileUrl ? 'file-check-outline' : 'upload-outline'} size={20} color={Colors.primary} />
+              )}
+              <View style={styles.uploadTextWrap}>
+                <Text style={styles.uploadLabel}>
+                  {uploading ? i18n.uploading : (form.contractFileUrl ? i18n.changeFile : i18n.chooseFile)}
+                </Text>
+                {!!uploadedFileName && !uploading && (
+                  <Text style={styles.uploadFileName} numberOfLines={1}>{uploadedFileName}</Text>
+                )}
+              </View>
+            </TouchableOpacity>
           </FormField>
         </View>
 
@@ -411,6 +448,10 @@ const styles = StyleSheet.create({
   datePickerBtn: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4},
   datePickerText: {fontSize: 15, color: Colors.textPrimary, flex: 1},
   datePickerPlaceholder: {fontSize: 15, color: Colors.textMuted, flex: 1},
+  uploadBtn: {flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: Colors.primaryLight, borderRadius: 10},
+  uploadTextWrap: {flex: 1},
+  uploadLabel: {fontSize: 14, color: Colors.primary, fontWeight: '600' as const},
+  uploadFileName: {fontSize: 12, color: Colors.textMuted, marginTop: 2},
   pickerBtnText: {fontSize: 15, color: Colors.textPrimary, flex: 1},
   pickerPlaceholder: {color: Colors.textMuted},
   // Modals

@@ -23,6 +23,7 @@ import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {Locale, t, isRTL as isRTLFn} from '../lib/i18n';
 import {DateWheelModal} from '../components/ui/DateWheelModal';
+import {TimeWheelModal} from '../components/ui/TimeWheelModal';
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
@@ -83,6 +84,7 @@ export function ContractFormScreen({contractId, locale, onBack, onSuccess}: Prop
   const [error, setError] = useState('');
 
   const [datePickerField, setDatePickerField] = useState<'contractStart' | 'contractEnd' | null>(null);
+  const [timePickerField, setTimePickerField] = useState<'departureTime' | 'returnTime' | null>(null);
 
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [drivers, setDrivers] = useState<DriverOption[]>([]);
@@ -108,11 +110,11 @@ export function ContractFormScreen({contractId, locale, onBack, onSuccess}: Prop
 
   useEffect(() => {
     Promise.all([
-      api.get<VehicleOption[]>('/vehicles'),
-      api.get<DriverOption[]>('/drivers'),
+      api.get<any>('/vehicles?limit=200'),
+      api.get<any>('/drivers?limit=200'),
     ]).then(([v, d]) => {
-      setVehicles(Array.isArray(v) ? v : []);
-      setDrivers(Array.isArray(d) ? d : []);
+      setVehicles(Array.isArray(v) ? v : (v?.data ?? []));
+      setDrivers(Array.isArray(d) ? d : (d?.data ?? []));
     }).catch(() => {});
 
     if (isEdit) {
@@ -303,29 +305,23 @@ export function ContractFormScreen({contractId, locale, onBack, onSuccess}: Prop
           </FormField>
           <FieldDivider />
           <FormField label={i18n.departureTime} required>
-            <TextInput
-              style={styles.input}
-              value={form.departureTime}
-              onChangeText={v => set('departureTime', v)}
-              placeholder="HH:MM"
-              placeholderTextColor={Colors.textMuted}
-              keyboardType="numeric"
-              textAlign={isRTL ? 'right' : 'left'}
-            />
+            <TouchableOpacity style={styles.datePickerBtn} onPress={() => setTimePickerField('departureTime')}>
+              <Text style={form.departureTime ? styles.datePickerText : styles.datePickerPlaceholder}>
+                {form.departureTime || 'HH:MM'}
+              </Text>
+              <AppIcon name="clock-outline" size={18} color={Colors.primary} />
+            </TouchableOpacity>
           </FormField>
           {form.isTwoWay && (
             <>
               <FieldDivider />
               <FormField label={i18n.returnTime}>
-                <TextInput
-                  style={styles.input}
-                  value={form.returnTime}
-                  onChangeText={v => set('returnTime', v)}
-                  placeholder="HH:MM"
-                  placeholderTextColor={Colors.textMuted}
-                  keyboardType="numeric"
-                  textAlign={isRTL ? 'right' : 'left'}
-                />
+                <TouchableOpacity style={styles.datePickerBtn} onPress={() => setTimePickerField('returnTime')}>
+                  <Text style={form.returnTime ? styles.datePickerText : styles.datePickerPlaceholder}>
+                    {form.returnTime || 'HH:MM'}
+                  </Text>
+                  <AppIcon name="clock-outline" size={18} color={Colors.primary} />
+                </TouchableOpacity>
               </FormField>
             </>
           )}
@@ -485,6 +481,16 @@ export function ContractFormScreen({contractId, locale, onBack, onSuccess}: Prop
         onConfirm={date => {
           if (datePickerField) set(datePickerField, date);
           setDatePickerField(null);
+        }}
+      />
+      <TimeWheelModal
+        visible={timePickerField !== null}
+        value={timePickerField ? form[timePickerField] : ''}
+        label={timePickerField === 'departureTime' ? i18n.departureTime : i18n.returnTime}
+        onClose={() => setTimePickerField(null)}
+        onConfirm={time => {
+          if (timePickerField) set(timePickerField, time);
+          setTimePickerField(null);
         }}
       />
     </KeyboardAvoidingView>
