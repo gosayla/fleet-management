@@ -13,7 +13,7 @@ interface Props {
 }
 
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
-const HEADER_FULL = 260;
+const HEADER_FULL = 300;
 const HEADER_MIN  = SB_HEIGHT + 56; // compact bar: status bar + row height
 const COLLAPSE    = HEADER_FULL - HEADER_MIN;
 
