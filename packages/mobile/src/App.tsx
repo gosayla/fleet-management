@@ -32,6 +32,7 @@ import {RentalDetailScreen} from './screens/RentalDetailScreen';
 import {AdminMaintenanceScreen} from './screens/AdminMaintenanceScreen';
 import {MaintenanceFormScreen} from './screens/MaintenanceFormScreen';
 import {MaintenanceDetailScreen} from './screens/MaintenanceDetailScreen';
+import {DriverDocumentsScreen} from './screens/DriverDocumentsScreen';
 import {Trip} from '@fleet/shared';
 import {Locale} from './lib/i18n';
 import {Colors} from './lib/theme';
@@ -39,7 +40,7 @@ import {BottomTabBar, TabItem} from './components/ui/BottomTabBar';
 import {api} from './lib/api';
 import {setNotificationTapHandler} from './lib/notifications';
 
-type DriverTab = 'dashboard' | 'trips' | 'profile';
+type DriverTab = 'dashboard' | 'trips' | 'documents' | 'profile';
 type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'documents' | 'profile';
 type MaintenanceTechTab = 'maintenance' | 'profile';
 
@@ -122,6 +123,10 @@ function Navigator() {
   const [fleetDriverScroll, setFleetDriverScroll] = useState(0);
   // Driver trip detail (separate from admin selectedTripId so back nav is scoped)
   const [driverViewTripId, setDriverViewTripId] = useState<string | null>(null);
+  // Driver documents
+  const [driverDocFormOpen, setDriverDocFormOpen] = useState(false);
+  const [driverDocFormId, setDriverDocFormId] = useState<string | null>(null);
+  const [driverSelectedDocId, setDriverSelectedDocId] = useState<string | null>(null);
 
   // Sync app locale from the user's saved language preference on every login/change
   useEffect(() => {
@@ -438,6 +443,35 @@ function Navigator() {
       );
     }
 
+    // Driver doc form (full-screen)
+    if (driverDocFormOpen) {
+      return (
+        <DocumentFormScreen
+          locale={locale}
+          documentId={driverDocFormId ?? undefined}
+          onBack={() => { setDriverDocFormOpen(false); setDriverDocFormId(null); }}
+          onSuccess={() => { setDriverDocFormOpen(false); setDriverDocFormId(null); }}
+        />
+      );
+    }
+
+    // Driver doc detail (full-screen)
+    if (driverSelectedDocId) {
+      return (
+        <DocumentDetailScreen
+          locale={locale}
+          documentId={driverSelectedDocId}
+          onBack={() => setDriverSelectedDocId(null)}
+          onEdit={() => {
+            const id = driverSelectedDocId;
+            setDriverSelectedDocId(null);
+            setDriverDocFormId(id);
+            setDriverDocFormOpen(true);
+          }}
+        />
+      );
+    }
+
     return (
       <View style={styles.shell}>
         <View style={styles.screenArea}>
@@ -456,6 +490,14 @@ function Navigator() {
               onSelectTrip={trip => setDriverViewTripId(trip.id)}
               onNotificationsPress={() => setNotificationsOpen(true)}
               unreadNotifications={unreadNotifications}
+              onDashboardPress={() => setDriverTab('dashboard')}
+            />
+          )}
+          {driverTab === 'documents' && (
+            <DriverDocumentsScreen
+              locale={locale}
+              onSelectDoc={id => setDriverSelectedDocId(id)}
+              onAddPress={() => { setDriverDocFormId(null); setDriverDocFormOpen(true); }}
             />
           )}
           {driverTab === 'profile' && (

@@ -196,6 +196,7 @@ const messages = {
     // documents screen
     documents: 'الوثائق', allDocs: 'الكل', expiredDocs: 'منتهية', expiringDocs2: 'قريبة الانتهاء', validDocs: 'سارية',
     noDocuments: 'لا توجد وثائق', driverLabel: 'السائق',
+    myDocs: 'وثائقي', vehicleDocs: 'وثائق المركبة', noVehicleLinked: 'لا توجد مركبة مرتبطة',
     docTypeDriverLicense: 'رخصة القيادة', docTypeVehicleInsurance: 'تأمين المركبة',
     docTypePeriodicInspection: 'الفحص الدوري', docTypeVehicleRegistration: 'تسجيل المركبة',
     docTypeOperationCard: 'بطاقة التشغيل', docTypeTransportPermit: 'تصريح النقل',
@@ -459,6 +460,7 @@ const messages = {
     // documents screen
     documents: 'Documents', allDocs: 'All', expiredDocs: 'Expired', expiringDocs2: 'Expiring Soon', validDocs: 'Valid',
     noDocuments: 'No documents', driverLabel: 'Driver',
+    myDocs: 'My Docs', vehicleDocs: 'Vehicle Docs', noVehicleLinked: 'No vehicle assigned',
     docTypeDriverLicense: 'Driver License', docTypeVehicleInsurance: 'Vehicle Insurance',
     docTypePeriodicInspection: 'Periodic Inspection', docTypeVehicleRegistration: 'Vehicle Registration',
     docTypeOperationCard: 'Operation Card', docTypeTransportPermit: 'Transport Permit',
@@ -722,6 +724,7 @@ const messages = {
     // documents screen
     documents: 'दस्तावेज़', allDocs: 'सभी', expiredDocs: 'समाप्त', expiringDocs2: 'जल्द समाप्त', validDocs: 'वैध',
     noDocuments: 'कोई दस्तावेज़ नहीं', driverLabel: 'चालक',
+    myDocs: 'मेरे दस्तावेज़', vehicleDocs: 'वाहन दस्तावेज़', noVehicleLinked: 'कोई वाहन नहीं',
     docTypeDriverLicense: 'ड्राइविंग लाइसेंस', docTypeVehicleInsurance: 'वाहन बीमा',
     docTypePeriodicInspection: 'आवधिक निरीक्षण', docTypeVehicleRegistration: 'वाहन पंजीकरण',
     docTypeOperationCard: 'ऑपरेशन कार्ड', docTypeTransportPermit: 'परिवहन परमिट',
@@ -985,6 +988,7 @@ const messages = {
     // documents screen
     documents: 'নথি', allDocs: 'সব', expiredDocs: 'মেয়াদোত্তীর্ণ', expiringDocs2: 'শীঘ্রই মেয়াদ শেষ', validDocs: 'বৈধ',
     noDocuments: 'কোনো নথি নেই', driverLabel: 'চালক',
+    myDocs: 'আমার নথি', vehicleDocs: 'যানবাহন নথি', noVehicleLinked: 'কোনো যানবাহন নেই',
     docTypeDriverLicense: 'ড্রাইভিং লাইসেন্স', docTypeVehicleInsurance: 'যানবাহন বীমা',
     docTypePeriodicInspection: 'পর্যায়ক্রমিক পরিদর্শন', docTypeVehicleRegistration: 'যানবাহন নিবন্ধন',
     docTypeOperationCard: 'অপারেশন কার্ড', docTypeTransportPermit: 'পরিবহন পারমিট',
@@ -1248,6 +1252,7 @@ const messages = {
     // documents screen
     documents: 'دستاویزات', allDocs: 'سب', expiredDocs: 'میعاد ختم', expiringDocs2: 'جلد ختم', validDocs: 'درست',
     noDocuments: 'کوئی دستاویز نہیں', driverLabel: 'ڈرائیور',
+    myDocs: 'میری دستاویزات', vehicleDocs: 'گاڑی کی دستاویزات', noVehicleLinked: 'کوئی گاڑی منسلک نہیں',
     docTypeDriverLicense: 'ڈرائیونگ لائسنس', docTypeVehicleInsurance: 'گاڑی کا انشورنس',
     docTypePeriodicInspection: 'مدت وار معائنہ', docTypeVehicleRegistration: 'گاڑی رجسٹریشن',
     docTypeOperationCard: 'آپریشن کارڈ', docTypeTransportPermit: 'ٹرانسپورٹ پرمٹ',

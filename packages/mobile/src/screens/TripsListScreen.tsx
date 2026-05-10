@@ -24,9 +24,10 @@ interface Props {
   locale: Locale;
   onNotificationsPress?: () => void;
   unreadNotifications?: number;
+  onDashboardPress?: () => void;
 }
 
-export function TripsListScreen({onSelectTrip, locale, onNotificationsPress, unreadNotifications = 0}: Props) {
+export function TripsListScreen({onSelectTrip, locale, onNotificationsPress, unreadNotifications = 0, onDashboardPress}: Props) {
   const i18n = t(locale);
   const {data: raw, refreshing, refresh: load} = useCachedFetch(
     'driver:trips',
@@ -47,6 +48,11 @@ export function TripsListScreen({onSelectTrip, locale, onNotificationsPress, unr
             <Text style={styles.headerSub}>{trips.length} {i18n.tripsUnit}</Text>
           </View>
           <View style={styles.headerRight}>
+            {onDashboardPress && (
+              <TouchableOpacity style={styles.bellBtn} activeOpacity={0.8} onPress={onDashboardPress}>
+                <AppIcon name="view-dashboard-outline" size={20} color="#fff" />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.bellBtn} activeOpacity={0.8} onPress={onNotificationsPress}>
               <AppIcon name={unreadNotifications > 0 ? 'bell-badge-outline' : 'bell-outline'} size={20} color="#fff" />
               {unreadNotifications > 0 && (

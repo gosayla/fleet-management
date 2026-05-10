@@ -114,4 +114,11 @@ export class DriversService {
       data: { status: 'TERMINATED' },
     });
   }
+
+  async findMe(companyId: string, userId: string) {
+    return this.prisma.driver.findFirst({
+      where: { companyId, userId },
+      include: { vehicles: { select: { id: true, plateNumber: true, make: true, model: true } } },
+    });
+  }
 }

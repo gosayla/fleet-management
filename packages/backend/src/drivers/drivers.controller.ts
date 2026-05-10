@@ -26,6 +26,12 @@ import { Roles } from '../auth/roles.decorator';
 export class DriversController {
   constructor(private readonly driversService: DriversService) {}
 
+  @Get('me')
+  @Roles(UserRole.DRIVER)
+  findMe(@CurrentUser() user: AuthTokenPayload) {
+    return this.driversService.findMe(user.companyId, user.sub);
+  }
+
   @Get()
   findAll(
     @CurrentUser() user: AuthTokenPayload,
