@@ -69,7 +69,7 @@ export class AuthService {
       },
     });
 
-    const token = await this.signToken(user.id, user.email ?? '', user.role, user.companyId);
+    const token = await this.signToken(user.id, user.email ?? '', user.role, user.companyId, user.fullName);
 
     return {
       accessToken: token,
@@ -92,7 +92,7 @@ export class AuthService {
       throw new UnauthorizedException('بيانات تسجيل الدخول غير صحيحة');
     }
 
-    const token = await this.signToken(user.id, user.email ?? '', user.role, user.companyId);
+    const token = await this.signToken(user.id, user.email ?? '', user.role, user.companyId, user.fullName);
 
     return {
       accessToken: token,
@@ -178,12 +178,14 @@ export class AuthService {
     email: string,
     role: string,
     companyId: string,
+    fullName?: string,
   ): Promise<string> {
     const payload: AuthTokenPayload = {
       sub: userId,
       email,
       role: role as AuthTokenPayload['role'],
       companyId,
+      fullName,
     };
     return this.jwt.signAsync(payload, {
       expiresIn: this.config.get('JWT_EXPIRES_IN', '7d'),

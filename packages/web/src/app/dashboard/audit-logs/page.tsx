@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardList, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ClipboardList, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import api from '@/lib/api';
 import { useLocale } from '@/providers/locale-provider';
 
@@ -138,23 +138,37 @@ export default function AuditLogsPage() {
           {/* Date from */}
           <div>
             <label className="block text-xs text-gray-500 mb-1">{tl.filterFrom}</label>
-            <input
-              type="date"
-              value={filterFrom}
-              onChange={e => { setFilterFrom(e.target.value); resetPage(); }}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative">
+              <input
+                type="date"
+                value={filterFrom}
+                onChange={e => { setFilterFrom(e.target.value); resetPage(); }}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 [direction:ltr]"
+              />
+              {filterFrom && (
+                <button onClick={() => { setFilterFrom(''); resetPage(); }} className="absolute inset-y-0 end-2 flex items-center text-gray-400 hover:text-gray-600">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Date to */}
           <div>
             <label className="block text-xs text-gray-500 mb-1">{tl.filterTo}</label>
-            <input
-              type="date"
-              value={filterTo}
-              onChange={e => { setFilterTo(e.target.value); resetPage(); }}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative">
+              <input
+                type="date"
+                value={filterTo}
+                onChange={e => { setFilterTo(e.target.value); resetPage(); }}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 [direction:ltr]"
+              />
+              {filterTo && (
+                <button onClick={() => { setFilterTo(''); resetPage(); }} className="absolute inset-y-0 end-2 flex items-center text-gray-400 hover:text-gray-600">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
