@@ -302,8 +302,6 @@ export default function AuditLogsPage() {
 }
 
 
-type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT';
-
 interface AuditLog {
   id: string;
   companyId: string | null;
