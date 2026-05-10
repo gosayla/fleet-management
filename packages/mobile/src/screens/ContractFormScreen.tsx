@@ -22,6 +22,7 @@ import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {Locale, t, isRTL as isRTLFn} from '../lib/i18n';
+import {DateWheelModal} from '../components/ui/DateWheelModal';
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
@@ -80,6 +81,8 @@ export function ContractFormScreen({contractId, locale, onBack, onSuccess}: Prop
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const [datePickerField, setDatePickerField] = useState<'contractStart' | 'contractEnd' | null>(null);
 
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [drivers, setDrivers] = useState<DriverOption[]>([]);
@@ -282,27 +285,21 @@ export function ContractFormScreen({contractId, locale, onBack, onSuccess}: Prop
         <SectionTitle title={locale === 'ar' ? 'التواريخ والأوقات' : 'Dates & Times'} />
         <View style={styles.card}>
           <FormField label={i18n.contractStart} required>
-            <TextInput
-              style={styles.input}
-              value={form.contractStart}
-              onChangeText={v => set('contractStart', v)}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={Colors.textMuted}
-              keyboardType="numeric"
-              textAlign={isRTL ? 'right' : 'left'}
-            />
+            <TouchableOpacity style={styles.datePickerBtn} onPress={() => setDatePickerField('contractStart')}>
+              <Text style={form.contractStart ? styles.datePickerText : styles.datePickerPlaceholder}>
+                {form.contractStart || 'YYYY-MM-DD'}
+              </Text>
+              <AppIcon name="calendar" size={18} color={Colors.primary} />
+            </TouchableOpacity>
           </FormField>
           <FieldDivider />
           <FormField label={i18n.contractEnd} required>
-            <TextInput
-              style={styles.input}
-              value={form.contractEnd}
-              onChangeText={v => set('contractEnd', v)}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={Colors.textMuted}
-              keyboardType="numeric"
-              textAlign={isRTL ? 'right' : 'left'}
-            />
+            <TouchableOpacity style={styles.datePickerBtn} onPress={() => setDatePickerField('contractEnd')}>
+              <Text style={form.contractEnd ? styles.datePickerText : styles.datePickerPlaceholder}>
+                {form.contractEnd || 'YYYY-MM-DD'}
+              </Text>
+              <AppIcon name="calendar" size={18} color={Colors.primary} />
+            </TouchableOpacity>
           </FormField>
           <FieldDivider />
           <FormField label={i18n.departureTime} required>
@@ -478,6 +475,18 @@ export function ContractFormScreen({contractId, locale, onBack, onSuccess}: Prop
           </View>
         </View>
       </Modal>
+
+      {/* Date Picker */}
+      <DateWheelModal
+        visible={datePickerField !== null}
+        value={datePickerField ? form[datePickerField] : ''}
+        label={datePickerField === 'contractStart' ? i18n.contractStart : i18n.contractEnd}
+        onClose={() => setDatePickerField(null)}
+        onConfirm={date => {
+          if (datePickerField) set(datePickerField, date);
+          setDatePickerField(null);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -521,6 +530,9 @@ const styles = StyleSheet.create({
   switchRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12},
   switchLabel: {fontSize: 15, color: Colors.textPrimary, flex: 1},
   pickerBtn: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 14},
+  datePickerBtn: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4},
+  datePickerText: {fontSize: 15, color: Colors.textPrimary, flex: 1},
+  datePickerPlaceholder: {fontSize: 15, color: Colors.textMuted, flex: 1},
   pickerBtnText: {fontSize: 15, color: Colors.textPrimary, flex: 1},
   pickerPlaceholder: {color: Colors.textMuted},
   // Modals

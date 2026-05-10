@@ -20,6 +20,7 @@ import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {Locale, t, isRTL as isRTLFn} from '../lib/i18n';
+import {DateWheelModal} from '../components/ui/DateWheelModal';
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
@@ -69,6 +70,8 @@ export function RentalFormScreen({rentalId, locale, onBack, onSuccess}: Props) {
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const [datePickerField, setDatePickerField] = useState<'rentalStart' | 'rentalEnd' | null>(null);
 
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false);
@@ -240,27 +243,21 @@ export function RentalFormScreen({rentalId, locale, onBack, onSuccess}: Props) {
         <SectionTitle title={locale === 'ar' ? 'فترة الإيجار' : 'Rental Period'} />
         <View style={styles.card}>
           <FormField label={i18n.rentalStart} required>
-            <TextInput
-              style={styles.input}
-              value={form.rentalStart}
-              onChangeText={v => set('rentalStart', v)}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={Colors.textMuted}
-              keyboardType="numeric"
-              textAlign={isRTL ? 'right' : 'left'}
-            />
+            <TouchableOpacity style={styles.datePickerBtn} onPress={() => setDatePickerField('rentalStart')}>
+              <Text style={form.rentalStart ? styles.datePickerText : styles.datePickerPlaceholder}>
+                {form.rentalStart || 'YYYY-MM-DD'}
+              </Text>
+              <AppIcon name="calendar" size={18} color={Colors.primary} />
+            </TouchableOpacity>
           </FormField>
           <FieldDivider />
           <FormField label={i18n.rentalEnd} required>
-            <TextInput
-              style={styles.input}
-              value={form.rentalEnd}
-              onChangeText={v => set('rentalEnd', v)}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={Colors.textMuted}
-              keyboardType="numeric"
-              textAlign={isRTL ? 'right' : 'left'}
-            />
+            <TouchableOpacity style={styles.datePickerBtn} onPress={() => setDatePickerField('rentalEnd')}>
+              <Text style={form.rentalEnd ? styles.datePickerText : styles.datePickerPlaceholder}>
+                {form.rentalEnd || 'YYYY-MM-DD'}
+              </Text>
+              <AppIcon name="calendar" size={18} color={Colors.primary} />
+            </TouchableOpacity>
           </FormField>
         </View>
 
@@ -358,6 +355,18 @@ export function RentalFormScreen({rentalId, locale, onBack, onSuccess}: Props) {
           </View>
         </View>
       </Modal>
+
+      {/* Date Picker */}
+      <DateWheelModal
+        visible={datePickerField !== null}
+        value={datePickerField ? form[datePickerField] : ''}
+        label={datePickerField === 'rentalStart' ? i18n.rentalStart : i18n.rentalEnd}
+        onClose={() => setDatePickerField(null)}
+        onConfirm={date => {
+          if (datePickerField) set(datePickerField, date);
+          setDatePickerField(null);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -399,6 +408,9 @@ const styles = StyleSheet.create({
   notesInput: {minHeight: 80, paddingHorizontal: 14, paddingVertical: 10},
   divider: {height: 1, backgroundColor: Colors.borderLight, marginHorizontal: 14},
   pickerBtn: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 14},
+  datePickerBtn: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4},
+  datePickerText: {fontSize: 15, color: Colors.textPrimary, flex: 1},
+  datePickerPlaceholder: {fontSize: 15, color: Colors.textMuted, flex: 1},
   pickerBtnText: {fontSize: 15, color: Colors.textPrimary, flex: 1},
   pickerPlaceholder: {color: Colors.textMuted},
   // Modals
