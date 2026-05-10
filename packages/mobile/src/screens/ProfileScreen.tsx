@@ -72,9 +72,10 @@ export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Pr
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         {/* Info section */}
         <View style={styles.section}>
+          <InfoRow icon="phone-outline" label={locale === 'ar' ? 'رقم الجوال' : 'Phone'} value={(user as any)?.phone ?? ''} />
           <InfoRow icon="email-outline" label={locale === 'ar' ? 'البريد الإلكتروني' : 'Email'} value={user?.email ?? ''} />
           <InfoRow icon="shield-account-outline" label={locale === 'ar' ? 'الدور' : 'Role'} value={user?.role ?? ''} />
-          <InfoRow icon="office-building-outline" label={locale === 'ar' ? 'الشركة' : 'Company'} value={(user as any)?.companyId ?? ''} last />
+          <InfoRow icon="office-building-outline" label={locale === 'ar' ? 'الشركة' : 'Company'} value={(user as any)?.companyName ?? (user as any)?.companyId ?? ''} last />
         </View>
 
         <View style={styles.section}>

@@ -28,6 +28,7 @@ export class AuthService {
     role: string;
     companyId: string;
     language: string;
+    company?: { name: string } | null;
   }) {
     return {
       id: user.id,
@@ -36,6 +37,7 @@ export class AuthService {
       phone: user.phone,
       role: user.role,
       companyId: user.companyId,
+      companyName: user.company?.name ?? null,
       language: user.language,
     };
   }
@@ -67,6 +69,7 @@ export class AuthService {
         companyId: company.id,
         language: dto.language ?? 'ar',
       },
+      include: { company: { select: { name: true } } },
     });
 
     const token = await this.signToken(user.id, user.email ?? '', user.role, user.companyId, user.fullName);
@@ -82,6 +85,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { phone: dto.phone },
+      include: { company: { select: { name: true } } },
     });
     if (!user) {
       throw new UnauthorizedException('بيانات تسجيل الدخول غير صحيحة');
@@ -144,6 +148,7 @@ export class AuthService {
         role: true,
         companyId: true,
         language: true,
+        company: { select: { name: true } },
       },
     });
     return user ? this.serializeUser(user) : null;
@@ -168,6 +173,7 @@ export class AuthService {
         role: true,
         companyId: true,
         language: true,
+        company: { select: { name: true } },
       },
     });
     return this.serializeUser(user);
