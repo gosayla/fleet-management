@@ -117,9 +117,11 @@ export default function AuditLogsPage() {
   const [filterTo, setFilterTo] = useState<string | undefined>();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const LIMIT = 20;
+
   const params = new URLSearchParams({
     page: String(page),
-    limit: '30',
+    limit: String(LIMIT),
     ...(filterAction && { action: filterAction }),
     ...(filterEntity && { entity: filterEntity }),
     ...(filterFrom && { from: filterFrom }),
@@ -132,7 +134,6 @@ export default function AuditLogsPage() {
   });
 
   const logs = data?.data ?? [];
-  const totalPages = data?.totalPages ?? 1;
 
   function resetPage() { setPage(1); }
 
@@ -265,23 +266,91 @@ export default function AuditLogsPage() {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {isRTL ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
-          <span className="text-sm text-gray-600">{page} / {totalPages}</span>
-          <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {isRTL ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
+      {/* Pagination */}
+      {data && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
+          {/* Count info */}
+          <p className="text-sm text-gray-500 order-2 sm:order-1">
+            {(() => {
+              const from = (page - 1) * LIMIT + 1;
+              const to = Math.min(page * LIMIT, data.total);
+              return data.total === 0
+                ? tl.empty
+                : `Showing ${from}–${to} of ${data.total} entries`;
+            })()}
+          </p>
+
+          {/* Page controls */}
+          <div className="flex items-center gap-1 order-1 sm:order-2">
+            {/* First page */}
+            <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium"
+              title="First page"
+            >
+              {isRTL ? '»' : '«'}
+            </button>
+
+            {/* Prev */}
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isRTL ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
+
+            {/* Page number buttons */}
+            {(() => {
+              const totalPages = data.totalPages;
+              const delta = 2;
+              const pages: (number | '...')[] = [];
+              const left = Math.max(1, page - delta);
+              const right = Math.min(totalPages, page + delta);
+
+              if (left > 1) { pages.push(1); if (left > 2) pages.push('...'); }
+              for (let i = left; i <= right; i++) pages.push(i);
+              if (right < totalPages) { if (right < totalPages - 1) pages.push('...'); pages.push(totalPages); }
+
+              return pages.map((p, i) =>
+                p === '...' ? (
+                  <span key={`ellipsis-${i}`} className="px-2 text-gray-400 text-sm select-none">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`min-w-[36px] h-9 rounded-lg border text-sm font-medium transition-colors ${
+                      p === page
+                        ? 'bg-blue-600 border-blue-600 text-white'
+                        : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              );
+            })()}
+
+            {/* Next */}
+            <button
+              onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
+              disabled={page === data.totalPages}
+              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isRTL ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+
+            {/* Last page */}
+            <button
+              onClick={() => setPage(data.totalPages)}
+              disabled={page === data.totalPages}
+              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium"
+              title="Last page"
+            >
+              {isRTL ? '«' : '»'}
+            </button>
+          </div>
         </div>
       )}
     </div>
