@@ -1,4 +1,4 @@
-﻿import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   View,
@@ -45,25 +45,25 @@ type DriverTab = 'dashboard' | 'trips' | 'documents' | 'profile';
 type AdminTab = 'dashboard' | 'fleet' | 'trips' | 'documents' | 'profile';
 type MaintenanceTechTab = 'maintenance' | 'profile';
 
-// â”€â”€ Tab config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tab config ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const DRIVER_TABS: TabItem[] = [
-  {key: 'dashboard', icon: 'view-grid-outline', labels: {ar: 'ط§ظ„ط±ط¦ظٹط³ظٹط©', en: 'Home',    hi: 'à¤¹à¥‹à¤®',      bn: 'à¦¹à§‹à¦®',      ur: 'غپظˆظ…'}},
-  {key: 'trips',     icon: 'truck-outline',     labels: {ar: 'ط±ط­ظ„ط§طھظٹ',   en: 'Trips',   hi: 'à¤¯à¤¾à¤¤à¥چà¤°à¤¾à¤ڈà¤‚', bn: 'à¦ںà§چà¦°à¦؟à¦ھ',    ur: 'ط³ظپط±'}},
-  {key: 'documents', icon: 'file-document-outline', labels: {ar: 'ظˆط«ط§ط¦ظ‚ظٹ', en: 'My Docs', hi: 'à¤¦à¤¸à¥چà¤¤à¤¾à¤µà¥‡à¤œà¤¼', bn: 'à¦¨à¦¥à¦؟', ur: 'ط¯ط³طھط§ظˆغŒط²'}},
-  {key: 'profile',   icon: 'account-outline',   labels: {ar: 'ط­ط³ط§ط¨ظٹ',    en: 'Profile', hi: 'à¤ھà¥چà¤°à¥‹à¤«à¤¾à¤‡à¤²', bn: 'à¦ھà§چà¦°à§‹à¦«à¦¾à¦‡à¦²', ur: 'ظ¾ط±ظˆظپط§ط¦ظ„'}},
+  {key: 'dashboard', icon: 'view-grid-outline',     labels: {ar: 'الرئيسية', en: 'Home',    hi: 'होम',        bn: 'হোম',       ur: 'ہوم'}},
+  {key: 'trips',     icon: 'truck-outline',         labels: {ar: 'رحلاتي',   en: 'Trips',   hi: 'यात्राएं',   bn: 'ট্রিপ',    ur: 'سفر'}},
+  {key: 'documents', icon: 'file-document-outline', labels: {ar: 'وثائقي',   en: 'My Docs', hi: 'दस्तावेज़',  bn: 'নথি',      ur: 'دستاویز'}},
+  {key: 'profile',   icon: 'account-outline',       labels: {ar: 'حسابي',    en: 'Profile', hi: 'प्रोफाइल',  bn: 'প্রোফাইল', ur: 'پروفائل'}},
 ];
 
 const MAINTENANCE_TECH_TABS: TabItem[] = [
-  {key: 'maintenance', icon: 'wrench', labels: {ar: 'ط§ظ„طµظٹط§ظ†ط©', en: 'Maintenance', hi: 'à¤°à¤–à¤°à¤–à¤¾à¤µ', bn: 'à¦°à¦•à§چà¦·à¦£à¦¾à¦¬à§‡à¦•à§چà¦·à¦£', ur: 'ط¯غŒع©ع¾ ط¨ع¾ط§ظ„'}},
-  {key: 'profile',     icon: 'account-outline', labels: {ar: 'ط­ط³ط§ط¨ظٹ', en: 'Profile', hi: 'à¤ھà¥چà¤°à¥‹à¤«à¤¾à¤‡à¤²', bn: 'à¦ھà§چà¦°à§‹à¦«à¦¾à¦‡à¦²', ur: 'ظ¾ط±ظˆظپط§ط¦ظ„'}},
+  {key: 'maintenance', icon: 'wrench',          labels: {ar: 'الصيانة', en: 'Maintenance', hi: 'रखरखाव',    bn: 'রক্ষণাবেক্ষণ', ur: 'دیکھ بھال'}},
+  {key: 'profile',     icon: 'account-outline', labels: {ar: 'حسابي',   en: 'Profile',     hi: 'प्रोफाइल', bn: 'প্রোফাইল',     ur: 'پروفائل'}},
 ];
 
 const ADMIN_TABS: TabItem[] = [
-  {key: 'dashboard', icon: 'view-grid-outline', labels: {ar: 'ط§ظ„ط±ط¦ظٹط³ظٹط©', en: 'Home',    hi: 'à¤¹à¥‹à¤®',      bn: 'à¦¹à§‹à¦®',      ur: 'غپظˆظ…'}},
-  {key: 'fleet',     icon: 'truck-outline',     labels: {ar: 'ط§ظ„ط£ط³ط·ظˆظ„',  en: 'Fleet',   hi: 'à¤¬à¥‡à¤،à¤¼à¤¾',     bn: 'à¦«à§چà¦²à¦؟à¦ں',    ur: 'ط¨غŒع‘ط§'}},
-  {key: 'trips',     icon: 'map-marker-path',   labels: {ar: 'ط§ظ„ط±ط­ظ„ط§طھ',  en: 'Trips',   hi: 'à¤¯à¤¾à¤¤à¥چà¤°à¤¾à¤ڈà¤‚', bn: 'à¦ںà§چà¦°à¦؟à¦ھ',    ur: 'ط³ظپط±'}},
-  {key: 'documents', icon: 'file-document-outline', labels: {ar: 'ط§ظ„ظˆط«ط§ط¦ظ‚', en: 'Docs', hi: 'à¤¦à¤¸à¥چà¤¤à¤¾à¤µà¥‡à¤œà¤¼', bn: 'à¦¨à¦¥à¦؟', ur: 'ط¯ط³طھط§ظˆغŒط²'}},
-  {key: 'profile',   icon: 'account-outline',   labels: {ar: 'ط­ط³ط§ط¨ظٹ',    en: 'Profile', hi: 'à¤ھà¥چà¤°à¥‹à¤«à¤¾à¤‡à¤²', bn: 'à¦ھà§چà¦°à§‹à¦«à¦¾à¤‡à¦²', ur: 'ظ¾ط±ظˆظپط§ط¦ظ„'}},
+  {key: 'dashboard', icon: 'view-grid-outline',     labels: {ar: 'الرئيسية', en: 'Home',    hi: 'होम',        bn: 'হোম',       ur: 'ہوم'}},
+  {key: 'fleet',     icon: 'truck-outline',         labels: {ar: 'الأسطول',  en: 'Fleet',   hi: 'बेड़ा',      bn: 'ফ্লিট',    ur: 'بیڑا'}},
+  {key: 'trips',     icon: 'map-marker-path',       labels: {ar: 'الرحلات',  en: 'Trips',   hi: 'यात्राएं',   bn: 'ট্রিপ',    ur: 'سفر'}},
+  {key: 'documents', icon: 'file-document-outline', labels: {ar: 'الوثائق',  en: 'Docs',    hi: 'दस्तावेज़',  bn: 'নথি',      ur: 'دستاویز'}},
+  {key: 'profile',   icon: 'account-outline',       labels: {ar: 'حسابي',    en: 'Profile', hi: 'प्रोफाइल',  bn: 'প্রোফাইল', ur: 'پروفائل'}},
 ];
 
 function Navigator() {
@@ -403,7 +403,7 @@ function Navigator() {
   // Full-screen vehicle detail (hides tab bar)
   // NOTE: rendered as overlay inside admin shell instead (see below) so fleet screen stays mounted
 
-  // â”€â”€ Maintenance Tech shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Maintenance Tech shell 
   if (user?.role === 'MAINTENANCE_TECH') {
     return (
       <View style={styles.shell}>
@@ -430,7 +430,7 @@ function Navigator() {
     );
   }
 
-  // â”€â”€ Driver shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Driver shell 
   if (!isAdmin) {
     // Driver trip detail view
     if (driverViewTripId) {

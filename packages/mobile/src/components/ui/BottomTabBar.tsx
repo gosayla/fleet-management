@@ -23,7 +23,7 @@ export function BottomTabBar({tabs, activeKey, locale, onPress, badgeByKey}: Pro
     <View style={styles.bar}>
       {tabs.map(tab => {
         const active = tab.key === activeKey;
-        const label = tab.labels['en'];
+        const label = tab.labels[locale];
         const badge = badgeByKey?.[tab.key] ?? 0;
         const showBadge = badge > 0;
         const badgeLabel = badge > 99 ? '99+' : String(badge);
