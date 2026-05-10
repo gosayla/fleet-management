@@ -33,6 +33,7 @@ interface Props {
   onSelectDriver?: (id: string) => void;
   onAddVehicle?: () => void;
   onAddDriver?: () => void;
+  onMaintenancePress?: () => void;
   /** Persisted segment (restored on mount) */
   initialSegment?: Segment;
   /** Persisted search query (restored on mount) */
@@ -51,7 +52,7 @@ type Segment = 'drivers' | 'vehicles';
 const STATUS_BAR_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 const PAGE_SIZE = 20;
 
-export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAddVehicle, onAddDriver, initialSegment, initialSearch, onStateChange, initialVehicleScroll, initialDriverScroll, onScrollChange}: Props) {
+export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAddVehicle, onAddDriver, onMaintenancePress, initialSegment, initialSearch, onStateChange, initialVehicleScroll, initialDriverScroll, onScrollChange}: Props) {
   const i18n = t(locale);
   const [segment, setSegment] = useState<Segment>(initialSegment ?? 'vehicles');
   const [searchOpen, setSearchOpen] = useState(!!(initialSearch?.trim()));
@@ -215,6 +216,11 @@ export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAdd
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>{i18n.fleet}</Text>
           <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={onMaintenancePress}>
+              <AppIcon name="wrench" size={20} color="#fff" />
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.iconBtn}
               onPress={() => {

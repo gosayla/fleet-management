@@ -29,6 +29,9 @@ import {ContractFormScreen} from './screens/ContractFormScreen';
 import {ContractDetailScreen} from './screens/ContractDetailScreen';
 import {RentalFormScreen} from './screens/RentalFormScreen';
 import {RentalDetailScreen} from './screens/RentalDetailScreen';
+import {AdminMaintenanceScreen} from './screens/AdminMaintenanceScreen';
+import {MaintenanceFormScreen} from './screens/MaintenanceFormScreen';
+import {MaintenanceDetailScreen} from './screens/MaintenanceDetailScreen';
 import {Trip} from '@fleet/shared';
 import {Locale} from './lib/i18n';
 import {Colors} from './lib/theme';
@@ -100,6 +103,11 @@ function Navigator() {
   const [rentalFormId, setRentalFormId] = useState<string | null>(null);
   // Trips hub persisted segment (so back from contract/rental form returns to correct tab)
   const [tripsHubSegment, setTripsHubSegment] = useState<'trips' | 'contracts' | 'rentals'>('trips');
+  // Maintenance
+  const [maintenanceOpen, setMaintenanceOpen] = useState(false);
+  const [selectedMaintenanceId, setSelectedMaintenanceId] = useState<string | null>(null);
+  const [maintenanceFormOpen, setMaintenanceFormOpen] = useState(false);
+  const [maintenanceFormId, setMaintenanceFormId] = useState<string | null>(null);
   // Fleet screen persisted state
   const [fleetSegment, setFleetSegment] = useState<'drivers' | 'vehicles'>('vehicles');
   const [fleetSearch, setFleetSearch] = useState('');
@@ -336,6 +344,46 @@ function Navigator() {
     );
   }
 
+  // Full-screen maintenance form
+  if (maintenanceFormOpen) {
+    return (
+      <MaintenanceFormScreen
+        maintenanceId={maintenanceFormId ?? undefined}
+        locale={locale}
+        onBack={() => setMaintenanceFormOpen(false)}
+        onSuccess={() => setMaintenanceFormOpen(false)}
+      />
+    );
+  }
+
+  // Full-screen maintenance detail
+  if (selectedMaintenanceId) {
+    return (
+      <MaintenanceDetailScreen
+        maintenanceId={selectedMaintenanceId}
+        locale={locale}
+        onBack={() => setSelectedMaintenanceId(null)}
+        onEdit={() => {
+          setMaintenanceFormId(selectedMaintenanceId);
+          setMaintenanceFormOpen(true);
+        }}
+        onDeleted={() => setSelectedMaintenanceId(null)}
+      />
+    );
+  }
+
+  // Full-screen maintenance list
+  if (maintenanceOpen) {
+    return (
+      <AdminMaintenanceScreen
+        locale={locale}
+        onBack={() => setMaintenanceOpen(false)}
+        onSelectItem={id => setSelectedMaintenanceId(id)}
+        onAddPress={() => { setMaintenanceFormId(null); setMaintenanceFormOpen(true); }}
+      />
+    );
+  }
+
   // Full-screen vehicle detail (hides tab bar)
   // NOTE: rendered as overlay inside admin shell instead (see below) so fleet screen stays mounted
 
@@ -396,7 +444,7 @@ function Navigator() {
       <View style={styles.screenArea}>
         {adminTab === 'dashboard'     && <AdminDashboardScreen locale={locale} onSelectTrip={setSelectedTripId} onNotificationsPress={() => setNotificationsOpen(true)} unreadNotifications={unreadNotifications} />}
         {/* Fleet screen is always kept mounted when tab is active so scroll position survives navigation */}
-        {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} initialSegment={fleetSegment} initialSearch={fleetSearch} onStateChange={(seg, q) => { setFleetSegment(seg); setFleetSearch(q); }} initialVehicleScroll={fleetVehicleScroll} initialDriverScroll={fleetDriverScroll} onScrollChange={(seg, offset) => { if (seg === 'vehicles') setFleetVehicleScroll(offset); else setFleetDriverScroll(offset); }} />}
+        {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} onMaintenancePress={() => setMaintenanceOpen(true)} initialSegment={fleetSegment} initialSearch={fleetSearch} onStateChange={(seg, q) => { setFleetSegment(seg); setFleetSearch(q); }} initialVehicleScroll={fleetVehicleScroll} initialDriverScroll={fleetDriverScroll} onScrollChange={(seg, offset) => { if (seg === 'vehicles') setFleetVehicleScroll(offset); else setFleetDriverScroll(offset); }} />}
         {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onSelectTrip={setSelectedTripId} onAddTrip={() => { setTripFormId(null); setTripFormOpen(true); }} onSelectContract={setSelectedContractId} onAddContract={() => { setContractFormId(null); setContractFormOpen(true); setTripsHubSegment('contracts'); }} onSelectRental={setSelectedRentalId} onAddRental={() => { setRentalFormId(null); setRentalFormOpen(true); setTripsHubSegment('rentals'); }} segment={tripsHubSegment} onSegmentChange={setTripsHubSegment} />}
         {adminTab === 'documents'      && <AdminDocumentsScreen   locale={locale} onAddPress={() => { setDocFormId(null); setDocFormOpen(true); }} onSelectDoc={doc => setSelectedDocId(doc.id)} />}
         {adminTab === 'profile'        && <ProfileScreen locale={locale} onSetLocale={setLocale} onBack={() => setAdminTab('dashboard')} />}
