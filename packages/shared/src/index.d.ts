@@ -50,7 +50,8 @@ export declare enum UserRole {
     FLEET_MANAGER = "FLEET_MANAGER",
     DISPATCHER = "DISPATCHER",
     DRIVER = "DRIVER",
-    VIEWER = "VIEWER"
+    VIEWER = "VIEWER",
+    MAINTENANCE_TECH = "MAINTENANCE_TECH"
 }
 export declare enum PermitStatus {
     PENDING = "PENDING",
