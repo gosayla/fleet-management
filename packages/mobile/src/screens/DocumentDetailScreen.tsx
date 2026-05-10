@@ -46,6 +46,7 @@ interface Props {
   onBack: () => void;
   onEdit: () => void;
   onDeleted: () => void;
+  readOnly?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -88,7 +89,7 @@ function InfoRow({label, value, locale}: {label: string; value: string | null | 
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
-export function DocumentDetailScreen({documentId, locale, onBack, onEdit, onDeleted}: Props) {
+export function DocumentDetailScreen({documentId, locale, onBack, onEdit, onDeleted, readOnly}: Props) {
   const i18n = t(locale);
   const isRTL = isRTLFn(locale);
 
@@ -175,14 +176,18 @@ export function DocumentDetailScreen({documentId, locale, onBack, onEdit, onDele
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>{i18n.viewDocument}</Text>
           <View style={[styles.headerActions, isRTL && styles.rowReverse]}>
-            <TouchableOpacity style={styles.iconBtn} onPress={onEdit} activeOpacity={0.7}>
-              <AppIcon name="pencil-outline" size={20} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn} onPress={confirmDelete} disabled={deleting} activeOpacity={0.7}>
-              {deleting
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <AppIcon name="trash-can-outline" size={20} color="#fff" />}
-            </TouchableOpacity>
+            {!readOnly && (
+              <>
+                <TouchableOpacity style={styles.iconBtn} onPress={onEdit} activeOpacity={0.7}>
+                  <AppIcon name="pencil-outline" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.iconBtn} onPress={confirmDelete} disabled={deleting} activeOpacity={0.7}>
+                  {deleting
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <AppIcon name="trash-can-outline" size={20} color="#fff" />}
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </View>

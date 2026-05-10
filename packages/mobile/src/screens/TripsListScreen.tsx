@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,8 @@ import {TripCard} from '../components/ui/cards/TripCard';
 
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
+type Filter = 'ALL' | 'ACTIVE' | 'SCHEDULED' | 'COMPLETED';
+
 interface Props {
   onSelectTrip: (trip: Trip) => void;
   locale: Locale;
@@ -25,11 +27,24 @@ interface Props {
 
 export function TripsListScreen({onSelectTrip, locale}: Props) {
   const i18n = t(locale);
+  const [filter, setFilter] = useState<Filter>('ALL');
   const {data: raw, refreshing, refresh: load} = useCachedFetch(
     'driver:trips',
     () => api.get<Trip[]>('/trips'),
   );
   const trips: Trip[] = raw ?? [];
+
+  const filtered = useMemo(() => {
+    if (filter === 'ALL') return trips;
+    return trips.filter(tr => tr.status === filter);
+  }, [trips, filter]);
+
+  const FILTERS: {key: Filter; label: string}[] = [
+    {key: 'ALL',       label: i18n.filterAll},
+    {key: 'ACTIVE',    label: i18n.filterActive},
+    {key: 'SCHEDULED', label: i18n.scheduledStat},
+    {key: 'COMPLETED', label: i18n.filterDone},
+  ];
 
   return (
     <View style={styles.container}>
@@ -41,13 +56,25 @@ export function TripsListScreen({onSelectTrip, locale}: Props) {
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.headerTitle}>{i18n.myTrips}</Text>
-            <Text style={styles.headerSub}>{trips.length} {i18n.tripsUnit}</Text>
+            <Text style={styles.headerSub}>{filtered.length} {i18n.tripsUnit}</Text>
           </View>
+        </View>
+        {/* Filter pills */}
+        <View style={styles.filterRow}>
+          {FILTERS.map(f => (
+            <TouchableOpacity
+              key={f.key}
+              style={[styles.pill, filter === f.key && styles.pillActive]}
+              onPress={() => setFilter(f.key)}
+              activeOpacity={0.7}>
+              <Text style={[styles.pillText, filter === f.key && styles.pillTextActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
       <FlatList
-        data={trips}
+        data={filtered}
         keyExtractor={item => item.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} tintColor={Colors.primary} />}
         contentContainerStyle={styles.list}
@@ -81,13 +108,24 @@ export function TripsListScreen({onSelectTrip, locale}: Props) {
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: Colors.bg},
-  header: {backgroundColor: Colors.primary, paddingBottom: 20},
+  header: {backgroundColor: Colors.primary, paddingBottom: 12},
   headerRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: Spacing.md, paddingTop: 10,
   },
   headerTitle: {fontSize: 22, fontWeight: '700' as const, color: '#fff'},
   headerSub: {fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2},
+  filterRow: {
+    flexDirection: 'row', paddingHorizontal: Spacing.md,
+    paddingTop: 10, paddingBottom: 4, gap: 8,
+  },
+  pill: {
+    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  pillActive: {backgroundColor: '#fff'},
+  pillText: {fontSize: 12, fontWeight: '600' as const, color: 'rgba(255,255,255,0.85)'},
+  pillTextActive: {color: Colors.primary},
   list: {padding: Spacing.md, gap: Spacing.sm},
   itemWrap: {gap: 6},
   cardDisabled: {opacity: 0.55},
