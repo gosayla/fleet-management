@@ -267,17 +267,10 @@ export default function DocumentsPage() {
                       <td className="px-4 py-3 text-gray-700">
                         {formatEnumLabel('documentType', row.type, locale)}
                       </td>
-                      <td className="px-4 py-3 text-gray-700 w-48 max-w-[12rem]">
-                        <p
-                          className="truncate"
-                          title={row.vehicles && row.vehicles.length > 0
-                            ? row.vehicles.map((v) => `${v.plateNumber} - ${v.year} ${v.make} ${v.model}`).join(', ')
-                            : td.unknownVehicle}
-                        >
-                          {row.vehicles && row.vehicles.length > 0
-                            ? row.vehicles.map((v) => `${v.plateNumber} - ${v.year} ${v.make} ${v.model}`).join(', ')
-                            : td.unknownVehicle}
-                        </p>
+                      <td className="px-4 py-3 text-gray-700 w-48 max-w-[12rem] break-words">
+                        {row.vehicles && row.vehicles.length > 0
+                          ? row.vehicles.map((v) => `${v.plateNumber} - ${v.year} ${v.make} ${v.model}`).join(', ')
+                          : td.unknownVehicle}
                       </td>
                       <td className="px-4 py-3 text-gray-700">{row.drivers && row.drivers.length > 0 ? row.drivers.map((d) => d.fullName).join(', ') : td.unknownDriver}</td>
                       <td className="px-4 py-3 text-gray-700">{row.referenceNumber || tc.empty}</td>
