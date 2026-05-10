@@ -13,7 +13,7 @@ interface Props {
 }
 
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
-const HEADER_FULL = 220;
+const HEADER_FULL = 260;
 const HEADER_MIN  = SB_HEIGHT + 56; // compact bar: status bar + row height
 const COLLAPSE    = HEADER_FULL - HEADER_MIN;
 
@@ -61,6 +61,9 @@ export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Pr
   const animAvatarOpacity = scrollY.interpolate({
     inputRange: [0, COLLAPSE * 0.6], outputRange: [1, 0], extrapolate: 'clamp',
   });
+  const animSubtitleOpacity = scrollY.interpolate({
+    inputRange: [0, COLLAPSE * 0.4], outputRange: [1, 0], extrapolate: 'clamp',
+  });
   const animNameSize = scrollY.interpolate({
     inputRange: [0, COLLAPSE], outputRange: [20, 15], extrapolate: 'clamp',
   });
@@ -73,15 +76,23 @@ export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Pr
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
       {/* ── Collapsing teal header ── */}
-      <Animated.View style={[styles.header, {height: animHeaderHeight}]}>
+      <Animated.View style={[styles.header, {height: animHeaderHeight, paddingTop: animTopPad}]}>
+        {/* Avatar — fades + shrinks away */}
+        <Animated.View style={[styles.avatar, {width: animAvatarSize, height: animAvatarSize, borderRadius: 42, opacity: animAvatarOpacity}]}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </Animated.View>
+
         {/* Name — always visible, shrinks slightly */}
-        <Animated.Text style={[styles.name, {fontSize: animNameSize, paddingTop: animTopPad}]} numberOfLines={1}>
+        <Animated.Text style={[styles.name, {fontSize: animNameSize}]} numberOfLines={1}>
           {displayName}
         </Animated.Text>
 
-        {/* Avatar — fades + shrinks away */}
-        <Animated.View style={[styles.avatar, {width: animAvatarSize, height: animAvatarSize, borderRadius: 42, opacity: animAvatarOpacity, marginTop: 12}]}>
-          <Text style={styles.avatarText}>{initials}</Text>
+        {/* Email + role badge — fade away */}
+        <Animated.View style={[styles.subtitleWrap, {opacity: animSubtitleOpacity}]}>
+          <Text style={styles.email}>{user?.email}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>{user?.role?.replace(/_/g, ' ')}</Text>
+          </View>
         </Animated.View>
       </Animated.View>
 
@@ -180,11 +191,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: 'center',
     overflow: 'hidden',
-  },
-  name: {
-    fontWeight: '700' as const,
-    color: '#fff',
-    textAlign: 'center',
     paddingHorizontal: Spacing.md,
   },
   avatar: {
@@ -192,8 +198,22 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.35)',
     overflow: 'hidden',
+    marginBottom: 10,
   },
   avatarText: {fontSize: 34, fontWeight: '700' as const, color: Colors.white},
+  name: {
+    fontWeight: '700' as const,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  subtitleWrap: {alignItems: 'center', gap: 6},
+  email: {fontSize: 13, color: 'rgba(255,255,255,0.7)', textAlign: 'center'},
+  roleBadge: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 20, paddingHorizontal: Spacing.md, paddingVertical: 5,
+  },
+  roleBadgeText: {fontSize: 12, fontWeight: '600' as const, color: Colors.white, textTransform: 'uppercase', letterSpacing: 1},
   panel: {
     flex: 1,
     backgroundColor: Colors.bg,
