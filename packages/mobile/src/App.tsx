@@ -128,7 +128,6 @@ function Navigator() {
   const [driverDocFormOpen, setDriverDocFormOpen] = useState(false);
   const [driverDocFormId, setDriverDocFormId] = useState<string | null>(null);
   const [driverSelectedDocId, setDriverSelectedDocId] = useState<string | null>(null);
-  const [driverDocReadOnly, setDriverDocReadOnly] = useState(false);
 
   // Sync app locale from the user's saved language preference on every login/change
   useEffect(() => {
@@ -464,7 +463,7 @@ function Navigator() {
         <DocumentDetailScreen
           locale={locale}
           documentId={driverSelectedDocId}
-          readOnly={driverDocReadOnly}
+          driverView
           onBack={() => setDriverSelectedDocId(null)}
           onDeleted={() => setDriverSelectedDocId(null)}
           onEdit={() => {
@@ -498,7 +497,7 @@ function Navigator() {
           {driverTab === 'documents' && (
             <DriverDocumentsScreen
               locale={locale}
-              onSelectDoc={(id, readOnly) => { setDriverDocReadOnly(readOnly ?? false); setDriverSelectedDocId(id); }}
+              onSelectDoc={id => setDriverSelectedDocId(id)}
               onAddPress={() => { setDriverDocFormId(null); setDriverDocFormOpen(true); }}
             />
           )}

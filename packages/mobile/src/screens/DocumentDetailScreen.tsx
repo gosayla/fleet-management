@@ -46,7 +46,8 @@ interface Props {
   onBack: () => void;
   onEdit: () => void;
   onDeleted: () => void;
-  readOnly?: boolean;
+  /** When true, hide edit/delete if the document is linked to any vehicle */
+  driverView?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -90,13 +91,16 @@ function InfoRow({label, value, locale}: {label: string; value: string | null | 
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
-export function DocumentDetailScreen({documentId, locale, onBack, onEdit, onDeleted, readOnly}: Props) {
+export function DocumentDetailScreen({documentId, locale, onBack, onEdit, onDeleted, driverView}: Props) {
   const i18n = t(locale);
   const isRTL = isRTLFn(locale);
 
   const [doc, setDoc] = useState<FleetDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+
+  // When viewed by a driver, hide edit/delete if the doc is linked to any vehicle
+  const readOnly = driverView && (doc?.vehicles?.length ?? 0) > 0;
 
   useEffect(() => {
     api.get<FleetDocument>(`/documents/${documentId}`)

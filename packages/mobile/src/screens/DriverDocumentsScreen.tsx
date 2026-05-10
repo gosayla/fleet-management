@@ -56,7 +56,7 @@ type Segment = 'mine' | 'vehicle';
 
 interface Props {
   locale: Locale;
-  onSelectDoc: (docId: string, readOnly?: boolean) => void;
+  onSelectDoc: (docId: string) => void;
   onAddPress: () => void;
 }
 
@@ -174,7 +174,7 @@ export function DriverDocumentsScreen({locale, onSelectDoc, onAddPress}: Props) 
     const allLinked   = [...linkedPlates, ...linkedDrivers];
 
     return (
-      <TouchableOpacity style={styles.card} onPress={() => onSelectDoc(item.id, segment === 'vehicle')} activeOpacity={0.85}>
+      <TouchableOpacity style={styles.card} onPress={() => onSelectDoc(item.id)} activeOpacity={0.85}>
         <View style={[styles.cardHeader, isRTL && styles.rowReverse]}>
           <View style={styles.iconWrap}>
             <AppIcon name="file-document-outline" size={20} color={Colors.primary} />
