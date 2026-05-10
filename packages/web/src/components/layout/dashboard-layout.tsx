@@ -21,6 +21,7 @@ import {
   UserCircle2,
   CalendarDays,
   Key,
+  ClipboardList,
 } from 'lucide-react';
 import { useLocale } from '@/providers/locale-provider';
 
@@ -56,6 +57,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     { path: '/dashboard/rentals', label: t.nav.rentals, icon: Key },
     { path: '/dashboard/documents', label: t.nav.documents, icon: FileText },
     { path: '/dashboard/users', label: t.nav.users, icon: UserCog },
+    { path: '/dashboard/audit-logs', label: t.nav.auditLogs, icon: ClipboardList },
     { path: '/dashboard/settings', label: t.nav.settings, icon: Settings },
   ];
 
