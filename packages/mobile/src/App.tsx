@@ -98,6 +98,8 @@ function Navigator() {
   const [selectedRentalId, setSelectedRentalId] = useState<string | null>(null);
   const [rentalFormOpen, setRentalFormOpen] = useState(false);
   const [rentalFormId, setRentalFormId] = useState<string | null>(null);
+  // Trips hub persisted segment (so back from contract/rental form returns to correct tab)
+  const [tripsHubSegment, setTripsHubSegment] = useState<'trips' | 'contracts' | 'rentals'>('trips');
   // Fleet screen persisted state
   const [fleetSegment, setFleetSegment] = useState<'drivers' | 'vehicles'>('vehicles');
   const [fleetSearch, setFleetSearch] = useState('');
@@ -395,7 +397,7 @@ function Navigator() {
         {adminTab === 'dashboard'     && <AdminDashboardScreen locale={locale} onSelectTrip={setSelectedTripId} onNotificationsPress={() => setNotificationsOpen(true)} unreadNotifications={unreadNotifications} />}
         {/* Fleet screen is always kept mounted when tab is active so scroll position survives navigation */}
         {adminTab === 'fleet'          && <AdminFleetScreen      locale={locale} onSelectVehicle={setSelectedVehicleId} onSelectDriver={setSelectedDriverId} onAddVehicle={() => { setVehicleFormId(null); setVehicleFormOpen(true); }} onAddDriver={() => { setDriverFormId(null); setDriverFormOpen(true); }} initialSegment={fleetSegment} initialSearch={fleetSearch} onStateChange={(seg, q) => { setFleetSegment(seg); setFleetSearch(q); }} initialVehicleScroll={fleetVehicleScroll} initialDriverScroll={fleetDriverScroll} onScrollChange={(seg, offset) => { if (seg === 'vehicles') setFleetVehicleScroll(offset); else setFleetDriverScroll(offset); }} />}
-        {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onSelectTrip={setSelectedTripId} onAddTrip={() => { setTripFormId(null); setTripFormOpen(true); }} onSelectContract={setSelectedContractId} onAddContract={() => { setContractFormId(null); setContractFormOpen(true); }} onSelectRental={setSelectedRentalId} onAddRental={() => { setRentalFormId(null); setRentalFormOpen(true); }} />}
+        {adminTab === 'trips'          && <AdminTripsScreen      locale={locale} onSelectTrip={setSelectedTripId} onAddTrip={() => { setTripFormId(null); setTripFormOpen(true); }} onSelectContract={setSelectedContractId} onAddContract={() => { setContractFormId(null); setContractFormOpen(true); setTripsHubSegment('contracts'); }} onSelectRental={setSelectedRentalId} onAddRental={() => { setRentalFormId(null); setRentalFormOpen(true); setTripsHubSegment('rentals'); }} segment={tripsHubSegment} onSegmentChange={setTripsHubSegment} />}
         {adminTab === 'documents'      && <AdminDocumentsScreen   locale={locale} onAddPress={() => { setDocFormId(null); setDocFormOpen(true); }} onSelectDoc={doc => setSelectedDocId(doc.id)} />}
         {adminTab === 'profile'        && <ProfileScreen locale={locale} onSetLocale={setLocale} onBack={() => setAdminTab('dashboard')} />}
       </View>

@@ -40,6 +40,8 @@ interface Props {
   onAddContract?: () => void;
   onSelectRental?: (id: string) => void;
   onAddRental?: () => void;
+  segment?: HubSegment;
+  onSegmentChange?: (s: HubSegment) => void;
 }
 
 type HubSegment = 'trips' | 'contracts' | 'rentals';
@@ -78,11 +80,13 @@ const FILTERS = [
   {key: 'COMPLETED',   ar: 'منتهية',  en: 'Done',      hi: 'पूर्ण',      bn: 'সম্পন্ন',    ur: 'مکمل'},
 ] as const;
 
-export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContract, onAddContract, onSelectRental, onAddRental}: Props) {
+export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContract, onAddContract, onSelectRental, onAddRental, segment: segmentProp, onSegmentChange}: Props) {
   const i18n = t(locale);
 
-  // ── Segment ───────────────────────────────────────────────────────────────
-  const [segment, setSegment] = useState<HubSegment>('trips');
+  // ── Segment (controlled from parent to survive navigation) ────────────────
+  const [segmentLocal, setSegmentLocal] = useState<HubSegment>(segmentProp ?? 'trips');
+  const segment = segmentProp ?? segmentLocal;
+  function setSegment(s: HubSegment) { setSegmentLocal(s); onSegmentChange?.(s); }
 
   // ── Trips state ───────────────────────────────────────────────────────────
   const [filter, setFilter] = useState('ALL');
@@ -123,6 +127,8 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
   // ── Contracts state ───────────────────────────────────────────────────────
   const [contracts, setContracts] = useState<ContractItem[]>([]);
   const [contractsRefreshing, setContractsRefreshing] = useState(false);
+  const [contractsSearchOpen, setContractsSearchOpen] = useState(false);
+  const [contractsQuery, setContractsQuery] = useState('');
 
   async function loadContracts() {
     try {
@@ -137,9 +143,20 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
     setContractsRefreshing(false);
   }
 
+  const visibleContracts = contractsQuery.trim()
+    ? contracts.filter(c =>
+        c.clientName.toLowerCase().includes(contractsQuery.toLowerCase()) ||
+        (c.contractNumber ?? '').toLowerCase().includes(contractsQuery.toLowerCase()) ||
+        c.origin.toLowerCase().includes(contractsQuery.toLowerCase()) ||
+        c.destination.toLowerCase().includes(contractsQuery.toLowerCase())
+      )
+    : contracts;
+
   // ── Rentals state ─────────────────────────────────────────────────────────
   const [rentals, setRentals] = useState<RentalItem[]>([]);
   const [rentalsRefreshing, setRentalsRefreshing] = useState(false);
+  const [rentalsSearchOpen, setRentalsSearchOpen] = useState(false);
+  const [rentalsQuery, setRentalsQuery] = useState('');
 
   async function loadRentals() {
     try {
@@ -153,6 +170,14 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
     await loadRentals();
     setRentalsRefreshing(false);
   }
+
+  const visibleRentals = rentalsQuery.trim()
+    ? rentals.filter(r =>
+        r.clientName.toLowerCase().includes(rentalsQuery.toLowerCase()) ||
+        (r.contractNumber ?? '').toLowerCase().includes(rentalsQuery.toLowerCase()) ||
+        (r.vehicle?.plateNumber ?? '').toLowerCase().includes(rentalsQuery.toLowerCase())
+      )
+    : rentals;
 
   // Load data when segment changes
   useEffect(() => {
@@ -223,6 +248,26 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
                 <AppIcon name="magnify" size={22} color="#fff" />
               </TouchableOpacity>
             )}
+            {segment === 'contracts' && (
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={() => {
+                  if (contractsSearchOpen && contractsQuery) setContractsQuery('');
+                  setContractsSearchOpen(p => !p);
+                }}>
+                <AppIcon name="magnify" size={22} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {segment === 'rentals' && (
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={() => {
+                  if (rentalsSearchOpen && rentalsQuery) setRentalsQuery('');
+                  setRentalsSearchOpen(p => !p);
+                }}>
+                <AppIcon name="magnify" size={22} color="#fff" />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.iconBtn} onPress={onAdd}>
               <AppIcon name="plus" size={22} color="#fff" />
             </TouchableOpacity>
@@ -258,6 +303,44 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
             />
             {!!searchQuery && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <AppIcon name="close-circle" size={18} color="rgba(255,255,255,0.9)" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+        {segment === 'contracts' && contractsSearchOpen && (
+          <View style={styles.searchWrap}>
+            <AppIcon name="magnify" size={18} color="rgba(255,255,255,0.9)" />
+            <TextInput
+              style={styles.searchInput}
+              value={contractsQuery}
+              onChangeText={setContractsQuery}
+              placeholder={i18n.searchContracts}
+              placeholderTextColor="rgba(255,255,255,0.7)"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {!!contractsQuery && (
+              <TouchableOpacity onPress={() => setContractsQuery('')}>
+                <AppIcon name="close-circle" size={18} color="rgba(255,255,255,0.9)" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+        {segment === 'rentals' && rentalsSearchOpen && (
+          <View style={styles.searchWrap}>
+            <AppIcon name="magnify" size={18} color="rgba(255,255,255,0.9)" />
+            <TextInput
+              style={styles.searchInput}
+              value={rentalsQuery}
+              onChangeText={setRentalsQuery}
+              placeholder={i18n.searchRentals}
+              placeholderTextColor="rgba(255,255,255,0.7)"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {!!rentalsQuery && (
+              <TouchableOpacity onPress={() => setRentalsQuery('')}>
                 <AppIcon name="close-circle" size={18} color="rgba(255,255,255,0.9)" />
               </TouchableOpacity>
             )}
@@ -305,7 +388,7 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
         {/* ── CONTRACTS ── */}
         {segment === 'contracts' && (
           <FlatList
-            data={contracts}
+            data={visibleContracts}
             keyExtractor={c => c.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
@@ -352,7 +435,7 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
         {/* ── RENTALS ── */}
         {segment === 'rentals' && (
           <FlatList
-            data={rentals}
+            data={visibleRentals}
             keyExtractor={r => r.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
