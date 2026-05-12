@@ -24,6 +24,7 @@ export class DashboardService {
       maintenanceCostAgg,
       pendingViolations,
       expiringDocuments,
+      pendingMaintenance,
     ] = await Promise.all([
       this.prisma.vehicle.count({ where: { companyId } }),
       this.prisma.vehicle.count({ where: { companyId, status: 'ACTIVE' } }),
@@ -54,6 +55,9 @@ export class DashboardService {
           expiryDate: { lte: thirtyDaysFromNow, gte: now },
         },
       }),
+      this.prisma.maintenanceLog.count({
+        where: { companyId, status: 'PENDING' },
+      }),
     ]);
 
     return {
@@ -68,6 +72,7 @@ export class DashboardService {
       maintenanceCostThisMonth: maintenanceCostAgg._sum.costSar ?? 0,
       pendingViolations,
       expiringDocuments,
+      pendingMaintenance,
     };
   }
 }
