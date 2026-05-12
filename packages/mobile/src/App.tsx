@@ -6,6 +6,7 @@ import {
   View,
   Text,
   StyleSheet,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {AuthProvider, useAuth} from './context/AuthContext';
@@ -374,7 +375,12 @@ function Navigator() {
     return (
       <View style={styles.loader}>
         <View style={styles.loaderIcon}>
-          <Text style={styles.loaderTruck}>ًںڑ›</Text>
+          <Image
+            source={require('./assets/app_logo.png')}
+            style={styles.loaderLogo}
+            resizeMode="contain"
+            accessibilityLabel="App logo"
+          />
         </View>
         <ActivityIndicator size="large" color={Colors.primary} style={{marginTop: 24}} />
       </View>
@@ -798,7 +804,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     justifyContent: 'center', alignItems: 'center',
   },
-  loaderTruck: {fontSize: 36},
+  loaderLogo: {width: 44, height: 44},
   shell: {flex: 1, backgroundColor: Colors.bg},
   screenArea: {flex: 1},
 });

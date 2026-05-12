@@ -169,6 +169,23 @@ export class DocumentsService {
   }
 
   private async refreshVehicleDocumentState(companyId: string, vehicleId: string) {
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: { id: vehicleId, companyId },
+      select: {
+        licenseIssuanceDate: true,
+        licenseExpiryDate: true,
+        insuranceExpiryDate: true,
+        insuranceStatus: true,
+        inspectionExpiryDate: true,
+        mvpiStatus: true,
+        operationCardFileUrl: true,
+        operationCardIssueDate: true,
+        operationCardExpiryDate: true,
+        operationCardNumber: true,
+      },
+    });
+    if (!vehicle) return;
+
     const docs = await this.prisma.fleetDocument.findMany({
       where: {
         companyId,
@@ -193,16 +210,16 @@ export class DocumentsService {
     await this.prisma.vehicle.updateMany({
       where: { id: vehicleId, companyId },
       data: {
-        licenseIssuanceDate: registration ? this.toDateOnly(registration.issueDate) : null,
-        licenseExpiryDate: registration ? this.toDateOnly(registration.expiryDate) : null,
-        insuranceExpiryDate: insurance ? this.toDateOnly(insurance.expiryDate) : null,
-        insuranceStatus: insurance ? this.statusFromExpiry(insurance.expiryDate) : null,
-        inspectionExpiryDate: inspection ? this.toDateOnly(inspection.expiryDate) : null,
-        mvpiStatus: inspection ? this.statusFromExpiry(inspection.expiryDate) : null,
-        operationCardFileUrl: opCard ? opCard.fileUrl : null,
-        operationCardIssueDate: opCard ? this.toDateOnly(opCard.issueDate) : null,
-        operationCardExpiryDate: opCard ? this.toDateOnly(opCard.expiryDate) : null,
-        operationCardNumber: opCard?.referenceNumber ?? null,
+        licenseIssuanceDate: registration ? this.toDateOnly(registration.issueDate) : vehicle.licenseIssuanceDate,
+        licenseExpiryDate: registration ? this.toDateOnly(registration.expiryDate) : vehicle.licenseExpiryDate,
+        insuranceExpiryDate: insurance ? this.toDateOnly(insurance.expiryDate) : vehicle.insuranceExpiryDate,
+        insuranceStatus: insurance ? this.statusFromExpiry(insurance.expiryDate) : vehicle.insuranceStatus,
+        inspectionExpiryDate: inspection ? this.toDateOnly(inspection.expiryDate) : vehicle.inspectionExpiryDate,
+        mvpiStatus: inspection ? this.statusFromExpiry(inspection.expiryDate) : vehicle.mvpiStatus,
+        operationCardFileUrl: opCard ? opCard.fileUrl : vehicle.operationCardFileUrl,
+        operationCardIssueDate: opCard ? this.toDateOnly(opCard.issueDate) : vehicle.operationCardIssueDate,
+        operationCardExpiryDate: opCard ? this.toDateOnly(opCard.expiryDate) : vehicle.operationCardExpiryDate,
+        operationCardNumber: opCard?.referenceNumber ?? vehicle.operationCardNumber,
       },
     });
   }

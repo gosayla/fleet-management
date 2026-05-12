@@ -8,6 +8,7 @@ export function isRTL(locale: Locale): boolean {
 const messages = {
   ar: {
     appName: 'فليت إس إيه',
+    brand: 'eFleet',
     subtitle: 'إدارة الأسطول',
     email: 'البريد الإلكتروني',
     phone: 'رقم الجوال',
@@ -282,6 +283,7 @@ const messages = {
   },
   en: {
     appName: 'FleetSA',
+    brand: 'eFleet',
     subtitle: 'Fleet Management',
     email: 'Email',
     phone: 'Phone Number',
@@ -556,6 +558,7 @@ const messages = {
   },
   hi: {
     appName: 'FleetSA',
+    brand: 'eFleet',
     subtitle: 'बेड़ा प्रबंधन',
     email: 'ईमेल',
     phone: 'फ़ोन नंबर',
@@ -830,6 +833,7 @@ const messages = {
   },
   bn: {
     appName: 'FleetSA',
+    brand: 'eFleet',
     subtitle: 'বহর ব্যবস্থাপনা',
     email: 'ইমেইল',
     phone: 'ফোন নম্বর',
@@ -1104,6 +1108,7 @@ const messages = {
   },
   ur: {
     appName: 'FleetSA',
+    brand: 'eFleet',
     subtitle: 'بیڑہ انتظام',
     email: 'ای میل',
     phone: 'فون نمبر',
@@ -1378,6 +1383,8 @@ const messages = {
   },
 } as const;
 
+export type Messages = typeof messages.ar;
+
 const tripStatusLabels = {
   SCHEDULED:   { ar: 'مجدولة',      en: 'Scheduled',  hi: 'निर्धारित',  bn: 'নির্ধারিত', ur: 'طے شدہ'  },
   IN_PROGRESS: { ar: 'قيد التنفيذ', en: 'In Progress', hi: 'प्रगति में', bn: 'চলছে',      ur: 'جاری'    },
@@ -1385,8 +1392,8 @@ const tripStatusLabels = {
   CANCELLED:   { ar: 'ملغاة',       en: 'Cancelled',   hi: 'रद्द',       bn: 'বাতিল',     ur: 'منسوخ'   },
 } as const;
 
-export function t(locale: Locale) {
-  return messages[locale];
+export function t(locale: Locale): Messages {
+  return messages[locale] as Messages;
 }
 
 export function formatDateTime(value: string | Date, locale: Locale) {

@@ -7,6 +7,7 @@ import {
 import {useAuth} from '../context/AuthContext';
 import {Locale, t, isRTL as getIsRTL} from '../lib/i18n';
 import {Colors, Spacing, Typography} from '../lib/theme';
+import {Image} from 'react-native';
 import {AppIcon} from '../components/ui/AppIcon';
 import {api} from '../lib/api';
 
@@ -24,6 +25,8 @@ export function LoginScreen({locale, onSetLocale}: Props) {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<'phone' | 'password' | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false);
   const [resetVisible, setResetVisible] = useState(false);
   const [resetIdentifier, setResetIdentifier] = useState('');
   const [resetCrNumber, setResetCrNumber] = useState('');
@@ -76,6 +79,8 @@ export function LoginScreen({locale, onSetLocale}: Props) {
       setResetCrNumber('');
       setResetPassword('');
       setResetConfirmPassword('');
+      setShowResetPassword(false);
+      setShowResetConfirmPassword(false);
     } catch (e: any) {
       const message = String(e?.message ?? '');
       Alert.alert(
@@ -109,20 +114,27 @@ export function LoginScreen({locale, onSetLocale}: Props) {
         {/* Hero Section */}
         <View style={styles.hero}>
           {/* Gradient overlay effect */}
-          <View style={styles.heroGradient} />
+          <View style={[styles.heroGradient, isRTL ? styles.heroGradientRtl : styles.heroGradientLtr]} />
 
           {/* Logo Row */}
-          <View style={styles.logoRow}>
-            <View style={styles.logoCircle}>
-              <AppIcon name="truck" size={22} color={Colors.primary} />
+          <View style={[styles.logoRow, !isRTL ? styles.logoRowRtl : styles.logoRowLtr]}>
+            <View>
+              <Image
+                source={require('../assets/app_logo_full.png')}
+                style={styles.logoImage}
+                accessibilityLabel="App logo"
+              />
             </View>
-            <Text style={styles.brand}>eLEET</Text>
+            <View style={[styles.brandBlock]}>
+              <Text style={[styles.brand, isRTL && styles.brandRtl]}>{i18n.brand}</Text>
+              <Text style={[styles.brandSubline, isRTL && styles.brandRtl]}>{i18n.subtitle}</Text>
+            </View>
           </View>
 
-          <Text style={[styles.welcome, isRTL && styles.rtl]}>
+          <Text style={[styles.welcome, !isRTL && styles.rtl]}>
             {i18n.welcome}
           </Text>
-          <Text style={[styles.subtitle, isRTL && styles.rtl]}>
+          <Text style={[styles.subtitle, !isRTL && styles.rtl]}>
             {i18n.loginSubtitle}
           </Text>
         </View>
@@ -131,13 +143,14 @@ export function LoginScreen({locale, onSetLocale}: Props) {
         <View style={styles.card}>
           {/* Phone Field */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, isRTL && styles.rtl]}>
+            <Text style={[styles.fieldLabel, !isRTL && styles.rtl]}>
               {i18n.phone}
             </Text>
             <View style={[
               styles.inputWrap,
+              isRTL && styles.inputWrapRtl,
               focusedField === 'phone' && styles.inputWrapFocused,
-              phone && styles.inputWrapFilled,
+              !!phone && styles.inputWrapFilled,
             ]}>
               <AppIcon 
                 name="phone-outline" 
@@ -161,13 +174,14 @@ export function LoginScreen({locale, onSetLocale}: Props) {
 
           {/* Password Field */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, isRTL && styles.rtl]}>
+            <Text style={[styles.fieldLabel, !isRTL && styles.rtl]}>
               {i18n.password}
             </Text>
             <View style={[
               styles.inputWrap,
+              isRTL && styles.inputWrapRtl,
               focusedField === 'password' && styles.inputWrapFocused,
-              password && styles.inputWrapFilled,
+              !!password && styles.inputWrapFilled,
             ]}>
               <AppIcon 
                 name="lock-outline" 
@@ -214,9 +228,9 @@ export function LoginScreen({locale, onSetLocale}: Props) {
             {loading
               ? <ActivityIndicator color={Colors.white} size="small" />
               : (
-                <View style={styles.btnContent}>
+                <View style={[styles.btnContent, isRTL && styles.btnContentRtl]}>
                   <Text style={styles.btnText}>{i18n.signIn}</Text>
-                  <AppIcon name="arrow-right" size={18} color={Colors.white} />
+                  <AppIcon name={isRTL ? 'arrow-left' : 'arrow-right'} size={18} color={Colors.white} />
                 </View>
               )}
           </TouchableOpacity>
@@ -263,10 +277,10 @@ export function LoginScreen({locale, onSetLocale}: Props) {
       <Modal visible={resetVisible} transparent animationType="fade" onRequestClose={() => setResetVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={[styles.modalTitle, isRTL && styles.rtl]}>
+            <Text style={[styles.modalTitle, !isRTL && styles.rtl]}>
               {i18n.resetTitle}
             </Text>
-            <Text style={[styles.modalSubTitle, isRTL && styles.rtl]}>
+            <Text style={[styles.modalSubTitle, !isRTL && styles.rtl]}>
               {i18n.resetSubtitle}
             </Text>
 
@@ -289,25 +303,49 @@ export function LoginScreen({locale, onSetLocale}: Props) {
               textAlign={isRTL ? 'right' : 'left'}
             />
 
-            <TextInput
-              style={[styles.modalInput, isRTL && styles.rtl]}
-              placeholder={i18n.resetNewPassword}
-              placeholderTextColor={Colors.textMuted}
-              value={resetPassword}
-              onChangeText={setResetPassword}
-              secureTextEntry
-              textAlign={isRTL ? 'right' : 'left'}
-            />
+            <View style={[styles.modalInputWrap, isRTL && styles.modalInputWrapRtl]}>
+              <TextInput
+                style={[styles.modalInputField, isRTL && styles.rtl]}
+                placeholder={i18n.resetNewPassword}
+                placeholderTextColor={Colors.textMuted}
+                value={resetPassword}
+                onChangeText={setResetPassword}
+                secureTextEntry={!showResetPassword}
+                textAlign={isRTL ? 'right' : 'left'}
+              />
+              <TouchableOpacity
+                onPress={() => setShowResetPassword(!showResetPassword)}
+                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+              >
+                <AppIcon
+                  name={showResetPassword ? 'eye-outline' : 'eye-off-outline'}
+                  size={20}
+                  color={Colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
 
-            <TextInput
-              style={[styles.modalInput, isRTL && styles.rtl]}
-              placeholder={i18n.resetConfirmPassword}
-              placeholderTextColor={Colors.textMuted}
-              value={resetConfirmPassword}
-              onChangeText={setResetConfirmPassword}
-              secureTextEntry
-              textAlign={isRTL ? 'right' : 'left'}
-            />
+            <View style={[styles.modalInputWrap, isRTL && styles.modalInputWrapRtl]}>
+              <TextInput
+                style={[styles.modalInputField, isRTL && styles.rtl]}
+                placeholder={i18n.resetConfirmPassword}
+                placeholderTextColor={Colors.textMuted}
+                value={resetConfirmPassword}
+                onChangeText={setResetConfirmPassword}
+                secureTextEntry={!showResetConfirmPassword}
+                textAlign={isRTL ? 'right' : 'left'}
+              />
+              <TouchableOpacity
+                onPress={() => setShowResetConfirmPassword(!showResetConfirmPassword)}
+                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+              >
+                <AppIcon
+                  name={showResetConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
+                  size={20}
+                  color={Colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setResetVisible(false)} disabled={resetLoading}>
@@ -343,38 +381,67 @@ const styles = StyleSheet.create({
   heroGradient: {
     position: 'absolute',
     top: -36,
-    right: -36,
     width: 120,
     height: 120,
     borderRadius: 60,
     backgroundColor: 'rgba(31, 130, 120, 0.08)',
   },
+  heroGradientLtr: {
+    right: -36,
+  },
+  heroGradientRtl: {
+    left: -36,
+  },
   logoRow: {
-    flexDirection: 'row',
+    width: '100%',
     alignItems: 'center',
     marginBottom: Spacing.lg,
-    gap: Spacing.sm,
-    alignSelf: 'flex-start',
+    gap: Spacing.md,
+  },
+  logoRowLtr: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+  },
+  logoRowRtl: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'flex-start',
   },
   logoCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(31, 130, 120, 0.10)',
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+    
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1f8278',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
+    
     elevation: 4,
   },
+  logoImage: {
+    width: 60,
+    height: 60,
+    resizeMode: 'contain',
+  },
+  brandBlock: {
+    maxWidth: '72%',
+  },
+  brandBlockRtl: {
+    alignItems: 'flex-end',
+  },
   brand: {
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: '800' as const,
     color: '#2d8f87',
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  brandRtl: {
+    textAlign: 'right',
+  },
+  brandSubline: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#5a7b78',
+    marginTop: 2,
   },
   welcome: {
     ...Typography.h2,
@@ -417,6 +484,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: Spacing.md,
     paddingVertical: 11,
+  },
+  inputWrapRtl: {
+    flexDirection: 'row-reverse',
   },
   inputWrapFocused: {
     borderColor: '#4aa89f',
@@ -468,6 +538,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     justifyContent: 'center',
+  },
+  btnContentRtl: {
+    flexDirection: 'row-reverse',
   },
   btnText: {
     fontSize: 15,
@@ -564,6 +637,25 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 14,
     color: Colors.textPrimary,
+  },
+  modalInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+  },
+  modalInputWrapRtl: {
+    flexDirection: 'row-reverse',
+  },
+  modalInputField: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.textPrimary,
+    padding: 0,
   },
   modalActions: {
     flexDirection: 'row',
