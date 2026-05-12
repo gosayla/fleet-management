@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -28,8 +29,19 @@ export class ContractsController {
     return this.contractsService.findAll(user.companyId);
   }
 
+  @Get(':id/trips')
+  @ApiOperation({ summary: 'Get contract trips in pages' })
+  findTrips(
+    @CurrentUser() user: AuthTokenPayload,
+    @Param('id') id: string,
+    @Query('cursor') cursor?: string,
+    @Query('take') take?: string,
+  ) {
+    return this.contractsService.findTrips(user.companyId, id, cursor, take);
+  }
+
   @Get(':id')
-  @ApiOperation({ summary: 'Get a single contract with all its daily trips' })
+  @ApiOperation({ summary: 'Get a single contract detail snapshot' })
   findOne(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
     return this.contractsService.findOne(user.companyId, id);
   }

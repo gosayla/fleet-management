@@ -76,21 +76,43 @@ export class ContractsService {
         vehicle: { select: { id: true, plateNumber: true, make: true, model: true } },
         driver: { select: { id: true, fullName: true, phone: true } },
         vacations: { orderBy: { date: 'asc' } },
-        trips: {
-          orderBy: { tripDate: 'asc' },
-          select: {
-            id: true,
-            tripDate: true,
-            leg: true,
-            status: true,
-            scheduledStart: true,
-            scheduledEnd: true,
-          },
-        },
+        _count: { select: { trips: true } },
       },
     });
     if (!contract) this.notFound(id);
     return contract;
+  }
+
+  async findTrips(companyId: string, id: string, cursor?: string, take?: string) {
+    const contract = await this.prisma.tripContract.findFirst({
+      where: { id, companyId },
+      select: { id: true },
+    });
+    if (!contract) this.notFound(id);
+
+    const pageSize = Math.min(Math.max(Number(take) || 20, 1), 100);
+    const trips = await this.prisma.trip.findMany({
+      where: { companyId, contractId: id },
+      orderBy: [{ scheduledStart: 'asc' }, { id: 'asc' }],
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      take: pageSize + 1,
+      select: {
+        id: true,
+        scheduledStart: true,
+        status: true,
+        tripType: true,
+        origin: true,
+        destination: true,
+      },
+    });
+
+    const hasMore = trips.length > pageSize;
+    const items = hasMore ? trips.slice(0, pageSize) : trips;
+
+    return {
+      items,
+      nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null,
+    };
   }
 
   async create(companyId: string, dto: CreateContractDto, user: AuthTokenPayload) {
