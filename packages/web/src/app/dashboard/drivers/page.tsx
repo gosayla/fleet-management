@@ -89,7 +89,7 @@ export default function DriversPage() {
                       {formatEnumLabel('driverStatus', d.status, locale)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{(d as any).assignedVehicle?.plateNumber ?? t.common.empty}</td>
+                  <td className="px-4 py-3 text-gray-500">{(d as any).vehicles?.[0]?.plateNumber ?? t.common.empty}</td>
                                   <td className="px-4 py-3">
                                     <div className="flex items-center gap-1">
                                       <Link href={`/dashboard/drivers/${d.id}`} className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title={tc.view}>
