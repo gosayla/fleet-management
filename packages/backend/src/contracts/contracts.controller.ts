@@ -34,10 +34,10 @@ export class ContractsController {
   findTrips(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,
-    @Query('cursor') cursor?: string,
+    @Query('skip') skip?: string,
     @Query('take') take?: string,
   ) {
-    return this.contractsService.findTrips(user.companyId, id, cursor, take);
+    return this.contractsService.findTrips(user.companyId, id, skip, take);
   }
 
   @Get(':id')

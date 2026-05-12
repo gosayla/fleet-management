@@ -15,7 +15,7 @@ import {
   Alert,
 } from 'react-native';
 import {api} from '../lib/api';
-import {Locale, t} from '../lib/i18n';
+import {Locale, t, isRTL} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {DateTimeWheelModal} from '../components/ui/DateTimeWheelModal';
@@ -82,6 +82,7 @@ interface Props {
 export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
   const i18n = t(locale);
   const isEdit = !!tripId;
+  const rtl = isRTL(locale);
 
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loadingTrip, setLoadingTrip] = useState(isEdit);
@@ -228,7 +229,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
       {/* Header */}
       <View style={styles.header}>
         <View style={{height: SB_H}} />
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
           <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.8}>
             <AppIcon name="close" size={21} color="#fff" />
           </TouchableOpacity>
@@ -295,7 +296,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
             </Field>
             <Divider />
             <Field label={i18n.tripTypeField}>
-              <View style={styles.pillsRow}>
+              <View style={[styles.pillsRow, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
                 {TRIP_TYPES.map(tt => (
                   <TouchableOpacity
                     key={tt}
@@ -316,7 +317,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
           <View style={styles.card}>
             <Field label={i18n.startDateTimeLabel} required>
               <TouchableOpacity
-                style={styles.dateBtn}
+                style={[styles.dateBtn, {flexDirection: rtl ? 'row' : 'row-reverse'}]}
                 onPress={() => setDtPicker('scheduledStart')}
                 activeOpacity={0.8}>
                 <AppIcon name="calendar-clock" size={18} color={Colors.primary} />
@@ -328,7 +329,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
             <Divider />
             <Field label={i18n.endDateTimeLabel} required>
               <TouchableOpacity
-                style={styles.dateBtn}
+                style={[styles.dateBtn, {flexDirection: rtl ? 'row' : 'row-reverse'}]}
                 onPress={() => setDtPicker('scheduledEnd')}
                 activeOpacity={0.8}>
                 <AppIcon name="calendar-clock" size={18} color={Colors.primary} />
@@ -342,57 +343,57 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
           {/* Driver picker */}
           <SectionLabel text={i18n.driverSection} required />
           <TouchableOpacity
-            style={styles.pickerBtn}
+            style={[styles.pickerBtn, {flexDirection: rtl ? 'row' : 'row-reverse'}]}
             onPress={() => setDriverModalOpen(true)}
             activeOpacity={0.8}>
             {selectedDriver ? (
-              <View style={styles.pickerSelected}>
+              <View style={[styles.pickerSelected, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
                 <View style={styles.pickerAvatar}>
-                  <Text style={styles.pickerAvatarText}>
+                  <Text style={[styles.pickerAvatarText, {textAlign: rtl ? 'right' : 'left'}]}>
                     {selectedDriver.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                   </Text>
                 </View>
                 <View style={{flex: 1}}>
-                  <Text style={styles.pickerName}>{selectedDriver.fullName}</Text>
-                  <Text style={styles.pickerSub}>{selectedDriver.phone}</Text>
+                  <Text style={[styles.pickerName, {textAlign: !rtl ? 'right' : 'left'}]}>{selectedDriver.fullName}</Text>
+                  <Text style={[styles.pickerSub, {textAlign: !rtl ? 'right' : 'left'}]}>{selectedDriver.phone}</Text>
                 </View>
               </View>
             ) : (
-              <View style={styles.pickerPlaceholder}>
+              <View style={[styles.pickerPlaceholder, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
                 <AppIcon name="account-outline" size={20} color={Colors.textMuted} />
                 <Text style={styles.pickerPlaceholderText}>
                   {i18n.selectDriverPicker}
                 </Text>
               </View>
             )}
-            <AppIcon name="chevron-right" size={20} color={Colors.textMuted} />
+            <AppIcon name={rtl ? "chevron-left" : "chevron-right"} size={20} color={Colors.textMuted} />
           </TouchableOpacity>
 
           {/* Vehicle picker */}
           <SectionLabel text={i18n.vehicleSection} required />
           <TouchableOpacity
-            style={styles.pickerBtn}
+            style={[styles.pickerBtn, {flexDirection: rtl ? 'row' : 'row-reverse'}]}
             onPress={() => setVehicleModalOpen(true)}
             activeOpacity={0.8}>
             {selectedVehicle ? (
-              <View style={styles.pickerSelected}>
+              <View style={[styles.pickerSelected, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
                 <View style={[styles.pickerAvatar, {backgroundColor: '#e8f5f4'}]}>
                   <AppIcon name="truck" size={18} color={Colors.primary} />
                 </View>
                 <View style={{flex: 1}}>
-                  <Text style={styles.pickerName}>{selectedVehicle.plateNumber}</Text>
-                  <Text style={styles.pickerSub}>{selectedVehicle.make} {selectedVehicle.model}</Text>
+                  <Text style={[styles.pickerName, {textAlign: !rtl ? 'right' : 'left'}]}>{selectedVehicle.plateNumber}</Text>
+                  <Text style={[styles.pickerSub, {textAlign: !rtl ? 'right' : 'left'}]}>{selectedVehicle.make} {selectedVehicle.model}</Text>
                 </View>
               </View>
             ) : (
-              <View style={styles.pickerPlaceholder}>
+              <View style={[styles.pickerPlaceholder, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
                 <AppIcon name="truck-outline" size={20} color={Colors.textMuted} />
                 <Text style={styles.pickerPlaceholderText}>
                   {i18n.selectVehiclePicker}
                 </Text>
               </View>
             )}
-            <AppIcon name="chevron-right" size={20} color={Colors.textMuted} />
+            <AppIcon name={rtl ? "chevron-left" : "chevron-right"} size={20} color={Colors.textMuted} />
           </TouchableOpacity>
 
           {/* Optional fields */}
@@ -474,6 +475,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
         }))}
         selectedId={form.driverId}
         onSelect={id => {set('driverId', id); setDriverModalOpen(false);}}
+        rtl={rtl}
       />
 
       {/* Vehicle picker modal */}
@@ -489,6 +491,7 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
         }))}
         selectedId={form.vehicleId}
         onSelect={id => {set('vehicleId', id); setVehicleModalOpen(false);}}
+        rtl={rtl}
       />
 
       {/* Date+Time wheel picker */}
@@ -554,8 +557,8 @@ function Divider() {
   return <View style={styles.divider} />;
 }
 
-interface PickerItem {id: string; primary: string; secondary: string; initials?: string}
-function PickerModal({visible, onClose, title, isAr, items, selectedId, onSelect}: {
+interface PickerItem {id: string; primary: string; secondary: string; initials?: string; rtl?: boolean}
+function PickerModal({visible, onClose, title, isAr, items, selectedId, onSelect, rtl}: {
   visible: boolean;
   onClose: () => void;
   title: string;
@@ -563,12 +566,13 @@ function PickerModal({visible, onClose, title, isAr, items, selectedId, onSelect
   items: PickerItem[];
   selectedId: string;
   onSelect: (id: string) => void;
+  rtl: boolean;
 }) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalSheet}>
-          <View style={styles.modalHeader}>
+          <View style={[styles.modalHeader, {flexDirection: !rtl ? 'row-reverse' : 'row'}]}>
             <Text style={styles.modalTitle}>{title}</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalClose}>
               <AppIcon name="close" size={20} color={Colors.textPrimary} />
@@ -581,7 +585,7 @@ function PickerModal({visible, onClose, title, isAr, items, selectedId, onSelect
               const isSelected = item.id === selectedId;
               return (
                 <TouchableOpacity
-                  style={[styles.modalItem, isSelected && styles.modalItemActive]}
+                  style={[styles.modalItem, {flexDirection: !rtl ? 'row-reverse' : 'row'}, isSelected && styles.modalItemActive]}
                   onPress={() => onSelect(item.id)}
                   activeOpacity={0.75}>
                   {item.initials ? (
@@ -594,10 +598,10 @@ function PickerModal({visible, onClose, title, isAr, items, selectedId, onSelect
                     </View>
                   )}
                   <View style={{flex: 1}}>
-                    <Text style={[styles.modalItemPrimary, isSelected && {color: Colors.primary}]}>
+                    <Text style={[styles.modalItemPrimary, {textAlign: !rtl ? 'right' : 'left'}, isSelected && {color: Colors.primary}]}>
                       {item.primary}
                     </Text>
-                    <Text style={styles.modalItemSecondary}>{item.secondary}</Text>
+                    <Text style={[styles.modalItemSecondary, {textAlign: !rtl ? 'right' : 'left'}]}>{item.secondary}</Text>
                   </View>
                   {isSelected && <AppIcon name="check-circle" size={20} color={Colors.primary} />}
                 </TouchableOpacity>

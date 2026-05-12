@@ -13,7 +13,7 @@ import {
 import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
-import {Locale, t, tripStatusLabel} from '../lib/i18n';
+import {Locale, t, tripStatusLabel, isRTL} from '../lib/i18n';
 import {ENABLE_MAPS} from '../lib/env';
 import {OsmMapView} from '../components/maps/OsmMapView';
 
@@ -85,6 +85,7 @@ interface Props {
 
 export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: Props) {
   const i18n = t(locale);
+  const rtl = isRTL(locale);
   const scrollY = useRef(new Animated.Value(0)).current;
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [locations, setLocations] = useState<TripLocationPoint[]>([]);
@@ -140,7 +141,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
   }
 
   const statusCfg = STATUS_CONFIG[trip.status] ?? STATUS_CONFIG.SCHEDULED;
-  const displayName = trip.name || `${trip.origin} → ${trip.destination}`;
+  const displayName = trip.name || `${rtl ? trip.destination : trip.origin} ${!rtl ? '→' : '←'} ${rtl ? trip.origin : trip.destination}`;
 
   const durationMs = trip.scheduledEnd && trip.scheduledStart
     ? new Date(trip.scheduledEnd).getTime() - new Date(trip.scheduledStart).getTime()
@@ -191,7 +192,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
         </View>
 
         {/* Top bar */}
-        <Animated.View style={[styles.topBar, {paddingTop: animatedTopPadding}]}> 
+        <Animated.View style={[styles.topBar, {paddingTop: animatedTopPadding, flexDirection: rtl ? 'row' : 'row-reverse'}]}> 
           <TouchableOpacity style={styles.circleBtn} onPress={onBack} activeOpacity={0.8}>
             <AppIcon name="close" size={20} color="#fff" />
           </TouchableOpacity>
@@ -217,7 +218,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
         >
           <Text style={styles.tripNameText} numberOfLines={2}>{displayName}</Text>
           {trip.name && (
-            <Text style={styles.routeSubText}>{trip.origin} → {trip.destination}</Text>
+            <Text style={styles.routeSubText}>{rtl ? trip.destination : trip.origin} {!rtl ? '←' : '→'} {rtl ? trip.origin : trip.destination}</Text>
           )}
           <View style={[styles.statusPill, {backgroundColor: statusCfg.bg}]}>
             <AppIcon name={statusCfg.icon} size={13} color={statusCfg.color} />
@@ -241,7 +242,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
       >
 
         {/* 3-col info strip */}
-        <View style={styles.infoStrip}>
+        <View style={[styles.infoStrip, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
           <InfoCol label={i18n.typeLabel} value={TRIP_TYPE_LABELS[trip.tripType]?.[locale] ?? trip.tripType.replace(/_/g, ' ')} />
           <View style={styles.stripDiv} />
           <InfoCol label={i18n.duration} value={durationHrs !== '—' ? `${durationHrs}h` : '—'} highlight />
@@ -256,12 +257,14 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
             icon="clock-start"
             label={i18n.scheduledStart}
             value={fmtDateTime(trip.scheduledStart)}
+            rtl={rtl}
           />
           <InfoRow
             icon="clock-end"
             label={i18n.scheduledEnd}
             value={fmtDateTime(trip.scheduledEnd)}
             noBorder
+            rtl={rtl}
           />
         </View>
         {(trip.actualStart || trip.actualEnd) && (
@@ -273,6 +276,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
                 value={fmtDateTime(trip.actualStart)}
                 highlight
                 noBorder={!trip.actualEnd}
+                rtl={rtl}
               />
             )}
             {trip.actualEnd && (
@@ -282,6 +286,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
                 value={fmtDateTime(trip.actualEnd)}
                 highlight
                 noBorder
+                rtl={rtl}
               />
             )}
           </View>
@@ -298,6 +303,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
                 value={`${latestLocation.lat.toFixed(5)}, ${latestLocation.lng.toFixed(5)}`}
                 highlight={trip.status === 'IN_PROGRESS'}
                 noBorder={false}
+                rtl={rtl}
               />
               <InfoRow
                 icon="clock-outline"
@@ -305,6 +311,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
                 value={fmtDateTime(latestLocation.recordedAt)}
                 highlight={trip.status === 'IN_PROGRESS'}
                 noBorder
+                rtl={rtl}
               />
             </View>
             {ENABLE_MAPS ? (
@@ -320,6 +327,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
               <EmptyCard
                 icon="map-outline"
                 text={i18n.mapDisabled}
+                rtl={rtl}
               />
             )}
           </>
@@ -327,13 +335,14 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
           <EmptyCard
             icon="map-marker-off-outline"
             text={i18n.noLocationData}
+            rtl={rtl}
           />
         )}
 
         {/* Driver */}
         <Text style={[styles.sectionTitle, {marginTop: 20}]}>{i18n.driverSection}</Text>
         {trip.driver ? (
-          <View style={styles.personCard}>
+          <View style={[styles.personCard, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
             <View style={styles.personAvatar}>
               <Text style={styles.personInitials}>
                 {String(trip.driver.fullName ?? '')
@@ -347,34 +356,34 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
               </Text>
             </View>
             <View style={{flex: 1}}>
-              <Text style={styles.personName}>{trip.driver.fullName || i18n.driverSection}</Text>
-              <Text style={styles.personSub}>{trip.driver.phone}</Text>
+              <Text style={[styles.personName, {textAlign: !rtl ? 'right' : 'left'}]}>{trip.driver.fullName || i18n.driverSection}</Text>
+              <Text style={[styles.personSub, {textAlign: !rtl ? 'right' : 'left'}]}>{trip.driver.phone}</Text>
             </View>
             <View style={styles.licenseChip}>
               <Text style={styles.licenseText}>{trip.driver.licenseNumber}</Text>
             </View>
           </View>
         ) : (
-          <EmptyCard icon="account-outline" text={i18n.noDriver} />
+          <EmptyCard icon="account-outline" text={i18n.noDriver} rtl={rtl} />
         )}
 
         {/* Vehicle */}
         <Text style={[styles.sectionTitle, {marginTop: 20}]}>{i18n.vehicle}</Text>
         {trip.vehicle ? (
-          <View style={styles.personCard}>
+          <View style={[styles.personCard, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
             <View style={[styles.personAvatar, {backgroundColor: '#e8f5f4'}]}>
               <AppIcon name="truck" size={22} color={Colors.primary} />
             </View>
             <View style={{flex: 1}}>
-              <Text style={styles.personName}>{trip.vehicle.plateNumber}</Text>
-              <Text style={styles.personSub}>{trip.vehicle.make} {trip.vehicle.model}</Text>
+              <Text style={[styles.personName, {textAlign: !rtl ? 'right' : 'left'}]}>{trip.vehicle.plateNumber}</Text>
+              <Text style={[styles.personSub, {textAlign: !rtl ? 'right' : 'left'}]}>{trip.vehicle.make} {trip.vehicle.model}</Text>
             </View>
             <View style={styles.licenseChip}>
               <Text style={styles.licenseText}>{trip.vehicle.type?.replace(/_/g, ' ')}</Text>
             </View>
           </View>
         ) : (
-          <EmptyCard icon="truck-outline" text={i18n.noVehicle} />
+          <EmptyCard icon="truck-outline" text={i18n.noVehicle} rtl={rtl} />
         )}
 
         {/* Extra info */}
@@ -388,14 +397,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
                   label={i18n.clientName}
                   value={trip.clientName}
                   noBorder={!trip.contractNumber && !trip.notes}
-                />
-              )}
-              {trip.contractNumber && (
-                <InfoRow
-                  icon="file-document-outline"
-                  label={i18n.contractNo}
-                  value={trip.contractNumber}
-                  noBorder={!trip.notes}
+                  rtl={rtl}
                 />
               )}
               {trip.notes && (
@@ -404,6 +406,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
                   label={i18n.notes}
                   value={trip.notes}
                   noBorder
+                  rtl={rtl}
                 />
               )}
             </View>
@@ -413,7 +416,7 @@ export function TripDetailScreen({tripId, locale, onBack, onEdit, onStartTrip}: 
         {/* Start Trip button — only for SCHEDULED trips when driver can act */}
         {trip.status === 'SCHEDULED' && onStartTrip && (
           <TouchableOpacity
-            style={styles.startTripBtn}
+            style={[styles.startTripBtn, {flexDirection: rtl ? 'row' : 'row-reverse'}]}
             onPress={() => onStartTrip(trip)}
             activeOpacity={0.85}>
             <AppIcon name="play-circle-outline" size={20} color="#fff" />
@@ -440,27 +443,27 @@ function InfoCol({label, value, highlight}: {label: string; value: string; highl
   );
 }
 
-function InfoRow({icon, label, value, highlight, noBorder}: {
-  icon: string; label: string; value: string; highlight?: boolean; noBorder?: boolean;
+function InfoRow({icon, label, value, highlight, noBorder, rtl}: {
+  icon: string; label: string; value: string; highlight?: boolean; noBorder?: boolean; rtl: boolean;
 }) {
   return (
-    <View style={[styles.infoRow, !noBorder && styles.infoRowBorder]}>
+    <View style={[styles.infoRow, {flexDirection: rtl ? 'row' : 'row-reverse'}, !noBorder && styles.infoRowBorder]}>
       <View style={styles.infoRowIcon}>
         <AppIcon name={icon} size={17} color={highlight ? Colors.primary : Colors.textMuted} />
       </View>
       <View style={{flex: 1}}>
-        <Text style={styles.infoRowLabel}>{label}</Text>
-        <Text style={[styles.infoRowValue, highlight && {color: Colors.primary}]}>{value}</Text>
+        <Text style={[styles.infoRowLabel, {textAlign: !rtl ? 'right' : 'left'}]}>{label}</Text>
+        <Text style={[styles.infoRowValue, highlight && {color: Colors.primary}, {textAlign: !rtl ? 'right' : 'left'}]}>{value}</Text>
       </View>
     </View>
   );
 }
 
-function EmptyCard({icon, text}: {icon: string; text: string}) {
+function EmptyCard({icon, text, rtl}: {icon: string; text: string; rtl: boolean}) {
   return (
-    <View style={styles.emptyCard}>
+    <View style={[styles.emptyCard, !rtl && {flexDirection: 'row-reverse'}]}>
       <AppIcon name={icon} size={18} color={Colors.textMuted} />
-      <Text style={styles.emptyCardText}>{text}</Text>
+      <Text style={[styles.emptyCardText]}>{text}</Text>
     </View>
   );
 }

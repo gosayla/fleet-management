@@ -43,8 +43,7 @@ export function ActiveTripScreen({trip, onComplete, onBack, locale}: Props) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationBuffer = useRef<{lat: number; lng: number; speed?: number; heading?: number; recordedAt: string}[]>([]);
   const batchTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const tripVehicle = (trip as Trip & {vehicle?: {plateNumber?: string}}).vehicle;
-  const vehicleLabel = tripVehicle?.plateNumber || trip.vehicleId;
+  const vehicleLabel = trip.vehicle?.plateNumber || trip.vehicleId;
 
   useEffect(() => {
     return () => {

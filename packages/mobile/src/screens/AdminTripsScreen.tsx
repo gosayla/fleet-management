@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import {api} from '../lib/api';
 import {Locale, t, isRTL} from '../lib/i18n';
+import {formatDateSmart} from '../lib/dates';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {TripCard} from '../components/ui/cards/TripCard';
@@ -224,8 +225,7 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
   }
 
   function fmtDate(iso?: string) {
-    if (!iso) return '—';
-    return new Date(iso).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: '2-digit'});
+    return formatDateSmart(iso, locale);
   }
 
   return (
@@ -235,9 +235,9 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
       {/* Teal header */}
       <View style={styles.header}>
         <View style={{height: SB_HEIGHT}} />
-        <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>{headerTitle}</Text>
-          <View style={styles.headerActions}>
+        <View style={[styles.headerRow, {flexDirection: !rtl ? 'row-reverse' : 'row'}]}>
+          <Text style={[styles.headerTitle, {textAlign: !rtl ? 'right' : 'left'}]}>{headerTitle}</Text>
+          <View style={[styles.headerActions, {flexDirection: !rtl ? 'row-reverse' : 'row'}]}>
             {segment === 'trips' && (
               <TouchableOpacity
                 style={styles.iconBtn}
@@ -276,7 +276,7 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
         <Text style={styles.headerSub}>{headerCount}</Text>
 
         {/* Segment control */}
-        <View style={styles.segmentRow}>
+        <View style={[styles.segmentRow, {flexDirection: !rtl ? 'row-reverse' : 'row'}]}>
           {SEGMENTS.map(seg => (
             <TouchableOpacity
               key={seg.key}
@@ -353,7 +353,7 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
         {/* ── TRIPS ── */}
         {segment === 'trips' && (
           <>
-            <View style={styles.filterRow}>
+            <View style={[styles.filterRow, {flexDirection: !rtl ? 'row-reverse' : 'row'}]}>
               {FILTERS.map(f => (
                 <TouchableOpacity
                   key={f.key}
@@ -395,11 +395,11 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
             refreshControl={<RefreshControl refreshing={contractsRefreshing} onRefresh={refreshContracts} tintColor={Colors.primary} />}
             renderItem={({item}) => (
               <TouchableOpacity style={styles.card} onPress={() => onSelectContract?.(item.id)} activeOpacity={0.8}>
-                <View style={styles.cardHeader}>
+                <View style={[styles.cardHeader, {flexDirection: !rtl ? 'row-reverse' : 'row'}]}>
                   <View style={{flex: 1}}>
-                    <Text style={styles.cardTitle}>{item.clientName}</Text>
+                    <Text style={[styles.cardTitle, {textAlign: !rtl ? 'right' : 'left'}]}>{item.clientName}</Text>
                     {item.contractNumber ? (
-                      <Text style={styles.cardSub}>#{item.contractNumber}</Text>
+                      <Text style={[styles.cardSub, {textAlign: !rtl ? 'right' : 'left'}]}>#{item.contractNumber}</Text>
                     ) : null}
                   </View>
                   <View style={styles.tripsCount}>
@@ -407,14 +407,14 @@ export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContr
                     <Text style={styles.tripsCountLabel}>{i18n.tripsUnit}</Text>
                   </View>
                 </View>
-                <View style={styles.routeRow}>
+                <View style={[styles.routeRow, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
                   <AppIcon name="map-marker-outline" size={14} color={Colors.primary} />
-                  <Text style={styles.routeText} numberOfLines={1}>
-                    {item.origin} → {item.destination}
+                  <Text style={[styles.routeText, {textAlign: !rtl ? 'right' : 'left'}]} numberOfLines={1}>
+                    {rtl ? item.origin : item.destination} {!rtl ? '→' : '←'} {rtl ? item.destination : item.origin}
                   </Text>
                 </View>
-                <View style={styles.cardFooter}>
-                  <Text style={styles.cardMeta}>{fmtDate(item.contractStart)} – {fmtDate(item.contractEnd)}</Text>
+                <View style={[styles.cardFooter, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
+                  <Text style={[styles.cardMeta, {textAlign: !rtl ? 'right' : 'left'}]}>{!rtl ? fmtDate(item.contractStart) : fmtDate(item.contractEnd)} – {!rtl ? fmtDate(item.contractEnd) : fmtDate(item.contractStart)}</Text>
                   {item.vehicle && (
                     <View style={styles.plateBadge}>
                       <Text style={styles.plateBadgeText}>{item.vehicle.plateNumber}</Text>

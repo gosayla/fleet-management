@@ -83,7 +83,7 @@ export class ContractsService {
     return contract;
   }
 
-  async findTrips(companyId: string, id: string, cursor?: string, take?: string) {
+  async findTrips(companyId: string, id: string, skip?: string, take?: string) {
     const contract = await this.prisma.tripContract.findFirst({
       where: { id, companyId },
       select: { id: true },
@@ -91,13 +91,16 @@ export class ContractsService {
     if (!contract) this.notFound(id);
 
     const pageSize = Math.min(Math.max(Number(take) || 20, 1), 100);
+    const offset = Math.max(Number(skip) || 0, 0);
     const trips = await this.prisma.trip.findMany({
       where: { companyId, contractId: id },
       orderBy: [{ scheduledStart: 'asc' }, { id: 'asc' }],
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      skip: offset,
       take: pageSize + 1,
       select: {
         id: true,
+        tripDate: true,
+        leg: true,
         scheduledStart: true,
         status: true,
         tripType: true,
@@ -111,7 +114,7 @@ export class ContractsService {
 
     return {
       items,
-      nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null,
+      nextOffset: hasMore ? offset + items.length : null,
     };
   }
 

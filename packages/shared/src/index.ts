@@ -260,11 +260,34 @@ export interface UpdateDriverDto extends Partial<CreateDriverDto> {
 
 // ─── Trip ─────────────────────────────────────────────────────────────────────
 
+export interface TripDriverRelation {
+  id: string;
+  fullName?: string;
+  phone?: string;
+  licenseNumber?: string;
+  user?: {
+    fullName?: string;
+  };
+}
+
+export interface TripVehicleRelation {
+  id: string;
+  plateNumber?: string;
+  make?: string;
+  model?: string;
+  type?: VehicleType;
+  lastLocation?: GeoPoint;
+  lastLocationLat?: number;
+  lastLocationLng?: number;
+  lastLocationAt?: Date;
+}
+
 export interface Trip {
   id: string;
   companyId: string;
   vehicleId: string;
   driverId: string;
+  name?: string;
   status: TripStatus;
   tripType: TripType;
   origin: string;
@@ -282,6 +305,8 @@ export interface Trip {
   contractNumber?: string;
   contractStart?: Date;
   contractEnd?: Date;
+  driver?: TripDriverRelation;
+  vehicle?: TripVehicleRelation;
   createdAt: Date;
   updatedAt: Date;
 }

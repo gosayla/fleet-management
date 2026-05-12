@@ -1,7 +1,7 @@
 /**
  * ContractDetailScreen — View contract details, manage vacations, view trips, regenerate trips
  */
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -14,13 +14,15 @@ import {
   Alert,
   Modal,
   TextInput,
-  FlatList,
   RefreshControl,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
 import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {Locale, t, isRTL as isRTLFn} from '../lib/i18n';
+import {formatDateSmart} from '../lib/dates';
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
@@ -57,7 +59,12 @@ interface ContractDetail {
   vehicle?: {id: string; plateNumber: string; make: string; model: string};
   driver?: {id: string; fullName: string; phone: string};
   vacations: ContractVacation[];
-  trips: ContractTrip[];
+  _count?: {trips: number};
+}
+
+interface ContractTripsPage {
+  items: ContractTrip[];
+  nextOffset: number | null;
 }
 
 interface Props {
@@ -75,16 +82,22 @@ const TRIP_STATUS_COLORS: Record<string, {color: string; bg: string}> = {
   CANCELLED:   {color: Colors.danger,    bg: Colors.dangerLight},
 };
 
-function fmtDate(iso?: string) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'});
+function fmtDate(iso: string | undefined, locale: Locale) {
+  return formatDateSmart(iso, locale);
 }
 
-function fmtDateTime(iso?: string) {
+function fmtDateTime(iso: string | undefined, locale: Locale) {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleDateString('en-GB', {day: '2-digit', month: 'short'}) + ' ' +
-    d.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+  const localeCode: Record<Locale, string> = {
+    ar: 'ar-SA',
+    en: 'en-GB',
+    hi: 'hi-IN',
+    bn: 'bn-BD',
+    ur: 'ur-PK',
+  };
+  return d.toLocaleDateString(localeCode[locale], {day: '2-digit', month: 'short'}) + ' ' +
+    d.toLocaleTimeString(localeCode[locale], {hour: '2-digit', minute: '2-digit'});
 }
 
 export function ContractDetailScreen({contractId, locale, onBack, onEdit, onSelectTrip}: Props) {
@@ -96,6 +109,16 @@ export function ContractDetailScreen({contractId, locale, onBack, onEdit, onSele
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [trips, setTrips] = useState<ContractTrip[]>([]);
+  const [tripsLoading, setTripsLoading] = useState(true);
+  const [loadingMoreTrips, setLoadingMoreTrips] = useState(false);
+  const [nextTripsOffset, setNextTripsOffset] = useState<number | null>(0);
+  const [hasMoreTrips, setHasMoreTrips] = useState(false);
+  const tripsLoadingRef = useRef(true);
+  const loadingMoreTripsRef = useRef(false);
+  const nextTripsOffsetRef = useRef<number | null>(0);
+  const hasMoreTripsRef = useRef(false);
+  const scrollMetricsRef = useRef({layoutHeight: 0, offsetY: 0, contentHeight: 0});
 
   // Vacation modal state
   const [vacModalOpen, setVacModalOpen] = useState(false);
@@ -103,8 +126,44 @@ export function ContractDetailScreen({contractId, locale, onBack, onEdit, onSele
   const [vacReason, setVacReason] = useState('');
   const [vacSaving, setVacSaving] = useState(false);
 
+  async function loadTrips(reset = false) {
+    if (reset) {
+      tripsLoadingRef.current = true;
+      setTripsLoading(true);
+      loadingMoreTripsRef.current = false;
+      setLoadingMoreTrips(false);
+    } else {
+      if (loadingMoreTripsRef.current || !hasMoreTripsRef.current) return;
+      loadingMoreTripsRef.current = true;
+      setLoadingMoreTrips(true);
+    }
+
+    try {
+      const qs = new URLSearchParams({take: '20'});
+      if (!reset && nextTripsOffsetRef.current !== null) qs.set('skip', String(nextTripsOffsetRef.current));
+
+      const data = await api.get<ContractTripsPage>(`/contracts/${contractId}/trips?${qs.toString()}`);
+      const nextItems = Array.isArray(data.items) ? data.items : [];
+      const nextOffset = typeof data.nextOffset === 'number' ? data.nextOffset : null;
+
+      setTrips(prev => (reset ? nextItems : [...prev, ...nextItems]));
+      nextTripsOffsetRef.current = nextOffset;
+      hasMoreTripsRef.current = nextOffset !== null;
+      setNextTripsOffset(nextOffset);
+      setHasMoreTrips(nextOffset !== null);
+    } catch {
+      if (reset) setTrips([]);
+    } finally {
+      tripsLoadingRef.current = false;
+      loadingMoreTripsRef.current = false;
+      setTripsLoading(false);
+      setLoadingMoreTrips(false);
+    }
+  }
+
   async function load() {
     try {
+      setError('');
       const data = await api.get<ContractDetail>(`/contracts/${contractId}`);
       setContract(data);
     } catch {
@@ -115,11 +174,21 @@ export function ContractDetailScreen({contractId, locale, onBack, onEdit, onSele
     }
   }
 
-  useEffect(() => { load(); }, [contractId]);
+  useEffect(() => {
+    setTrips([]);
+    nextTripsOffsetRef.current = 0;
+    hasMoreTripsRef.current = false;
+    tripsLoadingRef.current = true;
+    loadingMoreTripsRef.current = false;
+    setNextTripsOffset(0);
+    setHasMoreTrips(false);
+    load();
+    loadTrips(true);
+  }, [contractId]);
 
   async function handleRefresh() {
     setRefreshing(true);
-    await load();
+    await Promise.all([load(), loadTrips(true)]);
   }
 
   async function handleGenerateTrips() {
@@ -134,7 +203,7 @@ export function ContractDetailScreen({contractId, locale, onBack, onEdit, onSele
             setGenerating(true);
             try {
               await api.post(`/contracts/${contractId}/generate-trips`, {});
-              await load();
+              await Promise.all([load(), loadTrips(true)]);
               Alert.alert('', i18n.generatedSuccess);
             } catch (e: any) {
               const msg = e?.response?.data?.message ?? e?.message ?? 'Error';
@@ -159,7 +228,7 @@ export function ContractDetailScreen({contractId, locale, onBack, onEdit, onSele
       setVacDate('');
       setVacReason('');
       setVacModalOpen(false);
-      await load();
+      await Promise.all([load(), loadTrips(true)]);
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? e?.message ?? 'Error';
       Alert.alert(i18n.error, Array.isArray(msg) ? msg.join(', ') : String(msg));
@@ -171,8 +240,30 @@ export function ContractDetailScreen({contractId, locale, onBack, onEdit, onSele
   async function handleRemoveVacation(vacId: string) {
     try {
       await api.delete(`/contracts/${contractId}/vacations/${vacId}`);
-      await load();
+      await Promise.all([load(), loadTrips(true)]);
     } catch {}
+  }
+
+  function maybeLoadMoreTrips() {
+    if (!hasMoreTripsRef.current || loadingMoreTripsRef.current || tripsLoadingRef.current) return;
+
+    const {layoutHeight, offsetY, contentHeight} = scrollMetricsRef.current;
+    if (!layoutHeight || !contentHeight) return;
+
+    const distanceFromBottom = contentHeight - (layoutHeight + offsetY);
+    if (distanceFromBottom < 240) {
+      loadTrips(false);
+    }
+  }
+
+  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    const {layoutMeasurement, contentOffset, contentSize} = event.nativeEvent;
+    scrollMetricsRef.current = {
+      layoutHeight: layoutMeasurement.height,
+      offsetY: contentOffset.y,
+      contentHeight: contentSize.height,
+    };
+    maybeLoadMoreTrips();
   }
 
   async function handleDelete() {
@@ -249,14 +340,24 @@ export function ContractDetailScreen({contractId, locale, onBack, onEdit, onSele
       <ScrollView
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />}>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />}
+        onLayout={event => {
+          scrollMetricsRef.current.layoutHeight = event.nativeEvent.layout.height;
+          maybeLoadMoreTrips();
+        }}
+        onContentSizeChange={(_, height) => {
+          scrollMetricsRef.current.contentHeight = height;
+          maybeLoadMoreTrips();
+        }}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}>
 
         {/* Client info card */}
         <View style={styles.card}>
           <InfoRow icon="account-outline" label={i18n.contractClientName} value={contract.clientName} />
           {contract.clientPhone && <InfoRow icon="phone-outline" label={i18n.contractClientPhone} value={contract.clientPhone} />}
           <InfoRow icon="map-marker-outline" label={`${contract.origin} → ${contract.destination}`} value="" isRoute />
-          <InfoRow icon="calendar-outline" label={i18n.contractStart} value={`${fmtDate(contract.contractStart)} – ${fmtDate(contract.contractEnd)}`} />
+          <InfoRow icon="calendar-outline" label={i18n.contractStart} value={`${fmtDate(contract.contractStart, locale)} – ${fmtDate(contract.contractEnd, locale)}`} />
           <InfoRow icon="clock-outline" label={i18n.departureTime} value={contract.departureTime + (contract.isTwoWay && contract.returnTime ? ` / ${contract.returnTime}` : '')} />
           <View style={styles.badgeRow}>
             {contract.isTwoWay && <Badge label={i18n.isTwoWay} color={Colors.primary} />}
@@ -302,7 +403,7 @@ export function ContractDetailScreen({contractId, locale, onBack, onEdit, onSele
                 {idx > 0 && <View style={styles.divider} />}
                 <View style={[styles.vacRow, isRTL && styles.rowReverse]}>
                   <View style={{flex: 1}}>
-                    <Text style={styles.vacDate}>{fmtDate(vac.date)}</Text>
+                    <Text style={styles.vacDate}>{fmtDate(vac.date, locale)}</Text>
                     {vac.reason && <Text style={styles.vacReason}>{vac.reason}</Text>}
                   </View>
                   <TouchableOpacity onPress={() => handleRemoveVacation(vac.id)} style={styles.removeBtn}>
@@ -329,11 +430,15 @@ export function ContractDetailScreen({contractId, locale, onBack, onEdit, onSele
           </TouchableOpacity>
         </View>
 
-        {contract.trips.length === 0 ? (
+        {tripsLoading ? (
+          <View style={styles.tripsLoadingWrap}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+          </View>
+        ) : trips.length === 0 ? (
           <Text style={styles.emptyMini}>{locale === 'ar' ? 'لا توجد رحلات بعد' : 'No trips yet — tap Generate to create them'}</Text>
         ) : (
           <View style={styles.card}>
-            {contract.trips.map((trip, idx) => {
+            {trips.map((trip, idx) => {
               const sc = TRIP_STATUS_COLORS[trip.status] ?? {color: Colors.textMuted, bg: Colors.borderLight};
               return (
                 <React.Fragment key={trip.id}>
@@ -343,7 +448,7 @@ export function ContractDetailScreen({contractId, locale, onBack, onEdit, onSele
                     onPress={() => onSelectTrip?.(trip.id)}
                     activeOpacity={0.7}>
                     <View style={{flex: 1}}>
-                      <Text style={styles.tripDate}>{fmtDateTime(trip.scheduledStart)}</Text>
+                      <Text style={styles.tripDate}>{fmtDateTime(trip.scheduledStart, locale)}</Text>
                     </View>
                     <View style={[styles.statusBadge, {backgroundColor: sc.bg}]}>
                       <Text style={[styles.statusBadgeText, {color: sc.color}]}>{tripStatusLabel(trip.status)}</Text>
@@ -353,6 +458,12 @@ export function ContractDetailScreen({contractId, locale, onBack, onEdit, onSele
                 </React.Fragment>
               );
             })}
+          </View>
+        )}
+
+        {loadingMoreTrips && (
+          <View style={styles.tripsFooterLoading}>
+            <ActivityIndicator size="small" color={Colors.primary} />
           </View>
         )}
 
@@ -466,6 +577,8 @@ const styles = StyleSheet.create({
   tripDate: {fontSize: 14, color: Colors.textPrimary},
   statusBadge: {paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8},
   statusBadgeText: {fontSize: 11, fontWeight: '700' as const},
+  tripsLoadingWrap: {alignItems: 'center', paddingVertical: 20},
+  tripsFooterLoading: {alignItems: 'center', paddingVertical: 14},
   errorText: {color: Colors.danger, fontSize: 14, textAlign: 'center'},
   retryBtn: {backgroundColor: Colors.primary, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10},
   retryText: {color: '#fff', fontWeight: '600' as const},

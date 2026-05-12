@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
@@ -16,6 +16,10 @@ interface Trip {
   leg: 'OUTBOUND' | 'RETURN';
   status: string;
   scheduledStart: string;
+}
+interface ContractTripsPage {
+  items: Trip[];
+  nextOffset: number | null;
 }
 interface ContractDetail {
   id: string;
@@ -34,7 +38,6 @@ interface ContractDetail {
   notes?: string;
   vehicle: { id: string; plateNumber: string; make: string; model: string };
   driver: { id: string; fullName: string };
-  trips: Trip[];
   vacations: Vacation[];
 }
 
@@ -53,6 +56,22 @@ function fmt(dateStr: string) {
 function fmtTime(dateStr: string) {
   if (!dateStr) return '';
   return new Date(dateStr).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function fetchAllContractTrips(id: string): Promise<Trip[]> {
+  const allTrips: Trip[] = [];
+  let nextOffset: number | null = 0;
+
+  while (nextOffset !== null) {
+    const response = await api.get<ContractTripsPage>(`/contracts/${id}/trips`, {
+      params: { skip: nextOffset, take: 100 },
+    });
+    const page = response.data;
+    allTrips.push(...(Array.isArray(page.items) ? page.items : []));
+    nextOffset = typeof page.nextOffset === 'number' ? page.nextOffset : null;
+  }
+
+  return allTrips;
 }
 
 export default function ContractDetailPage() {
@@ -75,10 +94,22 @@ export default function ContractDetailPage() {
     queryFn: () => api.get(`/contracts/${id}`).then(r => r.data),
     enabled: !!id,
   });
+  const { data: trips = [], isLoading: tripsLoading } = useQuery<Trip[]>({
+    queryKey: ['contracts', id, 'trips'],
+    queryFn: () => fetchAllContractTrips(id),
+    enabled: !!id,
+  });
+
+  useEffect(() => {
+    setTripPage(1);
+  }, [id]);
 
   const generateMutation = useMutation({
     mutationFn: () => api.post(`/contracts/${id}/generate-trips`).then(r => r.data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contracts', id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts', id] });
+      queryClient.invalidateQueries({ queryKey: ['contracts', id, 'trips'] });
+    },
   });
 
   const addVacationMutation = useMutation({
@@ -106,7 +137,7 @@ export default function ContractDetailPage() {
   if (isLoading) return <div className="p-8 text-center text-gray-400">{t.common.loading}</div>;
   if (isError || !contract) return <div className="p-8 text-center text-red-500">{locale === 'ar' ? 'حدث خطأ' : 'An error occurred'}</div>;
 
-  const sortedTrips = [...(contract.trips ?? [])].sort((a, b) => new Date(a.tripDate).getTime() - new Date(b.tripDate).getTime() || (a.leg === 'OUTBOUND' ? -1 : 1));
+  const sortedTrips = [...trips].sort((a, b) => new Date(a.tripDate).getTime() - new Date(b.tripDate).getTime() || (a.leg === 'OUTBOUND' ? -1 : 1));
   const paginatedTrips = sortedTrips.slice((tripPage - 1) * tripsPerPage, tripPage * tripsPerPage);
 
   function Detail({ label, value }: { label: string; value?: string | null }) {
@@ -245,7 +276,9 @@ export default function ContractDetailPage() {
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700">{tc.trips} ({sortedTrips.length})</h2>
         </div>
-        {sortedTrips.length === 0 ? (
+        {tripsLoading ? (
+          <div className="p-8 text-center text-gray-400">{t.common.loading}</div>
+        ) : sortedTrips.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
             {tc.empty}
             <button onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending} className="block mx-auto mt-2 text-sm text-blue-600 hover:underline">

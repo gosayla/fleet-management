@@ -1,12 +1,12 @@
 ﻿import React from 'react';
 import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {Trip} from '@fleet/shared';
-import {formatDateTime, Locale, tripStatusLabel} from '../../../lib/i18n';
+import {formatDateTime, Locale, tripStatusLabel, isRTL} from '../../../lib/i18n';
 import {Colors, Spacing, Typography} from '../../../lib/theme';
 import {AppIcon} from '../AppIcon';
 
 interface Props {
-  trip: Trip & {name?: string};
+  trip: Trip;
   locale: Locale;
   onPress?: () => void;
 }
@@ -20,14 +20,16 @@ const STATUS_META: Record<string, {color: string; bg: string; icon: string}> = {
 
 export function TripCard({trip, locale, onPress}: Props) {
   const meta = STATUS_META[trip.status] ?? STATUS_META.SCHEDULED;
-  const displayName = trip.name || `${trip.origin} → ${trip.destination}`;
-
+  const rtl = isRTL(locale);
+  const displayName = trip.name || `${rtl ? trip.origin : trip.destination} ${!rtl ? '→' : '←'} ${rtl ? trip.destination : trip.origin}`;
+  const driverName = trip.driver?.fullName ?? trip.driver?.user?.fullName ?? '';
+  
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={onPress ? 0.75 : 1} onPress={onPress}>
+    <TouchableOpacity style={[styles.card, {flexDirection: rtl ? 'row' : 'row-reverse'}]} activeOpacity={onPress ? 0.75 : 1} onPress={onPress}>
       <View style={[styles.accentBar, {backgroundColor: meta.color}]} />
       <View style={styles.body}>
-        <View style={styles.top}>
-          <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
+        <View style={[styles.top, {flexDirection: !rtl ? 'row-reverse' : 'row'}]}>
+          <Text style={[styles.name, {textAlign: !rtl ? 'right' : 'left'}]} numberOfLines={1}>{displayName}</Text>
           <View style={[styles.badge, {backgroundColor: meta.bg}]}>
             <AppIcon name={meta.icon} size={11} color={meta.color} />
             <Text style={[styles.badgeText, {color: meta.color}]}>
@@ -36,28 +38,26 @@ export function TripCard({trip, locale, onPress}: Props) {
           </View>
         </View>
         {trip.name && (
-          <Text style={styles.route} numberOfLines={1}>
-            {trip.origin} → {trip.destination}
+          <Text style={[styles.route, {textAlign: rtl ? 'left' : 'right'}]} numberOfLines={1}>
+            {rtl ? trip.origin : trip.destination} {!rtl ? '→' : '←'} {rtl ? trip.destination : trip.origin}
           </Text>
         )}
-        <View style={styles.metaRow}>
+        <View style={[styles.metaRow, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
           <AppIcon name="clock-outline" size={13} color={Colors.textMuted} />
-          <Text style={styles.metaText}>{formatDateTime(trip.scheduledStart, locale)}</Text>
+          <Text style={[styles.metaText, {textAlign: rtl ? 'left' : 'right'}]}>{formatDateTime(trip.scheduledStart, locale)}</Text>
         </View>
         {(trip.driver || trip.vehicle) && (
-          <View style={styles.chips}>
-            {trip.driver && (
-              <View style={styles.chip}>
+          <View style={[styles.chips, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
+            {driverName && (
+              <View style={[styles.chip, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
                 <AppIcon name="account-outline" size={13} color={Colors.textMuted} />
-                <Text style={styles.metaText}>
-                  {(trip.driver as any).fullName ?? (trip.driver as any).user?.fullName ?? ''}
-                </Text>
+                <Text style={[styles.metaText, {textAlign: rtl ? 'left' : 'right'}]}>{driverName}</Text>
               </View>
             )}
             {trip.vehicle && (
-              <View style={styles.chip}>
+              <View style={[styles.chip, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
                 <AppIcon name="truck-outline" size={13} color={Colors.textMuted} />
-                <Text style={styles.metaText}>{trip.vehicle.plateNumber}</Text>
+                <Text style={[styles.metaText, {textAlign: rtl ? 'left' : 'right'}]}>{trip.vehicle.plateNumber ?? trip.vehicleId}</Text>
               </View>
             )}
           </View>
