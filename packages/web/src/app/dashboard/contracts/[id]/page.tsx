@@ -63,10 +63,9 @@ async function fetchAllContractTrips(id: string): Promise<Trip[]> {
   let nextOffset: number | null = 0;
 
   while (nextOffset !== null) {
-    const response = await api.get<ContractTripsPage>(`/contracts/${id}/trips`, {
+    const page: ContractTripsPage = (await api.get(`/contracts/${id}/trips`, {
       params: { skip: nextOffset, take: 100 },
-    });
-    const page = response.data;
+    })).data;
     allTrips.push(...(Array.isArray(page.items) ? page.items : []));
     nextOffset = typeof page.nextOffset === 'number' ? page.nextOffset : null;
   }
