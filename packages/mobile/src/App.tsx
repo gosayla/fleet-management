@@ -1,6 +1,8 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
+  ToastAndroid,
   View,
   Text,
   StyleSheet,
@@ -35,7 +37,7 @@ import {MaintenanceDetailScreen} from './screens/MaintenanceDetailScreen';
 import {DriverDocumentsScreen} from './screens/DriverDocumentsScreen';
 import {AuditLogScreen} from './screens/AuditLogScreen';
 import {Trip} from '@fleet/shared';
-import {Locale} from './lib/i18n';
+import {Locale, isRTL} from './lib/i18n';
 import {Colors} from './lib/theme';
 import {BottomTabBar, TabItem} from './components/ui/BottomTabBar';
 import {api} from './lib/api';
@@ -66,10 +68,19 @@ const ADMIN_TABS: TabItem[] = [
   {key: 'profile',   icon: 'account-outline',       labels: {ar: 'حسابي',    en: 'Profile', hi: 'प्रोफाइल',  bn: 'প্রোফাইল', ur: 'پروفائل'}},
 ];
 
+const EXIT_HINT: Record<Locale, string> = {
+  ar: 'اضغط رجوع مرة أخرى للخروج',
+  en: 'Press back again to exit',
+  hi: 'बाहर निकलने के लिए फिर से बैक दबाएं',
+  bn: 'অ্যাপ থেকে বের হতে আবার ব্যাক চাপুন',
+  ur: 'ایپ سے نکلنے کے لیے دوبارہ بیک دبائیں',
+};
+
 function Navigator() {
   const {user, isLoading} = useAuth();
   const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
   const [locale, setLocaleState] = useState<Locale>('ar');
+  const rtl = isRTL(locale);
 
   // Load persisted locale on startup
   useEffect(() => {
@@ -131,6 +142,7 @@ function Navigator() {
   const [driverDocFormOpen, setDriverDocFormOpen] = useState(false);
   const [driverDocFormId, setDriverDocFormId] = useState<string | null>(null);
   const [driverSelectedDocId, setDriverSelectedDocId] = useState<string | null>(null);
+  const lastBackPressAtRef = useRef(0);
 
   // Sync app locale from the user's saved language preference on every login/change
   useEffect(() => {
@@ -167,7 +179,7 @@ function Navigator() {
       return;
     }
     loadUnreadNotificationsCount();
-  }, [user?.id]);
+  }, [user?.role]);
 
   // Register FCM notification tap handler â€” navigates to documents screen
   useEffect(() => {
@@ -177,6 +189,186 @@ function Navigator() {
       }
     });
   }, []);
+
+  // Android hardware back: pop nested screen state before allowing app exit.
+  useEffect(() => {
+    const onHardwareBackPress = () => {
+      if (!user) return false;
+
+      if (activeTrip) {
+        setActiveTrip(null);
+        return true;
+      }
+
+      if (notificationsOpen) {
+        setNotificationsOpen(false);
+        return true;
+      }
+
+      if (auditLogOpen) {
+        setAuditLogOpen(false);
+        return true;
+      }
+
+      if (vehicleFormOpen) {
+        setVehicleFormOpen(false);
+        return true;
+      }
+
+      if (driverFormOpen) {
+        setDriverFormOpen(false);
+        return true;
+      }
+
+      if (tripFormOpen) {
+        setTripFormOpen(false);
+        return true;
+      }
+
+      if (selectedTripId) {
+        setSelectedTripId(null);
+        return true;
+      }
+
+      if (contractFormOpen) {
+        setContractFormOpen(false);
+        return true;
+      }
+
+      if (selectedContractId) {
+        setSelectedContractId(null);
+        return true;
+      }
+
+      if (rentalFormOpen) {
+        setRentalFormOpen(false);
+        return true;
+      }
+
+      if (selectedRentalId) {
+        setSelectedRentalId(null);
+        return true;
+      }
+
+      if (maintenanceFormOpen) {
+        setMaintenanceFormOpen(false);
+        return true;
+      }
+
+      if (selectedMaintenanceId) {
+        setSelectedMaintenanceId(null);
+        return true;
+      }
+
+      if (maintenanceOpen) {
+        setMaintenanceOpen(false);
+        return true;
+      }
+
+      // Driver nested flows
+      if (driverViewTripId) {
+        setDriverViewTripId(null);
+        return true;
+      }
+
+      if (driverDocFormOpen) {
+        setDriverDocFormOpen(false);
+        setDriverDocFormId(null);
+        return true;
+      }
+
+      if (driverSelectedDocId) {
+        setDriverSelectedDocId(null);
+        return true;
+      }
+
+      // Admin overlays (fleet/documents)
+      if (selectedVehicleId) {
+        setSelectedVehicleId(null);
+        return true;
+      }
+
+      if (selectedDriverId) {
+        setSelectedDriverId(null);
+        return true;
+      }
+
+      if (docFormOpen) {
+        setDocFormOpen(false);
+        return true;
+      }
+
+      if (selectedDocId) {
+        setSelectedDocId(null);
+        return true;
+      }
+
+      if (documentsOpen) {
+        setDocumentsOpen(false);
+        return true;
+      }
+
+      // Shell tab fallback
+      if (user.role === 'MAINTENANCE_TECH') {
+        if (techTab !== 'maintenance') {
+          setTechTab('maintenance');
+          return true;
+        }
+        return false;
+      }
+
+      if (user.role === 'DRIVER') {
+        if (driverTab !== 'dashboard') {
+          setDriverTab('dashboard');
+          return true;
+        }
+        return false;
+      }
+
+      if (adminTab !== 'dashboard') {
+        setAdminTab('dashboard');
+        return true;
+      }
+
+      const now = Date.now();
+      if (now - lastBackPressAtRef.current < 2000) {
+        return false;
+      }
+      lastBackPressAtRef.current = now;
+      ToastAndroid.show(EXIT_HINT[locale] ?? EXIT_HINT.en, ToastAndroid.SHORT);
+      return true;
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', onHardwareBackPress);
+    return () => sub.remove();
+  }, [
+    user,
+    activeTrip,
+    notificationsOpen,
+    auditLogOpen,
+    vehicleFormOpen,
+    driverFormOpen,
+    tripFormOpen,
+    selectedTripId,
+    contractFormOpen,
+    selectedContractId,
+    rentalFormOpen,
+    selectedRentalId,
+    maintenanceFormOpen,
+    selectedMaintenanceId,
+    maintenanceOpen,
+    driverViewTripId,
+    driverDocFormOpen,
+    driverSelectedDocId,
+    selectedVehicleId,
+    selectedDriverId,
+    docFormOpen,
+    selectedDocId,
+    documentsOpen,
+    techTab,
+    driverTab,
+    adminTab,
+  ]);
 
   if (isLoading) {
     return (
@@ -518,7 +710,7 @@ function Navigator() {
     );
   }
 
-  // â”€â”€ Admin shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Admin shell 
   const canSeeAuditLog = user?.role === 'FLEET_MANAGER' || user?.role === 'DISPATCHER' || user?.role === 'SUPER_ADMIN';
 
   // Full-screen audit log (opened from Profile screen)
@@ -542,7 +734,7 @@ function Navigator() {
         locale={locale}
         onPress={k => setAdminTab(k as AdminTab)}
       />
-      {/* Vehicle / driver detail overlays â€” rendered on top so fleet screen stays mounted */}
+      {/* Vehicle / driver detail overlays ─ rendered on top so fleet screen stays mounted */}
       {selectedVehicleId && (
         <View style={StyleSheet.absoluteFill}>
           <VehicleDetailScreen

@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Platform} from 'react-native';
-import {Locale} from '../../lib/i18n';
+import {Locale, isRTL} from '../../lib/i18n';
 import {Colors, Spacing} from '../../lib/theme';
 import {AppIcon} from './AppIcon';
 
@@ -19,8 +19,9 @@ interface Props {
 }
 
 export function BottomTabBar({tabs, activeKey, locale, onPress, badgeByKey}: Props) {
+  const isRTLLayout = isRTL(locale);
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, !isRTLLayout && {flexDirection: 'row-reverse'}]}>
       {tabs.map(tab => {
         const active = tab.key === activeKey;
         const label = tab.labels[locale];

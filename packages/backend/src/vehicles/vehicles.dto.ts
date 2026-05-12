@@ -57,6 +57,51 @@ export class CreateVehicleDto {
   @Min(1)
   fuelCapacity: number;
 
+  @ApiPropertyOptional({ example: 'Private Transport' })
+  @IsString()
+  @IsOptional()
+  plateType?: string;
+
+  @ApiPropertyOptional({ example: '12345678' })
+  @IsString()
+  @IsOptional()
+  sequenceNumber?: string;
+
+  @ApiPropertyOptional({ example: '4 Wheels' })
+  @IsString()
+  @IsOptional()
+  bodyType?: string;
+
+  @ApiPropertyOptional({ example: '1447-06-07' })
+  @IsString()
+  @IsOptional()
+  ownershipDate?: string;
+
+  @ApiPropertyOptional({ example: '1447-04-01' })
+  @IsString()
+  @IsOptional()
+  licenseIssuanceDate?: string;
+
+  @ApiPropertyOptional({ example: '2027-08-31' })
+  @IsString()
+  @IsOptional()
+  inspectionExpiryDate?: string;
+
+  @ApiPropertyOptional({ example: 'Unrestricted' })
+  @IsString()
+  @IsOptional()
+  restrictionStatus?: string;
+
+  @ApiPropertyOptional({ example: '2027-12-31' })
+  @IsString()
+  @IsOptional()
+  licenseExpiryDate?: string;
+
+  @ApiPropertyOptional({ example: '2027-11-30' })
+  @IsString()
+  @IsOptional()
+  insuranceExpiryDate?: string;
+
   @ApiPropertyOptional({ example: '35-00044426' })
   @IsString()
   @IsOptional()

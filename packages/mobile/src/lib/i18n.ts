@@ -11,6 +11,8 @@ const messages = {
     subtitle: 'إدارة الأسطول',
     email: 'البريد الإلكتروني',
     phone: 'رقم الجوال',
+    role: 'الدور',
+    company: 'الشركة',
     password: 'كلمة المرور',
     signIn: 'تسجيل الدخول',
     signingIn: 'جارِ تسجيل الدخول...',
@@ -114,6 +116,8 @@ const messages = {
     activeStat: 'جارية',
     hello: 'مرحباً',
     tapToOpen: 'اضغط لفتح الرحلة',
+    live: 'مباشر',
+    daysAbbr: 'يوم',
     // nav
     navHome: 'الرئيسية', navFleet: 'الأسطول', navTrips: 'الرحلات', navMyTrips: 'رحلاتي', navProfileTab: 'حسابي',
     // dashboard
@@ -133,7 +137,7 @@ const messages = {
     statusActive: 'نشط', statusOffDuty: 'خارج الخدمة', statusOnLeave: 'إجازة',
     statusSuspended: 'موقوف', statusTerminated: 'منتهي',
     // detail/form common
-    save: 'حفظ', error: 'خطأ', requiredField: 'الحقل مطلوب: ', warning: 'تنبيه',
+    save: 'حفظ', done: 'تم', error: 'خطأ', requiredField: 'الحقل مطلوب: ', warning: 'تنبيه',
     exitLabel: 'خروج', deleteLabel: 'حذف', deletePhotoTitle: 'حذف الصورة',
     deletePhotoConfirm: 'هل تريد حذف هذه الصورة؟', addPhoto: 'إضافة صورة',
     changePhoto: 'تغيير الصورة', camera: 'الكاميرا', gallery: 'المعرض',
@@ -281,6 +285,8 @@ const messages = {
     subtitle: 'Fleet Management',
     email: 'Email',
     phone: 'Phone Number',
+    role: 'Role',
+    company: 'Company',
     password: 'Password',
     signIn: 'Sign In',
     signingIn: 'Signing in...',
@@ -384,6 +390,8 @@ const messages = {
     activeStat: 'Active',
     hello: 'Hello',
     tapToOpen: 'Tap to open trip',
+    live: 'Live',
+    daysAbbr: 'd',
     // nav
     navHome: 'Home', navFleet: 'Fleet', navTrips: 'Trips', navMyTrips: 'Trips', navProfileTab: 'Profile',
     // dashboard
@@ -403,7 +411,7 @@ const messages = {
     statusActive: 'Active', statusOffDuty: 'Off Duty', statusOnLeave: 'On Leave',
     statusSuspended: 'Suspended', statusTerminated: 'Terminated',
     // detail/form common
-    save: 'Save', error: 'Error', requiredField: 'Required: ', warning: 'Warning',
+    save: 'Save', done: 'Done', error: 'Error', requiredField: 'Required: ', warning: 'Warning',
     exitLabel: 'Exit', deleteLabel: 'Delete', deletePhotoTitle: 'Delete Photo',
     deletePhotoConfirm: 'Delete this photo?', addPhoto: 'Add Photo',
     changePhoto: 'Change Photo', camera: 'Camera', gallery: 'Gallery',
@@ -551,6 +559,8 @@ const messages = {
     subtitle: 'बेड़ा प्रबंधन',
     email: 'ईमेल',
     phone: 'फ़ोन नंबर',
+    role: 'भूमिका',
+    company: 'कंपनी',
     password: 'पासवर्ड',
     signIn: 'साइन इन करें',
     signingIn: 'साइन इन हो रहा है...',
@@ -654,6 +664,8 @@ const messages = {
     activeStat: 'सक्रिय',
     hello: 'नमस्ते',
     tapToOpen: 'यात्रा खोलने के लिए टैप करें',
+    live: 'लाइव',
+    daysAbbr: 'दिन',
     // nav
     navHome: 'होम', navFleet: 'बेड़ा', navTrips: 'यात्राएं', navMyTrips: 'यात्राएं', navProfileTab: 'प्रोफाइल',
     // dashboard
@@ -673,7 +685,7 @@ const messages = {
     statusActive: 'सक्रिय', statusOffDuty: 'ड्यूटी से बाहर', statusOnLeave: 'छुट्टी पर',
     statusSuspended: 'निलंबित', statusTerminated: 'समाप्त',
     // detail/form common
-    save: 'सहेजें', error: 'त्रुटि', requiredField: 'आवश्यक: ', warning: 'चेतावनी',
+    save: 'सहेजें', done: 'पूर्ण', error: 'त्रुटि', requiredField: 'आवश्यक: ', warning: 'चेतावनी',
     exitLabel: 'बाहर', deleteLabel: 'हटाएं', deletePhotoTitle: 'फ़ोटो हटाएं',
     deletePhotoConfirm: 'इस फ़ोटो को हटाएं?', addPhoto: 'फ़ोटो जोड़ें',
     changePhoto: 'फ़ोटो बदलें', camera: 'कैमरा', gallery: 'गैलरी',
@@ -821,6 +833,8 @@ const messages = {
     subtitle: 'বহর ব্যবস্থাপনা',
     email: 'ইমেইল',
     phone: 'ফোন নম্বর',
+    role: 'ভূমিকা',
+    company: 'কোম্পানি',
     password: 'পাসওয়ার্ড',
     signIn: 'সাইন ইন',
     signingIn: 'সাইন ইন হচ্ছে...',
@@ -924,6 +938,8 @@ const messages = {
     activeStat: 'সক্রিয়',
     hello: 'হ্যালো',
     tapToOpen: 'ট্রিপ খুলতে ট্যাপ করুন',
+    live: 'লাইভ',
+    daysAbbr: 'দিন',
     // nav
     navHome: 'হোম', navFleet: 'ফ্লিট', navTrips: 'ট্রিপ', navMyTrips: 'ট্রিপ', navProfileTab: 'প্রোফাইল',
     // dashboard
@@ -943,7 +959,7 @@ const messages = {
     statusActive: 'সক্রিয়', statusOffDuty: 'ড্যুটি থেকে বাইরে', statusOnLeave: 'ছুটিতে',
     statusSuspended: 'স্থগিত', statusTerminated: 'সমাপ্ত',
     // detail/form common
-    save: 'সংরক্ষণ', error: 'ত্রুটি', requiredField: 'প্রয়োজন: ', warning: 'সতর্কতা',
+    save: 'সংরক্ষণ', done: 'সম্পন্ন', error: 'ত্রুটি', requiredField: 'প্রয়োজন: ', warning: 'সতর্কতা',
     exitLabel: 'বাহির', deleteLabel: 'মুছুন', deletePhotoTitle: 'ফটো মুছুন',
     deletePhotoConfirm: 'এই ফটো মুছবেন?', addPhoto: 'ফটো যোগ করুন',
     changePhoto: 'ফটো পরিবর্তন করুন', camera: 'ক্যামেরা', gallery: 'গ্যালারি',
@@ -1091,6 +1107,8 @@ const messages = {
     subtitle: 'بیڑہ انتظام',
     email: 'ای میل',
     phone: 'فون نمبر',
+    role: 'کردار',
+    company: 'کمپنی',
     password: 'پاس ورڈ',
     signIn: 'سائن ان کریں',
     signingIn: 'سائن ان ہو رہا ہے...',
@@ -1194,6 +1212,8 @@ const messages = {
     activeStat: 'جاری',
     hello: 'السلام علیکم',
     tapToOpen: 'سفر کھولنے کے لیے ٹیپ کریں',
+    live: 'لائیو',
+    daysAbbr: 'دن',
     // nav
     navHome: 'ہوم', navFleet: 'بیڑا', navTrips: 'سفر', navMyTrips: 'سفر', navProfileTab: 'پروفائل',
     // dashboard
@@ -1213,7 +1233,7 @@ const messages = {
     statusActive: 'فعال', statusOffDuty: 'ڈیوٹی سے باہر', statusOnLeave: 'چھٹی پر',
     statusSuspended: 'معطل', statusTerminated: 'ختم',
     // detail/form common
-    save: 'محفوظ', error: 'خطا', requiredField: 'ضروری: ', warning: 'خبردار',
+    save: 'محفوظ', done: 'مکمل', error: 'خطا', requiredField: 'ضروری: ', warning: 'خبردار',
     exitLabel: 'باہر', deleteLabel: 'حذف', deletePhotoTitle: 'تصویر حذف',
     deletePhotoConfirm: 'یہ تصویر حذف کریں؟', addPhoto: 'تصویر شامل کریں',
     changePhoto: 'تصویر بدلیں', camera: 'کیمرہ', gallery: 'گیلری',

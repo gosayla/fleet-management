@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {api} from '../lib/api';
 import {Locale, t} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
+import {DateTimeWheelModal} from '../components/ui/DateTimeWheelModal';
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
@@ -495,187 +496,15 @@ export function TripFormScreen({locale, tripId, onBack, onSuccess}: Props) {
         visible={dtPicker !== null}
         value={dtPicker ? form[dtPicker] : ''}
         label={dtPicker === 'scheduledStart' ? i18n.startDateTimeLabel : i18n.endDateTimeLabel}
-        confirmLabel={i18n.save}
-        cancelLabel={i18n.cancel ?? 'Cancel'}
+        confirmLabel={i18n.done}
+        cancelLabel={i18n.cancel}
+        locale={locale}
         onConfirm={val => { if (dtPicker) set(dtPicker, val); }}
         onClose={() => setDtPicker(null)}
       />
     </View>
   );
 }
-
-// ── Date+Time Wheel Picker ────────────────────────────────────────────────────
-
-const DT_WHEEL_H = 44;
-const DT_VISIBLE = 5;
-
-const DT_MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const DT_MONTH_NUMS  = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-const DT_HOURS  = Array.from({length: 24}, (_, i) => String(i).padStart(2, '0'));
-const DT_MINUTES = Array.from({length: 60}, (_, i) => String(i).padStart(2, '0'));
-
-function dtMakeDays(month: number, year: number): string[] {
-  const count = new Date(year, month, 0).getDate();
-  return Array.from({length: count}, (_, i) => String(i + 1).padStart(2, '0'));
-}
-function dtMakeYears(): string[] {
-  const cur = new Date().getFullYear();
-  return Array.from({length: 21}, (_, i) => String(cur - 2 + i));
-}
-
-interface DTWheelProps {
-  items: string[];
-  labels?: string[];
-  initialIndex: number;
-  onChange: (index: number) => void;
-  width?: number;
-}
-function DTWheel({items, labels, initialIndex, onChange, width}: DTWheelProps) {
-  const ref = useRef<ScrollView>(null);
-  const idxRef = useRef(initialIndex);
-
-  useEffect(() => {
-    setTimeout(() => ref.current?.scrollTo({y: Math.max(0, initialIndex) * DT_WHEEL_H, animated: false}), 80);
-  }, []);
-
-  function snap(e: any) {
-    const raw = e.nativeEvent.contentOffset.y;
-    const idx = Math.max(0, Math.min(Math.round(raw / DT_WHEEL_H), items.length - 1));
-    if (idx !== idxRef.current) { idxRef.current = idx; onChange(idx); }
-    ref.current?.scrollTo({y: idx * DT_WHEEL_H, animated: true});
-  }
-
-  return (
-    <View style={[dtStyles.col, width != null && {width, flex: 0}]}>
-      <View style={dtStyles.highlight} pointerEvents="none" />
-      <ScrollView
-        ref={ref}
-        showsVerticalScrollIndicator={false}
-        snapToInterval={DT_WHEEL_H}
-        decelerationRate="fast"
-        contentContainerStyle={{paddingVertical: DT_WHEEL_H * Math.floor(DT_VISIBLE / 2)}}
-        onMomentumScrollEnd={snap}
-        onScrollEndDrag={snap}
-        style={{height: DT_WHEEL_H * DT_VISIBLE}}>
-        {items.map((item, i) => (
-          <View key={i} style={dtStyles.item}>
-            <Text style={dtStyles.itemText}>{labels ? labels[i] : item}</Text>
-          </View>
-        ))}
-      </ScrollView>
-    </View>
-  );
-}
-
-interface DateTimeWheelModalProps {
-  visible: boolean;
-  value: string;      // 'YYYY-MM-DD HH:MM'
-  label: string;
-  confirmLabel: string;
-  cancelLabel: string;
-  onConfirm: (val: string) => void;
-  onClose: () => void;
-}
-function DateTimeWheelModal({visible, value, label, confirmLabel, cancelLabel, onConfirm, onClose}: DateTimeWheelModalProps) {
-  const years = useMemo(() => dtMakeYears(), []);
-  const today = new Date();
-
-  function parseVal(v: string): {d: number; mo: number; y: number; h: number; mi: number} {
-    const m = v.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?$/);
-    if (m) return {y: Number(m[1]), mo: Number(m[2]) - 1, d: Number(m[3]) - 1, h: Number(m[4] ?? 8), mi: Number(m[5] ?? 0)};
-    return {y: today.getFullYear(), mo: today.getMonth(), d: today.getDate() - 1, h: 8, mi: 0};
-  }
-
-  const [selDay,  setSelDay]  = useState(0);
-  const [selMon,  setSelMon]  = useState(0);
-  const [selYear, setSelYear] = useState(0);
-  const [selHour, setSelHour] = useState(8);
-  const [selMin,  setSelMin]  = useState(0);
-
-  useEffect(() => {
-    if (!visible) return;
-    const p = parseVal(value);
-    const yi = Math.max(0, years.indexOf(String(p.y)));
-    setSelDay(p.d); setSelMon(p.mo); setSelYear(yi); setSelHour(p.h); setSelMin(p.mi);
-  }, [visible]);
-
-  const days = useMemo(
-    () => dtMakeDays(selMon + 1, Number(years[selYear] ?? today.getFullYear())),
-    [selMon, selYear],
-  );
-  useEffect(() => { if (selDay >= days.length) setSelDay(days.length - 1); }, [days.length]);
-
-  function handleConfirm() {
-    const y = years[selYear] ?? String(today.getFullYear());
-    const mo = String(selMon + 1).padStart(2, '0');
-    const d  = String(selDay + 1).padStart(2, '0');
-    const h  = String(selHour).padStart(2, '0');
-    const mi = String(selMin).padStart(2, '0');
-    onConfirm(`${y}-${mo}-${d} ${h}:${mi}`);
-    onClose();
-  }
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={dtStyles.overlay} activeOpacity={1} onPress={onClose} />
-      <View style={dtStyles.sheet}>
-        <View style={dtStyles.header}>
-          <TouchableOpacity onPress={onClose} hitSlop={{top:8,bottom:8,left:8,right:8}}>
-            <Text style={dtStyles.cancelTxt}>{cancelLabel}</Text>
-          </TouchableOpacity>
-          <Text style={dtStyles.titleTxt}>{label}</Text>
-          <TouchableOpacity onPress={handleConfirm} hitSlop={{top:8,bottom:8,left:8,right:8}}>
-            <Text style={dtStyles.confirmTxt}>{confirmLabel}</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={dtStyles.wheels}>
-          <DTWheel key={`d-${visible}`}  items={days}         initialIndex={selDay}  onChange={setSelDay}  width={48} />
-          <Text style={dtStyles.sep}>/</Text>
-          <DTWheel key={`mo-${visible}`} items={DT_MONTH_NUMS} labels={DT_MONTH_NAMES} initialIndex={selMon}  onChange={setSelMon}  width={52} />
-          <Text style={dtStyles.sep}>/</Text>
-          <DTWheel key={`y-${visible}`}  items={years}        initialIndex={selYear} onChange={setSelYear} width={66} />
-          <View style={dtStyles.timeSep} />
-          <DTWheel key={`h-${visible}`}  items={DT_HOURS}     initialIndex={selHour} onChange={setSelHour} width={48} />
-          <Text style={dtStyles.sep}>:</Text>
-          <DTWheel key={`mi-${visible}`} items={DT_MINUTES}   initialIndex={selMin}  onChange={setSelMin}  width={48} />
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-const dtStyles = StyleSheet.create({
-  overlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.4)'},
-  sheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingBottom: Platform.OS === 'ios' ? 36 : 20,
-  },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
-  },
-  titleTxt: {fontSize: 16, fontWeight: '700' as const, color: Colors.textPrimary},
-  cancelTxt: {fontSize: 15, color: Colors.textMuted, minWidth: 52},
-  confirmTxt: {fontSize: 15, color: Colors.primary, fontWeight: '700' as const, minWidth: 52, textAlign: 'right' as const},
-  wheels: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: Spacing.md, paddingVertical: 8,
-  },
-  col: {flex: 1, position: 'relative' as const},
-  highlight: {
-    position: 'absolute' as const, left: 0, right: 0,
-    top: DT_WHEEL_H * Math.floor(DT_VISIBLE / 2),
-    height: DT_WHEEL_H,
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 10, zIndex: 1,
-  },
-  item: {height: DT_WHEEL_H, justifyContent: 'center' as const, alignItems: 'center' as const},
-  itemText: {fontSize: 17, color: Colors.textPrimary, fontWeight: '500' as const},
-  sep: {fontSize: 20, color: Colors.textMuted, paddingHorizontal: 2, marginTop: -4},
-  timeSep: {width: 1, height: DT_WHEEL_H * 3, backgroundColor: Colors.borderLight, marginHorizontal: 8},
-});
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

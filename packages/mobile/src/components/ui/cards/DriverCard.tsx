@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
-import {Locale} from '../../../lib/i18n';
+import {Locale, isRTL} from '../../../lib/i18n';
 import {Colors, Spacing} from '../../../lib/theme';
 import {AppIcon} from '../AppIcon';
 import {resolvePhotoUrl} from '../../../lib/api';
@@ -39,8 +39,10 @@ export function DriverCard({driver, locale, onPress}: Props) {
   const label = badge.label[locale];
   const photoUrl = resolvePhotoUrl(driver.photoUrl);
 
+  const rtl = isRTL(locale);
+
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.75} onPress={onPress}>
+    <TouchableOpacity style={[styles.card, !rtl && {flexDirection: 'row-reverse'}]} activeOpacity={0.75} onPress={onPress}>
       <View style={styles.avatar}>
         {photoUrl ? (
           <Image source={{uri: photoUrl}} style={styles.photo} />
@@ -50,13 +52,13 @@ export function DriverCard({driver, locale, onPress}: Props) {
       </View>
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1}>{driver.fullName}</Text>
-        <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
+        <Text style={[styles.subtitle, {textAlign: !rtl ? 'right' : 'left'}]} numberOfLines={1}>{subtitle}</Text>
       </View>
       <View style={[styles.badge, {backgroundColor: badge.bg}]}>
         <AppIcon name="star" size={11} color={badge.text} />
         <Text style={[styles.badgeText, {color: badge.text}]}>{label}</Text>
       </View>
-      <AppIcon name="arrow-right" size={20} color={Colors.textMuted} />
+      <AppIcon name={rtl ? "arrow-left" : "arrow-right"} size={20} color={Colors.textMuted} />
     </TouchableOpacity>
   );
 }

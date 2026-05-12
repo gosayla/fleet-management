@@ -15,6 +15,7 @@ import {api} from '../lib/api';
 import {Locale, t} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
+import {DateWheelModal} from '../components/ui/DateWheelModal';
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
@@ -85,6 +86,7 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
   const [loadingDriver, setLoadingDriver] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [licenseDatePickerOpen, setLicenseDatePickerOpen] = useState(false);
 
   // Pre-fill form when editing
   useEffect(() => {
@@ -222,7 +224,15 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
           <Text style={styles.section}>{i18n.licenseSection}</Text>
           <View style={styles.card}>
             <Field label={i18n.licenseExpiryDate} required>
-              <TextInput style={styles.input} value={form.licenseExpiry} onChangeText={v => set('licenseExpiry', v)} placeholder="YYYY-MM-DD" placeholderTextColor={Colors.textMuted} keyboardType="numbers-and-punctuation" />
+              <TouchableOpacity
+                style={styles.dateBtn}
+                onPress={() => setLicenseDatePickerOpen(true)}
+                activeOpacity={0.8}>
+                <Text style={[styles.dateBtnText, !form.licenseExpiry && {color: Colors.textMuted}]}>
+                  {form.licenseExpiry || 'YYYY-MM-DD'}
+                </Text>
+                <AppIcon name="calendar" size={20} color={Colors.primary} />
+              </TouchableOpacity>
             </Field>
           </View>
 
@@ -264,6 +274,20 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
           <View style={{height: 40}} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <DateWheelModal
+        visible={licenseDatePickerOpen}
+        value={form.licenseExpiry}
+        locale={locale}
+        cancelLabel={i18n.cancel}
+        doneLabel={i18n.done}
+        label={i18n.licenseExpiryDate}
+        onConfirm={d => {
+          set('licenseExpiry', d);
+          setLicenseDatePickerOpen(false);
+        }}
+        onClose={() => setLicenseDatePickerOpen(false)}
+      />
     </View>
   );
 }
@@ -366,6 +390,8 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontWeight: '500' as const,
   },
+  dateBtn: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6},
+  dateBtnText: {fontSize: 15, color: Colors.textPrimary, fontWeight: '500' as const},
   divider: {height: 1, backgroundColor: Colors.borderLight},
 
   pillsRow: {gap: 8, paddingBottom: 4},

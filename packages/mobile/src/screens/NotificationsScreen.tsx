@@ -98,7 +98,7 @@ export function NotificationsScreen({locale, onBack, onUnreadCountChange}: Props
       {/* Teal header */}
       <View style={styles.header}>
         <View style={{height: SB_HEIGHT}} />
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, !isRTL && {flexDirection: 'row-reverse'}]}>
           <TouchableOpacity style={styles.closeBtn} onPress={onBack} activeOpacity={0.7}>
             <AppIcon name="close" size={20} color="#fff" />
           </TouchableOpacity>
@@ -132,21 +132,21 @@ export function NotificationsScreen({locale, onBack, onUnreadCountChange}: Props
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => markRead(item.id)}
-              style={[styles.card, !item.isRead && styles.cardUnread]}>
+              style={[styles.card, !isRTL && {flexDirection: 'row-reverse'}, isRTL ? !item.isRead && {borderLeftWidth: 3, borderLeftColor: Colors.primary} : !item.isRead && {borderRightWidth: 3, borderRightColor: Colors.primary}]}>
               <View style={styles.iconWrap}>
                 <AppIcon name={item.isRead ? 'bell-outline' : 'bell-badge-outline'} size={18} color={Colors.primary} />
               </View>
               <View style={styles.cardBody}>
-                <Text style={[styles.title, isRTL && styles.rtlText]}>{item.title}</Text>
-                <Text style={[styles.body, isRTL && styles.rtlText]}>{item.body}</Text>
-                <Text style={[styles.date, isRTL && styles.rtlText]}>
+                <Text style={[styles.title, !isRTL && styles.rtlText]}>{item.title}</Text>
+                <Text style={[styles.body, !isRTL && styles.rtlText]}>{item.body}</Text>
+                <Text style={[styles.date, !isRTL && styles.rtlText]}>
                   {formatDateTime(item.createdAt, locale)}
                 </Text>
               </View>
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            <Text style={[styles.empty, isRTL && styles.rtlText]}>{i18n.noNotifications}</Text>
+            <Text style={[styles.empty, !isRTL && styles.rtlText]}>{i18n.noNotifications}</Text>
           }
         />
       </View>

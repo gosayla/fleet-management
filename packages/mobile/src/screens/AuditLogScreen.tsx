@@ -199,7 +199,7 @@ export function AuditLogScreen({locale, onBack}: Props) {
     const description = describeLog(item);
     const details = changesText(item.changes);
     return (
-      <View style={[styles.card, rtl && styles.cardRTL]}>
+      <View style={[styles.card, !rtl && styles.cardRTL]}>
         {/* Left: action badge */}
         <View style={[styles.badge, {backgroundColor: colors.bg}]}>
           <Text style={[styles.badgeText, {color: colors.text}]}>
@@ -210,20 +210,20 @@ export function AuditLogScreen({locale, onBack}: Props) {
         {/* Right: description + details + time */}
         <View style={styles.cardBody}>
           {/* What happened — human-readable sentence */}
-          <Text style={[styles.description, rtl && styles.textRTL]} numberOfLines={2}>
+          <Text style={[styles.description, !rtl && styles.textRTL]} numberOfLines={2}>
             {description}
           </Text>
 
           {/* What fields changed (only for mutations that carried a body) */}
           {details ? (
-            <View style={[styles.row, rtl && styles.rowRTL]}>
+            <View style={[styles.row, styles.rowRTL]}>
               <AppIcon name="pencil-outline" size={12} color={Colors.textSecondary} />
               <Text style={styles.changesText} numberOfLines={1}>{details}</Text>
             </View>
           ) : null}
 
           {/* Timestamp */}
-          <View style={[styles.row, rtl && styles.rowRTL]}>
+          <View style={[styles.row, styles.rowRTL]}>
             <AppIcon name="clock-outline" size={12} color={Colors.textSecondary} />
             <Text style={styles.dateText}>{fmtDate(item.createdAt)}</Text>
           </View>
@@ -252,7 +252,7 @@ export function AuditLogScreen({locale, onBack}: Props) {
 
       {/* Header */}
       <View style={[styles.header, {paddingTop: SB_HEIGHT + 12}]}>
-        <View style={[styles.headerRow, rtl && styles.rowRTL]}>
+        <View style={[styles.headerRow, {flexDirection: !rtl ? 'row-reverse' : 'row'}]}>
           {onBack && (
             <TouchableOpacity onPress={onBack} style={styles.backBtn} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
               <AppIcon name={rtl ? 'chevron-right' : 'chevron-left'} size={24} color={Colors.primary} />
@@ -264,12 +264,11 @@ export function AuditLogScreen({locale, onBack}: Props) {
       </View>
 
       {/* Filter pills */}
-      <View style={styles.filterWrap}>
+      <View style={[styles.filterWrap, {direction: !rtl ? 'rtl' : 'ltr'}]}>
         <ScrollView
           horizontal
-          showsHorizontalScrollicalcator={false}
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.filterRow, rtl && styles.filterRowRTL]}
+          contentContainerStyle={[styles.filterRow, !rtl && styles.filterRowRTL]}
         >
           {FILTERS.map(f => (
             <TouchableOpacity
@@ -324,7 +323,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
   backBtn: {marginEnd: 4},
-  title: {fontSize: 20, fontWeight: '700', color: Colors.text, marginStart: 6},
+  title: {fontSize: 20, fontWeight: '700', color: Colors.textPrimary, marginStart: 6},
   filterWrap: {backgroundColor: '#fff', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#e5e7eb'},
   filterRow: {flexDirection: 'row', paddingHorizontal: Spacing.md, gap: 8, alignItems: 'center'},
   filterRowRTL: {flexDirection: 'row-reverse'},
@@ -370,7 +369,7 @@ const styles = StyleSheet.create({
   row: {flexDirection: 'row', alignItems: 'center', gap: 5},
   rowRTL: {flexDirection: 'row-reverse'},
   textRTL: {textAlign: 'right'},
-  description: {fontSize: 13, fontWeight: '600', color: Colors.text, lineHeight: 19},
+  description: {fontSize: 13, fontWeight: '600', color: Colors.textPrimary, lineHeight: 19},
   changesText: {fontSize: 11, color: '#6b7280', flex: 1},
   dateText: {fontSize: 11, color: Colors.textSecondary},
   loadMoreBtn: {

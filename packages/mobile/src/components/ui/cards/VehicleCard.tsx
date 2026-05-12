@@ -1,6 +1,6 @@
 ﻿import React, {useEffect, useRef} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity, Image, Animated} from 'react-native';
-import {Locale} from '../../../lib/i18n';
+import {Locale, isRTL} from '../../../lib/i18n';
 import {Colors, Spacing} from '../../../lib/theme';
 import {AppIcon} from '../AppIcon';
 import {resolvePhotoUrl} from '../../../lib/api';
@@ -54,6 +54,7 @@ export function VehicleCard({vehicle, locale, onPress}: Props) {
   const subtitle = `${vehicle.make}-${vehicle.model}`;
   const label = badge.label[locale];
   const isActive = vehicle.pilotIgnitionOn === true;
+  const rtl = isRTL(locale);
 
   // Subtle glow when ignition is on (from GPS telemetry)
   const glowOpacity = useRef(new Animated.Value(0)).current;
@@ -79,7 +80,7 @@ export function VehicleCard({vehicle, locale, onPress}: Props) {
   const photoUrl = resolvePhotoUrl(profilePhoto?.url);
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.75} onPress={onPress}>
+    <TouchableOpacity style={[styles.card, !rtl && {flexDirection: 'row-reverse'}]} activeOpacity={0.75} onPress={onPress}>
       <View style={styles.iconWrap}>
         {/* Soft glow ring for ignition-on vehicles */}
         {isActive && (
@@ -94,7 +95,7 @@ export function VehicleCard({vehicle, locale, onPress}: Props) {
         )}
       </View>
       <View style={styles.body}>
-        <View style={styles.plateRow}>
+        <View style={[styles.plateRow, !rtl && {flexDirection: 'row-reverse'}]}>
           <Text style={styles.plate}>{vehicle.plateNumber}</Text>
           {vehicle.pilotImei && (
             <View style={styles.gpsPill}>
@@ -102,12 +103,12 @@ export function VehicleCard({vehicle, locale, onPress}: Props) {
             </View>
           )}
         </View>
-        <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
+        <Text style={[styles.subtitle, {textAlign: !rtl ? 'right' : 'left'}]} numberOfLines={1}>{subtitle}</Text>
       </View>
       <View style={[styles.badge, {backgroundColor: badge.bg}]}>
         <Text style={[styles.badgeText, {color: badge.text}]}>{label}</Text>
       </View>
-      <AppIcon name="arrow-right" size={20} color={Colors.textMuted} />
+      <AppIcon name={rtl ? "arrow-left" : "arrow-right"} size={20} color={Colors.textMuted} />
     </TouchableOpacity>
   );
 }

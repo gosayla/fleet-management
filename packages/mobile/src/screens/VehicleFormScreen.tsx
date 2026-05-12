@@ -21,6 +21,7 @@ import {
 import {api} from '../lib/api';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
+import {DateWheelModal} from '../components/ui/DateWheelModal';
 import {Locale, t} from '../lib/i18n';
 import {VehicleType, VehicleStatus} from '@fleet/shared';
 
@@ -63,6 +64,9 @@ interface FormState {
   model: string;
   year: string;
   color: string;
+  sequenceNumber: string;
+  plateType: string;
+  bodyType: string;
   type: VehicleType;
   odometer: string;
   fuelCapacity: string;
@@ -72,8 +76,12 @@ interface FormState {
   operationCardExpiryDate: string;
   operationCardRenewDate: string;
   // Tamm
+  ownershipDate: string;
+  licenseIssuanceDate: string;
+  inspectionExpiryDate: string;
   licenseExpiryDate: string;
   insuranceExpiryDate: string;
+  restrictionStatus: string;
   // Edit only
   status: VehicleStatus;
   assignedDriverId: string;
@@ -82,21 +90,63 @@ interface FormState {
 const EMPTY: FormState = {
   plateNumber: '', vin: '', make: '', model: '',
   year: String(new Date().getFullYear()), color: '',
+  sequenceNumber: '', plateType: '', bodyType: '',
   type: VehicleType.SEDAN,
   odometer: '0', fuelCapacity: '50',
   operationCardNumber: '', operationCardIssueDate: '', operationCardExpiryDate: '', operationCardRenewDate: '',
+  ownershipDate: '', licenseIssuanceDate: '', inspectionExpiryDate: '',
   licenseExpiryDate: '', insuranceExpiryDate: '',
+  restrictionStatus: '',
   status: VehicleStatus.ACTIVE, assignedDriverId: '',
 };
+
+const EXTRA_LABELS = {
+  sequenceNumber: {
+    en: 'Sequence Number', ar: 'الرقم التسلسلي', hi: 'सीक्वेंस नंबर', bn: 'সিকোয়েন্স নম্বর', ur: 'سیکوئنس نمبر',
+  },
+  plateType: {
+    en: 'Plate Type', ar: 'نوع اللوحة', hi: 'प्लेट प्रकार', bn: 'প্লেট টাইপ', ur: 'پلیٹ کی قسم',
+  },
+  bodyType: {
+    en: 'Body Type', ar: 'نوع الهيكل', hi: 'बॉडी टाइप', bn: 'বডি টাইপ', ur: 'باڈی ٹائپ',
+  },
+  ownershipDate: {
+    en: 'Ownership Date (Hijri)', ar: 'تاريخ الملكية (هجري)', hi: 'स्वामित्व तिथि (हिजरी)', bn: 'মালিকানা তারিখ (হিজরি)', ur: 'ملکیت کی تاریخ (ہجری)',
+  },
+  licenseIssuanceDate: {
+    en: 'License Issuance Date (Hijri)', ar: 'تاريخ إصدار الرخصة (هجري)', hi: 'लाइसेंस जारी तिथि (हिजरी)', bn: 'লাইসেন্স ইস্যু তারিখ (হিজরি)', ur: 'لائسنس اجراء تاریخ (ہجری)',
+  },
+  inspectionExpiryDate: {
+    en: 'Inspection Expiry Date', ar: 'تاريخ انتهاء الفحص', hi: 'निरीक्षण समाप्ति तिथि', bn: 'ইন্সপেকশন মেয়াদ শেষের তারিখ', ur: 'معائنہ میعاد ختم تاریخ',
+  },
+  restrictionStatus: {
+    en: 'Restriction Status', ar: 'حالة القيود', hi: 'प्रतिबंध स्थिति', bn: 'নিষেধাজ্ঞার অবস্থা', ur: 'پابندی کی حالت',
+  },
+} as const;
 
 export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props) {
   const i18n = t(locale);
   const isEdit = !!vehicleId;
+  const L = (k: keyof typeof EXTRA_LABELS) => EXTRA_LABELS[k][locale] ?? EXTRA_LABELS[k].en;
 
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loadingVehicle, setLoadingVehicle] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [datePickerField, setDatePickerField] = useState<
+    'operationCardIssueDate' |
+    'operationCardExpiryDate' |
+    'operationCardRenewDate' |
+    'inspectionExpiryDate' |
+    'insuranceExpiryDate' |
+    null
+  >(null);
+  const [hijriDatePickerField, setHijriDatePickerField] = useState<
+    'ownershipDate' |
+    'licenseIssuanceDate' |
+    'licenseExpiryDate' |
+    null
+  >(null);
 
   // Driver search (edit only)
   const [drivers, setDrivers] = useState<DriverOption[]>([]);
@@ -128,6 +178,9 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
         model: v.model ?? '',
         year: String(v.year ?? new Date().getFullYear()),
         color: v.color ?? '',
+        sequenceNumber: v.sequenceNumber ?? '',
+        plateType: v.plateType ?? '',
+        bodyType: v.bodyType ?? '',
         type: v.type ?? VehicleType.SEDAN,
         odometer: String(v.odometer ?? 0),
         fuelCapacity: String(v.fuelCapacity ?? 50),
@@ -135,8 +188,12 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
         operationCardIssueDate: v.operationCardIssueDate ?? '',
         operationCardExpiryDate: v.operationCardExpiryDate ?? '',
         operationCardRenewDate: v.operationCardRenewDate ?? '',
+        ownershipDate: v.ownershipDate ?? '',
+        licenseIssuanceDate: v.licenseIssuanceDate ?? '',
+        inspectionExpiryDate: v.inspectionExpiryDate ?? '',
         licenseExpiryDate: v.licenseExpiryDate ?? '',
         insuranceExpiryDate: v.insuranceExpiryDate ?? '',
+        restrictionStatus: v.restrictionStatus ?? '',
         status: v.status ?? VehicleStatus.ACTIVE,
         assignedDriverId: v.assignedDriverId ?? '',
       });
@@ -172,6 +229,9 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
       model: form.model.trim(),
       year: Number(form.year),
       color: form.color.trim(),
+      ...(form.sequenceNumber.trim() && {sequenceNumber: form.sequenceNumber.trim()}),
+      ...(form.plateType.trim() && {plateType: form.plateType.trim()}),
+      ...(form.bodyType.trim() && {bodyType: form.bodyType.trim()}),
       type: form.type,
       odometer: Number(form.odometer),
       fuelCapacity: Number(form.fuelCapacity),
@@ -179,8 +239,12 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
       ...(form.operationCardIssueDate && {operationCardIssueDate: form.operationCardIssueDate}),
       ...(form.operationCardExpiryDate && {operationCardExpiryDate: form.operationCardExpiryDate}),
       ...(form.operationCardRenewDate && {operationCardRenewDate: form.operationCardRenewDate}),
+      ...(form.ownershipDate && {ownershipDate: form.ownershipDate}),
+      ...(form.licenseIssuanceDate && {licenseIssuanceDate: form.licenseIssuanceDate}),
+      ...(form.inspectionExpiryDate && {inspectionExpiryDate: form.inspectionExpiryDate}),
       ...(form.licenseExpiryDate && {licenseExpiryDate: form.licenseExpiryDate}),
       ...(form.insuranceExpiryDate && {insuranceExpiryDate: form.insuranceExpiryDate}),
+      ...(form.restrictionStatus.trim() && {restrictionStatus: form.restrictionStatus.trim()}),
       ...(isEdit && {status: form.status}),
       ...(isEdit && {assignedDriverId: form.assignedDriverId || null}),
     };
@@ -319,6 +383,36 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
                 placeholderTextColor={Colors.textMuted}
               />
             </FormField>
+            <FieldDivider />
+            <FormField label={L('sequenceNumber')}>
+              <TextInput
+                style={styles.input}
+                value={form.sequenceNumber}
+                onChangeText={v => set('sequenceNumber', v)}
+                placeholder="12345678"
+                placeholderTextColor={Colors.textMuted}
+              />
+            </FormField>
+            <FieldDivider />
+            <FormField label={L('plateType')}>
+              <TextInput
+                style={styles.input}
+                value={form.plateType}
+                onChangeText={v => set('plateType', v)}
+                placeholder={L('plateType')}
+                placeholderTextColor={Colors.textMuted}
+              />
+            </FormField>
+            <FieldDivider />
+            <FormField label={L('bodyType')}>
+              <TextInput
+                style={styles.input}
+                value={form.bodyType}
+                onChangeText={v => set('bodyType', v)}
+                placeholder={L('bodyType')}
+                placeholderTextColor={Colors.textMuted}
+              />
+            </FormField>
           </View>
 
           {/* ── Section: Vehicle Type ── */}
@@ -380,35 +474,29 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
             </FormField>
             <FieldDivider />
             <FormField label={i18n.issueDate}>
-              <TextInput
-                style={styles.input}
+              <DateInputRow
                 value={form.operationCardIssueDate}
-                onChangeText={v => set('operationCardIssueDate', v)}
                 placeholder="YYYY-MM-DD"
-                placeholderTextColor={Colors.textMuted}
-                keyboardType="numbers-and-punctuation"
+                onChange={v => set('operationCardIssueDate', v)}
+                onOpenPicker={() => setDatePickerField('operationCardIssueDate')}
               />
             </FormField>
             <FieldDivider />
             <FormField label={i18n.expiryDateLabel}>
-              <TextInput
-                style={styles.input}
+              <DateInputRow
                 value={form.operationCardExpiryDate}
-                onChangeText={v => set('operationCardExpiryDate', v)}
                 placeholder="YYYY-MM-DD"
-                placeholderTextColor={Colors.textMuted}
-                keyboardType="numbers-and-punctuation"
+                onChange={v => set('operationCardExpiryDate', v)}
+                onOpenPicker={() => setDatePickerField('operationCardExpiryDate')}
               />
             </FormField>
             <FieldDivider />
             <FormField label={i18n.renewDate}>
-              <TextInput
-                style={styles.input}
+              <DateInputRow
                 value={form.operationCardRenewDate}
-                onChangeText={v => set('operationCardRenewDate', v)}
                 placeholder="YYYY-MM-DD"
-                placeholderTextColor={Colors.textMuted}
-                keyboardType="numbers-and-punctuation"
+                onChange={v => set('operationCardRenewDate', v)}
+                onOpenPicker={() => setDatePickerField('operationCardRenewDate')}
               />
             </FormField>
           </View>
@@ -416,25 +504,58 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
           {/* ── Section: Tamm / License ── */}
           <SectionTitle title="Tamm" />
           <View style={styles.card}>
-            <FormField label={i18n.licenseExpiryVehicle}>
-              <TextInput
-                style={styles.input}
-                value={form.licenseExpiryDate}
-                onChangeText={v => set('licenseExpiryDate', v)}
+            <FormField label={L('ownershipDate')}>
+              <DateInputRow
+                value={form.ownershipDate}
+                onChange={v => set('ownershipDate', v)}
+                placeholder="1446-01-01"
+                onOpenPicker={() => setHijriDatePickerField('ownershipDate')}
+              />
+            </FormField>
+            <FieldDivider />
+            <FormField label={L('licenseIssuanceDate')}>
+              <DateInputRow
+                value={form.licenseIssuanceDate}
+                onChange={v => set('licenseIssuanceDate', v)}
+                placeholder="1446-01-01"
+                onOpenPicker={() => setHijriDatePickerField('licenseIssuanceDate')}
+              />
+            </FormField>
+            <FieldDivider />
+            <FormField label={L('inspectionExpiryDate')}>
+              <DateInputRow
+                value={form.inspectionExpiryDate}
                 placeholder="YYYY-MM-DD"
-                placeholderTextColor={Colors.textMuted}
-                keyboardType="numbers-and-punctuation"
+                onChange={v => set('inspectionExpiryDate', v)}
+                onOpenPicker={() => setDatePickerField('inspectionExpiryDate')}
+              />
+            </FormField>
+            <FieldDivider />
+            <FormField label={i18n.licenseExpiryVehicle}>
+              <DateInputRow
+                value={form.licenseExpiryDate}
+                onChange={v => set('licenseExpiryDate', v)}
+                placeholder="1446-01-01"
+                onOpenPicker={() => setHijriDatePickerField('licenseExpiryDate')}
               />
             </FormField>
             <FieldDivider />
             <FormField label={i18n.insuranceExpiry}>
+              <DateInputRow
+                value={form.insuranceExpiryDate}
+                placeholder="YYYY-MM-DD"
+                onChange={v => set('insuranceExpiryDate', v)}
+                onOpenPicker={() => setDatePickerField('insuranceExpiryDate')}
+              />
+            </FormField>
+            <FieldDivider />
+            <FormField label={L('restrictionStatus')}>
               <TextInput
                 style={styles.input}
-                value={form.insuranceExpiryDate}
-                onChangeText={v => set('insuranceExpiryDate', v)}
-                placeholder="YYYY-MM-DD"
+                value={form.restrictionStatus}
+                onChangeText={v => set('restrictionStatus', v)}
+                placeholder={L('restrictionStatus')}
                 placeholderTextColor={Colors.textMuted}
-                keyboardType="numbers-and-punctuation"
               />
             </FormField>
           </View>
@@ -549,6 +670,47 @@ export function VehicleFormScreen({vehicleId, locale, onBack, onSuccess}: Props)
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <DateWheelModal
+        visible={datePickerField !== null}
+        value={datePickerField ? form[datePickerField] : ''}
+        locale={locale}
+        cancelLabel={i18n.cancel}
+        doneLabel={i18n.done}
+        label={
+          datePickerField === 'operationCardIssueDate' ? i18n.issueDate :
+          datePickerField === 'operationCardExpiryDate' ? i18n.expiryDateLabel :
+          datePickerField === 'operationCardRenewDate' ? i18n.renewDate :
+          datePickerField === 'inspectionExpiryDate' ? L('inspectionExpiryDate') :
+          i18n.insuranceExpiry
+        }
+        onClose={() => setDatePickerField(null)}
+        onConfirm={(date) => {
+          if (datePickerField) set(datePickerField, date);
+          setDatePickerField(null);
+        }}
+      />
+
+      <DateWheelModal
+        visible={hijriDatePickerField !== null}
+        value={hijriDatePickerField ? form[hijriDatePickerField] : ''}
+        locale={locale}
+        cancelLabel={i18n.cancel}
+        doneLabel={i18n.done}
+        label={
+          hijriDatePickerField === 'ownershipDate' ? L('ownershipDate') :
+          hijriDatePickerField === 'licenseIssuanceDate' ? L('licenseIssuanceDate') :
+          i18n.licenseExpiryVehicle
+        }
+        calendar="hijri"
+        minYear={1400}
+        maxYear={1600}
+        onClose={() => setHijriDatePickerField(null)}
+        onConfirm={(date) => {
+          if (hijriDatePickerField) set(hijriDatePickerField, date);
+          setHijriDatePickerField(null);
+        }}
+      />
     </View>
   );
 }
@@ -573,6 +735,34 @@ function FormField({label, required, children}: {label: string; required?: boole
 
 function FieldDivider() {
   return <View style={styles.divider} />;
+}
+
+function DateInputRow({
+  value,
+  placeholder,
+  onChange,
+  onOpenPicker,
+}: {
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+  onOpenPicker: () => void;
+}) {
+  return (
+    <View style={styles.dateInputRow}>
+      <TextInput
+        style={[styles.input, {flex: 1}]}
+        value={value}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        placeholderTextColor={Colors.textMuted}
+        keyboardType="numbers-and-punctuation"
+      />
+      <TouchableOpacity onPress={onOpenPicker} style={styles.dateIconBtn} activeOpacity={0.75}>
+        <AppIcon name="calendar-outline" size={18} color={Colors.textMuted} />
+      </TouchableOpacity>
+    </View>
+  );
 }
 
 // ── Styles ──────────────────────────────────────────────────────────────────
@@ -637,6 +827,19 @@ const styles = StyleSheet.create({
   input: {
     fontSize: 15, color: Colors.textPrimary, fontWeight: '500' as const,
     paddingVertical: 0, minHeight: 28,
+  },
+  dateInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dateIconBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.bg,
   },
 
   // Type pills

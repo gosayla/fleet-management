@@ -11,6 +11,13 @@ import { VehicleForm, VehicleFormValues } from '../../vehicle-form';
 
 type VehicleDetails = Vehicle & {
   assignedDriver?: { id: string; fullName: string } | null;
+  plateType?: string | null;
+  sequenceNumber?: string | null;
+  bodyType?: string | null;
+  ownershipDate?: string | null;
+  licenseIssuanceDate?: string | null;
+  inspectionExpiryDate?: string | null;
+  restrictionStatus?: string | null;
   operationCardNumber?: string | null;
   operationCardIssueDate?: string | null;
   operationCardExpiryDate?: string | null;
@@ -74,6 +81,13 @@ export default function EditVehiclePage() {
         vin: values.vin,
         odometer: values.odometer,
         fuelCapacity: values.fuelCapacity,
+        plateType: values.plateType,
+        sequenceNumber: values.sequenceNumber,
+        bodyType: values.bodyType,
+        ownershipDate: values.ownershipDate,
+        licenseIssuanceDate: values.licenseIssuanceDate,
+        inspectionExpiryDate: values.inspectionExpiryDate,
+        restrictionStatus: values.restrictionStatus,
         operationCardNumber: values.operationCardNumber,
         operationCardIssueDate: values.operationCardIssueDate,
         operationCardExpiryDate: values.operationCardExpiryDate,
@@ -108,6 +122,13 @@ export default function EditVehiclePage() {
     vin: vehicle.vin,
     odometer: vehicle.odometer,
     fuelCapacity: vehicle.fuelCapacity,
+    plateType: vehicle.plateType ?? undefined,
+    sequenceNumber: vehicle.sequenceNumber ?? undefined,
+    bodyType: vehicle.bodyType ?? undefined,
+    ownershipDate: vehicle.ownershipDate ?? undefined,
+    licenseIssuanceDate: vehicle.licenseIssuanceDate ?? undefined,
+    inspectionExpiryDate: vehicle.inspectionExpiryDate ?? undefined,
+    restrictionStatus: vehicle.restrictionStatus ?? undefined,
     operationCardNumber: vehicle.operationCardNumber ?? undefined,
     operationCardIssueDate: vehicle.operationCardIssueDate ?? undefined,
     operationCardExpiryDate: vehicle.operationCardExpiryDate ?? undefined,

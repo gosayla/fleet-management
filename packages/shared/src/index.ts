@@ -173,6 +173,13 @@ export interface Vehicle {
   vin: string;
   odometer: number; // km
   fuelCapacity: number; // liters
+  plateType?: string;
+  sequenceNumber?: string;
+  bodyType?: string;
+  ownershipDate?: string;
+  licenseIssuanceDate?: string;
+  inspectionExpiryDate?: string;
+  restrictionStatus?: string;
   assignedDriverId?: string;
   tammVehicleId?: string; // Tamm platform reference
   licenseExpiryDate?: string;
@@ -198,6 +205,13 @@ export interface CreateVehicleDto {
   vin: string;
   odometer: number;
   fuelCapacity: number;
+  plateType?: string;
+  sequenceNumber?: string;
+  bodyType?: string;
+  ownershipDate?: string;
+  licenseIssuanceDate?: string;
+  inspectionExpiryDate?: string;
+  restrictionStatus?: string;
   operationCardNumber?: string;
   operationCardIssueDate?: string;
   operationCardExpiryDate?: string;
@@ -519,6 +533,7 @@ export interface CreateNaqlPermitDto {
 // ─── Dashboard / Reports ──────────────────────────────────────────────────────
 
 export interface FleetStats {
+  pendingMaintenance: any;
   totalVehicles: number;
   activeVehicles: number;
   vehiclesInMaintenance: number;

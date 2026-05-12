@@ -125,8 +125,8 @@ export function AdminDashboardScreen({locale, onSelectTrip, onNotificationsPress
       {/* ── Top bar ── */}
       <View style={styles.topBar}>
         <View style={{height: SB_HEIGHT}} />
-        <View style={styles.topRow}>
-          <View style={styles.userRow}>
+        <View style={[styles.topRow, !rtl && {flexDirection: 'row-reverse'}]}>
+          <View style={[styles.userRow, !rtl && {flexDirection: 'row-reverse'}]}>
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
@@ -155,7 +155,7 @@ export function AdminDashboardScreen({locale, onSelectTrip, onNotificationsPress
 
         {/* ── Live GPS section ── */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+          <View style={[styles.sectionHeader, !rtl && {flexDirection: 'row-reverse'}]}>
             <Text style={styles.sectionTitle}>{i18n.liveGPS}</Text>
             <View style={styles.mapStat}>
               <AppIcon name="truck-outline" size={13} color={Colors.primary} />
@@ -174,16 +174,16 @@ export function AdminDashboardScreen({locale, onSelectTrip, onNotificationsPress
                 ? new Date(trip.vehicle.lastLocationAt).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})
                 : null;
               return (
-                <TouchableOpacity key={trip.id} style={styles.tripCard} onPress={() => onSelectTrip?.(trip.id)} activeOpacity={0.7}>
+                <TouchableOpacity key={trip.id} style={[styles.tripCard, !rtl && {flexDirection: 'row-reverse'}]} onPress={() => onSelectTrip?.(trip.id)} activeOpacity={0.7}>
                   {/* GPS pulse indicator */}
                   <View style={[styles.gpsDot, hasGps && styles.gpsDotActive]}>
                     <AppIcon name={hasGps ? 'map-marker' : 'map-marker-outline'} size={16} color={hasGps ? '#fff' : Colors.textMuted} />
                   </View>
                   <View style={{flex: 1}}>
-                    <Text style={styles.tripRoute} numberOfLines={1}>
-                      {trip.origin} → {trip.destination}
+                    <Text style={[styles.tripRoute, !rtl && {textAlign: 'right'}]} numberOfLines={1}>
+                      {rtl ? trip.origin : trip.destination} {rtl ? '←' : '→'} {rtl ? trip.destination : trip.origin}
                     </Text>
-                    <Text style={styles.tripMeta} numberOfLines={1}>
+                    <Text style={[styles.tripMeta, !rtl && {textAlign: 'right'}]} numberOfLines={1}>
                       {trip.vehicle?.plateNumber ?? '—'} · {trip.driver?.fullName ?? '—'}
                     </Text>
                     {lastUpdate && (
@@ -192,7 +192,7 @@ export function AdminDashboardScreen({locale, onSelectTrip, onNotificationsPress
                       </Text>
                     )}
                   </View>
-                  {hasGps && <View style={styles.gpsLiveBadge}><Text style={styles.gpsLiveText}>LIVE</Text></View>}
+                  {hasGps && <View style={styles.gpsLiveBadge}><Text style={styles.gpsLiveText}>{i18n.live}</Text></View>}
                 </TouchableOpacity>
               );
             })
@@ -201,7 +201,7 @@ export function AdminDashboardScreen({locale, onSelectTrip, onNotificationsPress
 
         {/* ── Spending section ── */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+          <View style={[styles.sectionHeader, !rtl && {flexDirection: 'row-reverse'}]}>
             <Text style={styles.sectionTitle}>{i18n.fuelSpending}</Text>
             {stats && stats.fuelCostThisMonth > 0 && (
               <Text style={styles.seeAll}>
@@ -216,7 +216,7 @@ export function AdminDashboardScreen({locale, onSelectTrip, onNotificationsPress
 
         {/* ── Upcoming Trips ── */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+          <View style={[styles.sectionHeader, !rtl && {flexDirection: 'row-reverse'}]}>
             <Text style={styles.sectionTitle}>{i18n.upcomingTrips}</Text>
           </View>
           {scheduledTrips.length === 0 ? (
@@ -231,22 +231,22 @@ export function AdminDashboardScreen({locale, onSelectTrip, onNotificationsPress
               const dateStr = date.toLocaleDateString(LOCALE_CODE[locale], {weekday: 'short', month: 'short', day: 'numeric'});
               const timeStr = date.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
               return (
-                <TouchableOpacity key={trip.id} style={[styles.deadlineRow, highlighted && styles.deadlineRowHL]} onPress={() => onSelectTrip?.(trip.id)} activeOpacity={0.7}>
+                <TouchableOpacity key={trip.id} style={[styles.deadlineRow, !rtl && {flexDirection: 'row-reverse'},highlighted && styles.deadlineRowHL]} onPress={() => onSelectTrip?.(trip.id)} activeOpacity={0.7}>
                   <View style={[styles.deadlineIcon, highlighted && styles.deadlineIconHL]}>
                     <AppIcon name="truck-outline" size={20} color={highlighted ? '#fff' : Colors.primary} />
                   </View>
                   <View style={styles.deadlineBody}>
-                    <Text style={[styles.deadlineTitle, highlighted && styles.deadlineTextHL]} numberOfLines={1}>
-                      {trip.origin} → {trip.destination}
+                    <Text style={[styles.deadlineTitle, highlighted && styles.deadlineTextHL, !rtl && {textAlign: 'right'}]} numberOfLines={1}>
+                      {rtl ? trip.origin : trip.destination} {rtl ? '←' : '→'} {rtl ? trip.destination : trip.origin}
                     </Text>
-                    <Text style={[styles.deadlineDate, highlighted && styles.deadlineTextHL]}>
+                    <Text style={[styles.deadlineDate, highlighted && styles.deadlineTextHL, !rtl && {textAlign: 'right'}]} numberOfLines={1}>
                       {trip.vehicle?.plateNumber ?? '—'} · {trip.driver?.fullName ?? '—'}
                     </Text>
                     <Text style={[styles.deadlineDate, highlighted && styles.deadlineTextHL]}>
                       {dateStr} {timeStr}
                     </Text>
                   </View>
-                  <AppIcon name="arrow-right" size={20} color={highlighted ? '#fff' : Colors.primary} />
+                  <AppIcon name={rtl ? "arrow-left" : "arrow-right"} size={20} color={highlighted ? '#fff' : Colors.primary} />
                 </TouchableOpacity>
               );
             })
@@ -257,7 +257,7 @@ export function AdminDashboardScreen({locale, onSelectTrip, onNotificationsPress
         {stats && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{i18n.overview}</Text>
-            <View style={styles.pills}>
+            <View style={[styles.pills, !rtl && {flexDirection: 'row-reverse'}]}>
               {[
                 {icon:'truck-outline',         label: i18n.vehiclesLabel,      value: stats.totalVehicles,      color: Colors.primary},
                 {icon:'account-group-outline', label: i18n.driversLabel,       value: stats.totalDrivers,       color: Colors.success},
@@ -279,7 +279,7 @@ export function AdminDashboardScreen({locale, onSelectTrip, onNotificationsPress
         {/* ── Document Expiry Alert ── */}
         {expiringDocs.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
+            <View style={[styles.sectionHeader, !rtl && {flexDirection: 'row-reverse'}]}>
               <Text style={styles.sectionTitle}>{i18n.expiringDocs}</Text>
             </View>
             {expiringDocs.map((doc, idx) => {
@@ -290,18 +290,18 @@ export function AdminDashboardScreen({locale, onSelectTrip, onNotificationsPress
               const subject = doc.vehicles?.[0]?.plateNumber ?? doc.drivers?.[0]?.fullName ?? '—';
               const expiryStr = formatDateSmart(doc.expiryDate, locale);
               return (
-                <View key={doc.id} style={[styles.deadlineRow, isExpired && {borderLeftWidth: 3, borderLeftColor: '#e74c3c'}]}>
+                <View key={doc.id} style={[styles.deadlineRow, rtl && {flexDirection: 'row-reverse'}, isExpired && {borderLeftWidth: 3, borderLeftColor: '#e74c3c'}]}>
                   <View style={[styles.deadlineIcon, {backgroundColor: isExpired ? '#fdecea' : '#fff3e0'}]}>
                     <AppIcon name="file-alert-outline" size={20} color={isExpired ? '#e74c3c' : '#e67e22'} />
                   </View>
                   <View style={styles.deadlineBody}>
-                    <Text style={styles.deadlineTitle} numberOfLines={1}>
+                    <Text style={[styles.deadlineTitle, !rtl && {textAlign: 'right'}]} numberOfLines={1}>
                       {(DOC_LABELS_BRIEF[doc.type]?.[locale] ?? DOC_LABELS_BRIEF[doc.type]?.en ?? doc.type.replace(/_/g,' '))} — {subject}
                     </Text>
-                    <Text style={[styles.deadlineDate, {color: isExpired ? '#e74c3c' : '#e67e22'}]}>
+                    <Text style={[styles.deadlineDate, {color: isExpired ? '#e74c3c' : '#e67e22'}, !rtl && {textAlign: 'right'}]}>
                       {isExpired
-                        ? `${i18n.expiringDocs} -${Math.abs(daysLeft)}d`
-                        : `+${daysLeft}d`}
+                        ? `${i18n.expiringDocs} -${Math.abs(daysLeft)}${i18n.daysAbbr}`
+                        : `+${daysLeft}${i18n.daysAbbr}`}
                       {' · '}{expiryStr}
                     </Text>
                   </View>

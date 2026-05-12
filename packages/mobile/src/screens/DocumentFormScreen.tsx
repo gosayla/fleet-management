@@ -28,6 +28,7 @@ const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
 
 const ALL_DOC_TYPES = Object.values(DocumentType);
 const DRIVER_DOC_TYPES = [DocumentType.DRIVER_LICENSE, DocumentType.DRIVER_CARD];
+const VEHICLE_DOC_TYPES = ALL_DOC_TYPES.filter((type) => !DRIVER_DOC_TYPES.includes(type as DocumentType));
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,8 @@ interface Props {
   onSuccess: () => void;
   driverOnly?: boolean; // restrict doc types to driver-relevant ones
 }
+
+type DocumentScope = 'vehicle' | 'driver';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -207,6 +210,7 @@ export function DocumentFormScreen({documentId, locale, onBack, onSuccess, drive
   const [form, setForm] = useState<FormState>(
     driverOnly ? {...EMPTY, type: DocumentType.DRIVER_LICENSE} : EMPTY,
   );
+  const [scopeTab, setScopeTab] = useState<DocumentScope>(driverOnly ? 'driver' : 'vehicle');
   const [loadingDoc, setLoadingDoc] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -222,6 +226,24 @@ export function DocumentFormScreen({documentId, locale, onBack, onSuccess, drive
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm(prev => ({...prev, [key]: value}));
+  }
+
+  function switchScope(scope: DocumentScope) {
+    if (driverOnly || scope === scopeTab) return;
+    setScopeTab(scope);
+    if (scope === 'vehicle') {
+      setForm(prev => ({
+        ...prev,
+        type: VEHICLE_DOC_TYPES.includes(prev.type) ? prev.type : DocumentType.VEHICLE_REGISTRATION,
+        driverIds: [],
+      }));
+      return;
+    }
+    setForm(prev => ({
+      ...prev,
+      type: DRIVER_DOC_TYPES.includes(prev.type) ? prev.type : DocumentType.DRIVER_LICENSE,
+      vehicleIds: [],
+    }));
   }
 
   // ── Load options + existing doc on edit ────────────────────────────────────
@@ -246,8 +268,9 @@ export function DocumentFormScreen({documentId, locale, onBack, onSuccess, drive
     if (!isEdit) return;
     api.get<any>(`/documents/${documentId}`)
       .then(doc => {
+        const loadedType = doc.type ?? DocumentType.VEHICLE_REGISTRATION;
         setForm({
-          type: doc.type ?? DocumentType.VEHICLE_REGISTRATION,
+          type: loadedType,
           issueDate: doc.issueDate ? doc.issueDate.slice(0, 10) : '',
           expiryDate: doc.expiryDate ? doc.expiryDate.slice(0, 10) : '',
           fileUrl: doc.fileUrl ?? '',
@@ -257,10 +280,25 @@ export function DocumentFormScreen({documentId, locale, onBack, onSuccess, drive
           vehicleIds: (doc.vehicles ?? []).map((v: any) => v.id),
           driverIds: (doc.drivers ?? []).map((d: any) => d.id),
         });
+        if (!driverOnly) {
+          setScopeTab(DRIVER_DOC_TYPES.includes(loadedType) ? 'driver' : 'vehicle');
+        }
       })
       .catch(() => setError(i18n.failedToLoadDoc))
       .finally(() => setLoadingDoc(false));
   }, [documentId]);
+
+  useEffect(() => {
+    if (driverOnly) return;
+    if (scopeTab === 'vehicle' && DRIVER_DOC_TYPES.includes(form.type)) {
+      set('type', DocumentType.VEHICLE_REGISTRATION);
+      return;
+    }
+    if (scopeTab === 'driver' && VEHICLE_DOC_TYPES.includes(form.type)) {
+      set('type', DocumentType.DRIVER_LICENSE);
+      return;
+    }
+  }, [scopeTab, form.type, driverOnly]);
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   async function handleSubmit() {
@@ -358,11 +396,31 @@ export function DocumentFormScreen({documentId, locale, onBack, onSuccess, drive
 
           {/* ── Document Type ── */}
           <SectionTitle title={i18n.docTypeSection} />
+          {!driverOnly && (
+            <View style={[styles.scopeTabs, isRTL && styles.rowReverse]}>
+              <TouchableOpacity
+                style={[styles.scopeTabBtn, scopeTab === 'vehicle' && styles.scopeTabBtnActive]}
+                onPress={() => switchScope('vehicle')}
+                activeOpacity={0.8}>
+                <Text style={[styles.scopeTabText, scopeTab === 'vehicle' && styles.scopeTabTextActive]}>
+                  {isRTL ? 'وثائق المركبات' : 'Vehicle Documents'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.scopeTabBtn, scopeTab === 'driver' && styles.scopeTabBtnActive]}
+                onPress={() => switchScope('driver')}
+                activeOpacity={0.8}>
+                <Text style={[styles.scopeTabText, scopeTab === 'driver' && styles.scopeTabTextActive]}>
+                  {isRTL ? 'وثائق السائقين' : 'Driver Documents'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.typePillRow}>
-            {(driverOnly ? DRIVER_DOC_TYPES : ALL_DOC_TYPES).map(type => (
+            {(driverOnly ? DRIVER_DOC_TYPES : (scopeTab === 'driver' ? DRIVER_DOC_TYPES : VEHICLE_DOC_TYPES)).map(type => (
               <TouchableOpacity
                 key={type}
                 style={[styles.typePill, form.type === type && styles.typePillActive]}
@@ -496,7 +554,7 @@ export function DocumentFormScreen({documentId, locale, onBack, onSuccess, drive
           </View>
 
           {/* ── Linked Vehicles ── */}
-          {!driverOnly && (
+          {!driverOnly && scopeTab === 'vehicle' && (
             <>
               <SectionTitle title={i18n.linkedVehicles} />
               <View style={styles.card}>
@@ -514,7 +572,7 @@ export function DocumentFormScreen({documentId, locale, onBack, onSuccess, drive
           )}
 
           {/* ── Linked Drivers ── */}
-          {!driverOnly && (
+          {!driverOnly && scopeTab === 'driver' && (
             <>
               <SectionTitle title={i18n.linkedDrivers} />
               <View style={styles.card}>
@@ -536,7 +594,7 @@ export function DocumentFormScreen({documentId, locale, onBack, onSuccess, drive
       </KeyboardAvoidingView>
 
       {/* ── Vehicle multi-select ── */}
-      {!driverOnly && (
+      {!driverOnly && scopeTab === 'vehicle' && (
         <MultiSelectModal
           visible={vehiclePickerOpen}
           title={i18n.selectVehicles}
@@ -552,7 +610,7 @@ export function DocumentFormScreen({documentId, locale, onBack, onSuccess, drive
       )}
 
       {/* ── Driver multi-select ── */}
-      {!driverOnly && (
+      {!driverOnly && scopeTab === 'driver' && (
         <MultiSelectModal
           visible={driverPickerOpen}
           title={i18n.selectDrivers}
@@ -822,6 +880,26 @@ const styles = StyleSheet.create({
   },
   multilineInput: {minHeight: 70, paddingTop: 0},
   typePillRow: {paddingVertical: 4, gap: 8, paddingRight: Spacing.md},
+  scopeTabs: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  scopeTabBtn: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  scopeTabBtnActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  scopeTabText: {fontSize: 13, fontWeight: '600', color: Colors.textSecondary},
+  scopeTabTextActive: {color: '#fff'},
   typePill: {
     paddingHorizontal: 14, paddingVertical: 8,
     borderRadius: 20,

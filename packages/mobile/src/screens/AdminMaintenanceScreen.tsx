@@ -11,7 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import {api} from '../lib/api';
-import {Locale, t} from '../lib/i18n';
+import {Locale, t, isRTL} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 
@@ -44,6 +44,7 @@ function fmtDate(iso?: string) {
 
 export function AdminMaintenanceScreen({locale, onSelectItem, onAddPress, onBack}: Props) {
   const i18n = t(locale);
+  const rtl = isRTL(locale);
   const [all, setAll] = useState<MaintenanceItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<StatusFilter>('ALL');
@@ -124,20 +125,20 @@ export function AdminMaintenanceScreen({locale, onSelectItem, onAddPress, onBack
       {/* Header */}
       <View style={styles.header}>
         <View style={{height: SB_HEIGHT}} />
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, !rtl && {flexDirection: 'row-reverse'}]}>
           <TouchableOpacity onPress={onBack} style={styles.iconBtn}>
-            <AppIcon name="arrow-left" size={22} color="#fff" />
+            <AppIcon name={rtl ? "arrow-right" : "arrow-left"} size={22} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{i18n.maintenanceScreenTitle}</Text>
-          <View style={styles.headerActions}>
+          <View style={[styles.headerActions, rtl && {flexDirection: 'row-reverse'}]}>
+            <TouchableOpacity style={styles.iconBtn} onPress={onAddPress}>
+              <AppIcon name="plus" size={22} color="#fff" />
+            </TouchableOpacity>
             <TouchableOpacity style={styles.iconBtn} onPress={() => {
               if (searchOpen && searchQuery) setSearchQuery('');
               setSearchOpen(p => !p);
             }}>
               <AppIcon name="magnify" size={22} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn} onPress={onAddPress}>
-              <AppIcon name="plus" size={22} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -172,8 +173,8 @@ export function AdminMaintenanceScreen({locale, onSelectItem, onAddPress, onBack
           data={FILTERS}
           keyExtractor={f => f.key}
           showsHorizontalScrollIndicator={false}
-          style={{flexGrow: 0}}
-          contentContainerStyle={styles.filterRow}
+          style={{flexGrow: 0, alignSelf: rtl ? 'flex-end' : 'flex-start'}}
+          contentContainerStyle={[styles.filterRow, {flexDirection: rtl ? 'row-reverse' : 'row'}]}
           renderItem={({item: f}) => (
             <TouchableOpacity
               style={[styles.filterPill, filter === f.key && styles.filterPillActive]}

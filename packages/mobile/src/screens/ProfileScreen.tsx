@@ -1,7 +1,7 @@
 ﻿import React, {useRef, useState} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity, Alert, StatusBar, Platform, ActivityIndicator, Animated} from 'react-native';
 import {useAuth} from '../context/AuthContext';
-import {Locale, t} from '../lib/i18n';
+import {Locale, t, isRTL} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 
@@ -28,6 +28,7 @@ const LANGUAGE_OPTIONS = [
 export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Props) {
   const {user, logout, updateLanguage} = useAuth();
   const i18n = t(locale);
+  const isRtl = isRTL(locale);
   const [savingLanguage, setSavingLanguage] = useState<string | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
   const canSeeAuditLog = onAuditLogPress && (
@@ -109,10 +110,10 @@ export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Pr
       >
         {/* Info section */}
         <View style={styles.section}>
-          <InfoRow icon="phone-outline" label={locale === 'ar' ? 'رقم الجوال' : 'Phone'} value={(user as any)?.phone ?? ''} />
-          <InfoRow icon="email-outline" label={locale === 'ar' ? 'البريد الإلكتروني' : 'Email'} value={user?.email ?? ''} />
-          <InfoRow icon="shield-account-outline" label={locale === 'ar' ? 'الدور' : 'Role'} value={user?.role ?? ''} />
-          <InfoRow icon="office-building-outline" label={locale === 'ar' ? 'الشركة' : 'Company'} value={(user as any)?.companyName ?? (user as any)?.companyId ?? ''} last />
+          <InfoRow icon="phone-outline" label={i18n.phone} value={(user as any)?.phone ?? ''} isRtl={isRtl} />
+          <InfoRow icon="email-outline" label={i18n.email} value={user?.email ?? ''} isRtl={isRtl} />
+          <InfoRow icon="shield-account-outline" label={i18n.role} value={user?.role ?? ''} isRtl={isRtl} />
+          <InfoRow icon="office-building-outline" label={i18n.company} value={(user as any)?.companyName ?? (user as any)?.companyId ?? ''} last isRtl={isRtl} />
         </View>
 
         <View style={styles.section}>
@@ -139,12 +140,12 @@ export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Pr
         </View>
 
         {canSeeAuditLog && (
-          <TouchableOpacity style={styles.auditBtn} onPress={onAuditLogPress} activeOpacity={0.85}>
+          <TouchableOpacity style={[styles.auditBtn, isRtl && {flexDirection: 'row-reverse'}]} onPress={onAuditLogPress} activeOpacity={0.85}>
             <View style={styles.auditIconWrap}>
               <AppIcon name="clipboard-list-outline" size={18} color={Colors.primary} />
             </View>
             <Text style={styles.auditText}>{i18n.auditLog}</Text>
-            <AppIcon name="chevron-right" size={18} color={Colors.textMuted} />
+            <AppIcon name={isRtl ? "chevron-right" : "chevron-left"} size={18} color={Colors.textMuted} />
           </TouchableOpacity>
         )}
 
@@ -157,15 +158,15 @@ export function ProfileScreen({locale, onSetLocale, onBack, onAuditLogPress}: Pr
   );
 }
 
-function InfoRow({icon, label, value, last}: {icon: string; label: string; value: string; last?: boolean}) {
+function InfoRow({icon, label, value, last, isRtl}: {icon: string; label: string; value: string; last?: boolean; isRtl?: boolean}) {
   return (
-    <View style={[row.wrap, !last && row.border]}>
+    <View style={[row.wrap, !last && row.border, isRtl && {flexDirection: 'row-reverse'}]}>
       <View style={row.iconWrap}>
         <AppIcon name={icon} size={16} color={Colors.primary} />
       </View>
       <View style={row.content}>
-        <Text style={row.label}>{label}</Text>
-        <Text style={row.value} numberOfLines={1}>{value || '—'}</Text>
+        <Text style={[row.label, isRtl && {textAlign: 'left'}]}>{label}</Text>
+        <Text style={[row.value, isRtl && {textAlign: 'left'}]} numberOfLines={1}>{value || '—'}</Text>
       </View>
     </View>
   );

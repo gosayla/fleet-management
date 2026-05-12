@@ -21,7 +21,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const SLIDE_VEHICLES = 0;
 const SLIDE_DRIVERS  = I18nManager.isRTL ? SCREEN_WIDTH : -SCREEN_WIDTH;
 import {api} from '../lib/api';
-import {Locale, t} from '../lib/i18n';
+import {Locale, t, isRTL as isTtl} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {DriverCard, DriverCardData} from '../components/ui/cards/DriverCard';
@@ -54,6 +54,9 @@ const PAGE_SIZE = 20;
 
 export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAddVehicle, onAddDriver, onMaintenancePress, initialSegment, initialSearch, onStateChange, initialVehicleScroll, initialDriverScroll, onScrollChange}: Props) {
   const i18n = t(locale);
+  const rtl = isTtl(locale);
+
+  // ── UI state ─────────────────────────────────────────────────────────────
   const [segment, setSegment] = useState<Segment>(initialSegment ?? 'vehicles');
   const [searchOpen, setSearchOpen] = useState(!!(initialSearch?.trim()));
   const [searchQuery, setSearchQuery] = useState(initialSearch ?? '');
@@ -213,23 +216,13 @@ export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAdd
       {/* ── Teal header ── */}
       <View style={styles.header}>
         <View style={{height: STATUS_BAR_H}} />
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, !rtl && {flexDirection: 'row-reverse'}]}>
           <Text style={styles.headerTitle}>{i18n.fleet}</Text>
-          <View style={styles.headerActions}>
+          <View style={[styles.headerActions, rtl && {flexDirection: 'row-reverse'}]}>
             <TouchableOpacity
               style={styles.iconBtn}
               onPress={onMaintenancePress}>
               <AppIcon name="wrench" size={20} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.iconBtn}
-              onPress={() => {
-                if (searchOpen && searchQuery.trim()) {
-                  setSearchQuery('');
-                }
-                setSearchOpen(prev => !prev);
-              }}>
-              <AppIcon name="magnify" size={22} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.iconBtn}
@@ -241,6 +234,16 @@ export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAdd
                 }
               }}>
               <AppIcon name="plus" size={22} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => {
+                if (searchOpen && searchQuery.trim()) {
+                  setSearchQuery('');
+                }
+                setSearchOpen(prev => !prev);
+              }}>
+              <AppIcon name="magnify" size={22} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -270,7 +273,7 @@ export function AdminFleetScreen({locale, onSelectVehicle, onSelectDriver, onAdd
       {/* ── White curved panel (overlaps header) ── */}
       <View style={styles.panel}>
         {/* Segment toggle inside panel */}
-        <View style={styles.segmentWrap}>
+        <View style={[styles.segmentWrap, rtl && {flexDirection: 'row-reverse'}]}>
           <TouchableOpacity
             style={[styles.segBtn, segment === 'drivers' && styles.segBtnActive]}
             onPress={() => switchTo('drivers')}

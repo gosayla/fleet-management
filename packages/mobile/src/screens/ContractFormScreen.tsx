@@ -474,6 +474,9 @@ export function ContractFormScreen({contractId, locale, onBack, onSuccess}: Prop
       <DateWheelModal
         visible={datePickerField !== null}
         value={datePickerField ? form[datePickerField] : ''}
+        locale={locale}
+        cancelLabel={i18n.cancel}
+        doneLabel={i18n.done}
         label={datePickerField === 'contractStart' ? i18n.contractStart : i18n.contractEnd}
         onClose={() => setDatePickerField(null)}
         onConfirm={date => {

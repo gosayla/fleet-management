@@ -18,9 +18,23 @@ type DatePickerProps = {
 
 type DateParts = { year: number; month: number; day: number };
 
+function normalizeDateInput(value: string): string {
+  return value
+    // Arabic-Indic digits
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    // Eastern Arabic/Persian digits
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+    // Common separators to hyphen
+    .replace(/[\/.]/g, '-')
+    // Strip bidi/invisible marks that often appear in RTL inputs
+    .replace(/[\u200e\u200f\u202a-\u202e]/g, '')
+    .trim();
+}
+
 function parseYyyyMmDd(value?: string): DateParts | undefined {
   if (!value) return undefined;
-  const m = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const normalized = normalizeDateInput(value);
+  const m = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return undefined;
   const year = Number(m[1]);
   const month = Number(m[2]);
@@ -195,7 +209,7 @@ export function DatePicker({
 
   return (
     <div className="relative" ref={ref}>
-      <div className={`mb-1 flex items-center gap-2 ${isRTL ? 'justify-between flex-row-reverse' : 'justify-between'}`}>
+      <div className={`mb-1 flex items-center gap-2 ${isRTL ? 'justify-between' : 'justify-between'}`}>
         <label className={`block text-sm font-medium text-gray-700 ${isRTL ? 'text-right' : 'text-left'}`}>
           {label}
         </label>

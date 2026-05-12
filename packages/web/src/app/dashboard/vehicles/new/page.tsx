@@ -19,10 +19,19 @@ const initialValues: VehicleFormValues = {
   vin: '',
   odometer: 0,
   fuelCapacity: 50,
+  plateType: undefined,
+  sequenceNumber: undefined,
+  bodyType: undefined,
+  ownershipDate: undefined,
+  licenseIssuanceDate: undefined,
+  inspectionExpiryDate: undefined,
+  restrictionStatus: undefined,
   operationCardNumber: undefined,
   operationCardIssueDate: undefined,
   operationCardExpiryDate: undefined,
   operationCardRenewDate: undefined,
+  licenseExpiryDate: undefined,
+  insuranceExpiryDate: undefined,
 };
 
 export default function NewVehiclePage() {
@@ -61,11 +70,20 @@ export default function NewVehiclePage() {
       vin: values.vin,
       odometer: values.odometer,
       fuelCapacity: values.fuelCapacity,
+      plateType: values.plateType,
+      sequenceNumber: values.sequenceNumber,
+      bodyType: values.bodyType,
+      ownershipDate: values.ownershipDate,
+      licenseIssuanceDate: values.licenseIssuanceDate,
+      inspectionExpiryDate: values.inspectionExpiryDate,
+      restrictionStatus: values.restrictionStatus,
       operationCardNumber: values.operationCardNumber,
       operationCardIssueDate: values.operationCardIssueDate,
       operationCardExpiryDate: values.operationCardExpiryDate,
       operationCardRenewDate: values.operationCardRenewDate,
       operationCardFileUrl,
+      licenseExpiryDate: values.licenseExpiryDate,
+      insuranceExpiryDate: values.insuranceExpiryDate,
     };
 
     createMutation.mutate(payload);

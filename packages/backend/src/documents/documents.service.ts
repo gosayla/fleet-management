@@ -7,6 +7,55 @@ import { CreateDocumentDto, DocumentsQueryDto, UpdateDocumentDto } from './docum
 export class DocumentsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private readonly vehicleSyncedTypes = [
+    'VEHICLE_REGISTRATION',
+    'VEHICLE_INSURANCE',
+    'PERIODIC_INSPECTION',
+    'OPERATION_CARD',
+  ] as const;
+
+  private readonly vehicleOnlyDocumentTypes = new Set([
+    'VEHICLE_REGISTRATION',
+    'VEHICLE_INSURANCE',
+    'PERIODIC_INSPECTION',
+    'TRANSPORT_PERMIT',
+    'OWNERSHIP_DEED',
+    'OPERATION_CARD',
+  ]);
+
+  private readonly driverOnlyDocumentTypes = new Set([
+    'DRIVER_LICENSE',
+    'DRIVER_CARD',
+  ]);
+
+  private toDateOnly(value: Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  private statusFromExpiry(expiry: Date) {
+    return expiry >= new Date() ? 'Valid' : 'Expired';
+  }
+
+  private validateDocumentTargets(type: string, vehicleIds: string[], driverIds: string[]) {
+    if (this.vehicleOnlyDocumentTypes.has(type)) {
+      if (!vehicleIds.length) {
+        throw new BadRequestException(`Document type ${type} must be linked to at least one vehicle`);
+      }
+      if (driverIds.length) {
+        throw new BadRequestException(`Document type ${type} cannot be linked to drivers`);
+      }
+    }
+
+    if (this.driverOnlyDocumentTypes.has(type)) {
+      if (!driverIds.length) {
+        throw new BadRequestException(`Document type ${type} must be linked to at least one driver`);
+      }
+      if (vehicleIds.length) {
+        throw new BadRequestException(`Document type ${type} cannot be linked to vehicles`);
+      }
+    }
+  }
+
   private async assertVehicleIds(companyId: string, ids: string[]) {
     for (const id of ids) {
       const v = await this.prisma.vehicle.findFirst({ where: { id, companyId }, select: { id: true } });
@@ -36,6 +85,7 @@ export class DocumentsService {
   async create(companyId: string, dto: CreateDocumentDto) {
     const vehicleIds = dto.vehicleIds ?? [];
     const driverIds = dto.driverIds ?? [];
+    this.validateDocumentTargets(dto.type, vehicleIds, driverIds);
     await this.assertVehicleIds(companyId, vehicleIds);
     await this.assertDriverIds(companyId, driverIds);
 
@@ -58,8 +108,8 @@ export class DocumentsService {
       },
     });
 
-    for (const v of doc.vehicles) await this.syncDocumentToVehicle(companyId, v.id, doc.type, doc);
-    for (const d of doc.drivers) await this.syncDocumentToDriver(companyId, d.id, doc.type, doc);
+    for (const v of doc.vehicles) await this.refreshVehicleDocumentState(companyId, v.id);
+    for (const d of doc.drivers) await this.refreshDriverDocumentState(companyId, d.id);
 
     return doc;
   }
@@ -67,7 +117,12 @@ export class DocumentsService {
   async update(companyId: string, id: string, dto: UpdateDocumentDto) {
     const existing = await this.prisma.fleetDocument.findFirst({
       where: { id, companyId },
-      select: { id: true, type: true },
+      select: {
+        id: true,
+        type: true,
+        vehicles: { select: { id: true } },
+        drivers: { select: { id: true } },
+      },
     });
     if (!existing) throw new NotFoundException('Document not found');
 
@@ -75,6 +130,11 @@ export class DocumentsService {
     const driverIds = dto.driverIds;
     if (vehicleIds) await this.assertVehicleIds(companyId, vehicleIds);
     if (driverIds) await this.assertDriverIds(companyId, driverIds);
+
+    const resolvedType = dto.type ?? existing.type;
+    const resolvedVehicleIds = vehicleIds ?? existing.vehicles.map(v => v.id);
+    const resolvedDriverIds = driverIds ?? existing.drivers.map(d => d.id);
+    this.validateDocumentTargets(resolvedType, resolvedVehicleIds, resolvedDriverIds);
 
     const doc = await this.prisma.fleetDocument.update({
       where: { id },
@@ -95,65 +155,94 @@ export class DocumentsService {
       },
     });
 
-    const resolvedType = dto.type ?? existing.type;
-    for (const v of doc.vehicles) await this.syncDocumentToVehicle(companyId, v.id, resolvedType, doc);
-    for (const d of doc.drivers) await this.syncDocumentToDriver(companyId, d.id, resolvedType, doc);
+    const impactedVehicleIds = Array.from(
+      new Set([...existing.vehicles.map(v => v.id), ...doc.vehicles.map(v => v.id)]),
+    );
+    const impactedDriverIds = Array.from(
+      new Set([...existing.drivers.map(d => d.id), ...doc.drivers.map(d => d.id)]),
+    );
+
+    for (const vehicleId of impactedVehicleIds) await this.refreshVehicleDocumentState(companyId, vehicleId);
+    for (const driverId of impactedDriverIds) await this.refreshDriverDocumentState(companyId, driverId);
 
     return doc;
   }
 
-  private async syncDocumentToVehicle(
-    companyId: string,
-    vehicleId: string,
-    type: string,
-    doc: { fileUrl: string; issueDate: Date; expiryDate: Date; referenceNumber: string | null },
-  ) {
-    const toDate = (d: Date) => d.toISOString().slice(0, 10);
-    let data: Record<string, unknown>;
-    switch (type) {
-      case 'VEHICLE_REGISTRATION':
-        data = { licenseIssuanceDate: toDate(doc.issueDate), licenseExpiryDate: toDate(doc.expiryDate) };
-        break;
-      case 'VEHICLE_INSURANCE':
-        data = { insuranceExpiryDate: toDate(doc.expiryDate), insuranceStatus: 'Valid' };
-        break;
-      case 'PERIODIC_INSPECTION':
-        data = { inspectionExpiryDate: toDate(doc.expiryDate), mvpiStatus: 'Valid' };
-        break;
-      case 'OPERATION_CARD':
-        data = {
-          operationCardFileUrl: doc.fileUrl,
-          operationCardIssueDate: toDate(doc.issueDate),
-          operationCardExpiryDate: toDate(doc.expiryDate),
-          operationCardNumber: doc.referenceNumber ?? undefined,
-        };
-        break;
-      default:
-        return;
-    }
-    await this.prisma.vehicle.updateMany({ where: { id: vehicleId, companyId }, data });
+  private async refreshVehicleDocumentState(companyId: string, vehicleId: string) {
+    const docs = await this.prisma.fleetDocument.findMany({
+      where: {
+        companyId,
+        type: { in: [...this.vehicleSyncedTypes] },
+        vehicles: { some: { id: vehicleId } },
+      },
+      orderBy: [{ expiryDate: 'desc' }, { updatedAt: 'desc' }],
+      select: {
+        type: true,
+        fileUrl: true,
+        issueDate: true,
+        expiryDate: true,
+        referenceNumber: true,
+      },
+    });
+
+    const registration = docs.find(d => d.type === 'VEHICLE_REGISTRATION');
+    const insurance = docs.find(d => d.type === 'VEHICLE_INSURANCE');
+    const inspection = docs.find(d => d.type === 'PERIODIC_INSPECTION');
+    const opCard = docs.find(d => d.type === 'OPERATION_CARD');
+
+    await this.prisma.vehicle.updateMany({
+      where: { id: vehicleId, companyId },
+      data: {
+        licenseIssuanceDate: registration ? this.toDateOnly(registration.issueDate) : null,
+        licenseExpiryDate: registration ? this.toDateOnly(registration.expiryDate) : null,
+        insuranceExpiryDate: insurance ? this.toDateOnly(insurance.expiryDate) : null,
+        insuranceStatus: insurance ? this.statusFromExpiry(insurance.expiryDate) : null,
+        inspectionExpiryDate: inspection ? this.toDateOnly(inspection.expiryDate) : null,
+        mvpiStatus: inspection ? this.statusFromExpiry(inspection.expiryDate) : null,
+        operationCardFileUrl: opCard ? opCard.fileUrl : null,
+        operationCardIssueDate: opCard ? this.toDateOnly(opCard.issueDate) : null,
+        operationCardExpiryDate: opCard ? this.toDateOnly(opCard.expiryDate) : null,
+        operationCardNumber: opCard?.referenceNumber ?? null,
+      },
+    });
   }
 
-  private async syncDocumentToDriver(
-    companyId: string,
-    driverId: string,
-    type: string,
-    doc: { issueDate: Date; expiryDate: Date; referenceNumber: string | null },
-  ) {
-    if (type !== 'DRIVER_LICENSE') return;
+  private async refreshDriverDocumentState(companyId: string, driverId: string) {
+    const licenseDoc = await this.prisma.fleetDocument.findFirst({
+      where: {
+        companyId,
+        type: 'DRIVER_LICENSE',
+        drivers: { some: { id: driverId } },
+      },
+      orderBy: [{ expiryDate: 'desc' }, { updatedAt: 'desc' }],
+      select: { expiryDate: true, referenceNumber: true },
+    });
+
+    if (!licenseDoc) return;
+
     await this.prisma.driver.updateMany({
       where: { id: driverId, companyId },
       data: {
-        licenseExpiry: doc.expiryDate,
-        ...(doc.referenceNumber ? { licenseNumber: doc.referenceNumber } : {}),
+        licenseExpiry: licenseDoc.expiryDate,
+        ...(licenseDoc.referenceNumber ? { licenseNumber: licenseDoc.referenceNumber } : {}),
       },
     });
   }
 
   async remove(companyId: string, id: string) {
-    const existing = await this.prisma.fleetDocument.findFirst({ where: { id, companyId }, select: { id: true } });
+    const existing = await this.prisma.fleetDocument.findFirst({
+      where: { id, companyId },
+      select: {
+        id: true,
+        vehicles: { select: { id: true } },
+        drivers: { select: { id: true } },
+      },
+    });
     if (!existing) throw new NotFoundException('Document not found');
-    return this.prisma.fleetDocument.delete({ where: { id } });
+    const deleted = await this.prisma.fleetDocument.delete({ where: { id } });
+    for (const v of existing.vehicles) await this.refreshVehicleDocumentState(companyId, v.id);
+    for (const d of existing.drivers) await this.refreshDriverDocumentState(companyId, d.id);
+    return deleted;
   }
 
   async findAll(companyId: string, query: DocumentsQueryDto) {

@@ -18,6 +18,13 @@ export type VehicleFormValues = {
   vin: string;
   odometer: number;
   fuelCapacity: number;
+  plateType?: string;
+  sequenceNumber?: string;
+  bodyType?: string;
+  ownershipDate?: string;
+  licenseIssuanceDate?: string;
+  inspectionExpiryDate?: string;
+  restrictionStatus?: string;
   operationCardNumber?: string;
   operationCardIssueDate?: string;
   operationCardExpiryDate?: string;
@@ -59,6 +66,9 @@ export function VehicleForm({
   const { isRTL, locale, t } = useLocale();
   const tv = t.vehicles;
   const [licenseExpiryDate, setLicenseExpiryDate] = useState<string | undefined>(initialValues.licenseExpiryDate);
+  const [ownershipDate, setOwnershipDate] = useState<string | undefined>(initialValues.ownershipDate);
+  const [licenseIssuanceDate, setLicenseIssuanceDate] = useState<string | undefined>(initialValues.licenseIssuanceDate);
+  const [inspectionExpiryDate, setInspectionExpiryDate] = useState<string | undefined>(initialValues.inspectionExpiryDate);
 
   // Assigned driver combobox state
   const [driverQuery, setDriverQuery] = useState('');
@@ -90,21 +100,31 @@ export function VehicleForm({
 
   useEffect(() => {
     setLicenseExpiryDate(initialValues.licenseExpiryDate);
+    setOwnershipDate(initialValues.ownershipDate);
+    setLicenseIssuanceDate(initialValues.licenseIssuanceDate);
+    setInspectionExpiryDate(initialValues.inspectionExpiryDate);
     setInsuranceExpiryDate(initialValues.insuranceExpiryDate);
     setOperationCardIssueDate(initialValues.operationCardIssueDate);
     setOperationCardExpiryDate(initialValues.operationCardExpiryDate);
     setOperationCardRenewDate(initialValues.operationCardRenewDate);
+  }, [
+    initialValues.licenseExpiryDate,
+    initialValues.ownershipDate,
+    initialValues.licenseIssuanceDate,
+    initialValues.inspectionExpiryDate,
+    initialValues.insuranceExpiryDate,
+    initialValues.operationCardIssueDate,
+    initialValues.operationCardExpiryDate,
+    initialValues.operationCardRenewDate,
+  ]);
+
+  useEffect(() => {
     // Sync driver selection when initialValues load (e.g. edit page async fetch)
     const newId = initialValues.assignedDriverId;
     setAssignedDriverId(newId);
     const matched = drivers.find((d) => d.id === newId);
     setDriverQuery(matched?.fullName ?? '');
   }, [
-    initialValues.licenseExpiryDate,
-    initialValues.insuranceExpiryDate,
-    initialValues.operationCardIssueDate,
-    initialValues.operationCardExpiryDate,
-    initialValues.operationCardRenewDate,
     initialValues.assignedDriverId,
     drivers,
   ]);
@@ -125,6 +145,13 @@ export function VehicleForm({
           vin: String(fd.get('vin') ?? '').trim(),
           odometer: Number(fd.get('odometer') ?? 0),
           fuelCapacity: Number(fd.get('fuelCapacity') ?? 0),
+          plateType: String(fd.get('plateType') ?? '').trim() || undefined,
+          sequenceNumber: String(fd.get('sequenceNumber') ?? '').trim() || undefined,
+          bodyType: String(fd.get('bodyType') ?? '').trim() || undefined,
+          ownershipDate,
+          licenseIssuanceDate,
+          inspectionExpiryDate,
+          restrictionStatus: String(fd.get('restrictionStatus') ?? '').trim() || undefined,
           operationCardNumber: String(fd.get('operationCardNumber') ?? '').trim() || undefined,
           operationCardIssueDate,
           operationCardExpiryDate,
@@ -146,6 +173,9 @@ export function VehicleForm({
           <Field label={tv.model} name="model" defaultValue={initialValues.model} required />
           <Field label={tv.year} name="year" type="number" min={1990} max={2100} defaultValue={String(initialValues.year)} required />
           <Field label={tv.color} name="color" defaultValue={initialValues.color} required />
+          <Field label={tv.sequenceNumber} name="sequenceNumber" defaultValue={initialValues.sequenceNumber ?? ''} />
+          <Field label={tv.plateType} name="plateType" defaultValue={initialValues.plateType ?? ''} />
+          <Field label={tv.bodyType} name="bodyType" defaultValue={initialValues.bodyType ?? ''} />
           <div>
             <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{tv.type}</label>
             <select
@@ -160,6 +190,7 @@ export function VehicleForm({
           </div>
           <Field label={tv.odometer} name="odometer" type="number" min={0} step="0.1" defaultValue={String(initialValues.odometer)} required />
           <Field label={tv.fuelCapacity} name="fuelCapacity" type="number" min={1} step="0.1" defaultValue={String(initialValues.fuelCapacity)} required />
+          <Field label={tv.restrictionStatus} name="restrictionStatus" defaultValue={initialValues.restrictionStatus ?? ''} />
 
           <div className="md:col-span-2 border-t border-gray-100 pt-4 mt-2">
             <h3 className={`text-sm font-semibold text-gray-900 mb-3 ${isRTL ? 'text-right' : 'text-left'}`}>{tv.operationCardSection}</h3>
@@ -226,6 +257,30 @@ export function VehicleForm({
           <div className="md:col-span-2 border-t border-gray-100 pt-4 mt-2">
             <h3 className={`text-sm font-semibold text-gray-900 mb-3 ${isRTL ? 'text-right' : 'text-left'}`}>Tamm</h3>
           </div>
+          <DatePicker
+            label={tv.ownershipDate}
+            value={ownershipDate}
+            onChange={setOwnershipDate}
+            placeholder={tv.ownershipDate}
+            isRTL={isRTL}
+            outputCalendar="hijri"
+          />
+          <DatePicker
+            label={tv.licenseIssuanceDate}
+            value={licenseIssuanceDate}
+            onChange={setLicenseIssuanceDate}
+            placeholder={tv.licenseIssuanceDate}
+            isRTL={isRTL}
+            outputCalendar="hijri"
+          />
+          <DatePicker
+            label={tv.inspectionExpiryDate}
+            value={inspectionExpiryDate}
+            onChange={setInspectionExpiryDate}
+            placeholder={tv.inspectionExpiryDate}
+            isRTL={isRTL}
+            outputCalendar="gregorian"
+          />
           <DatePicker
             label={tv.licenseExpiryDate}
             value={licenseExpiryDate}

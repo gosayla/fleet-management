@@ -11,7 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import {api} from '../lib/api';
-import {Locale, t} from '../lib/i18n';
+import {Locale, t, isRTL} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 import {TripCard} from '../components/ui/cards/TripCard';
@@ -82,7 +82,7 @@ const FILTERS = [
 
 export function AdminTripsScreen({locale, onSelectTrip, onAddTrip, onSelectContract, onAddContract, onSelectRental, onAddRental, segment: segmentProp, onSegmentChange}: Props) {
   const i18n = t(locale);
-
+  const rtl = isRTL(locale);
   // ── Segment (controlled from parent to survive navigation) ────────────────
   const [segmentLocal, setSegmentLocal] = useState<HubSegment>(segmentProp ?? 'trips');
   const segment = segmentProp ?? segmentLocal;

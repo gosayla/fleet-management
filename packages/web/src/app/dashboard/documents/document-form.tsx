@@ -46,6 +46,27 @@ type DocumentFormProps = {
 
 const docTypes = Object.values(DocumentType);
 
+const vehicleOnlyDocumentTypes = new Set<DocumentType>([
+  DocumentType.VEHICLE_REGISTRATION,
+  DocumentType.VEHICLE_INSURANCE,
+  DocumentType.PERIODIC_INSPECTION,
+  DocumentType.TRANSPORT_PERMIT,
+  DocumentType.OWNERSHIP_DEED,
+  DocumentType.OPERATION_CARD,
+]);
+
+const driverTypeOptions = [
+  DocumentType.DRIVER_LICENSE,
+  'DRIVER_CARD' as DocumentType,
+] as const;
+
+const driverOnlyDocumentTypes = new Set<DocumentType>(driverTypeOptions);
+
+const vehicleDocumentTypeOptions = docTypes.filter((type) => vehicleOnlyDocumentTypes.has(type));
+const driverDocumentTypeOptions = Array.from(new Set<DocumentType>(driverTypeOptions));
+
+type DocumentTargetTab = 'vehicle' | 'driver';
+
 function vehicleLabel(v: VehicleOption) {
   return `${v.plateNumber} - ${v.year} ${v.make} ${v.model}`;
 }
@@ -58,6 +79,7 @@ function MultiSelect({
   options,
   onChange,
   isRTL,
+  disabled,
 }: {
   label: string;
   placeholder: string;
@@ -65,6 +87,7 @@ function MultiSelect({
   options: { id: string; label: string }[];
   onChange: (ids: string[]) => void;
   isRTL: boolean;
+  disabled?: boolean;
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -85,6 +108,7 @@ function MultiSelect({
   }, [options, query]);
 
   const toggle = (id: string) => {
+    if (disabled) return;
     onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]);
   };
 
@@ -111,11 +135,12 @@ function MultiSelect({
           value={query}
           placeholder={placeholder}
           autoComplete="off"
-          className={`w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'text-right' : 'text-left'}`}
+          disabled={disabled}
+          className={`w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 ${isRTL ? 'text-right' : 'text-left'}`}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => !disabled && setOpen(true)}
         />
-        {open && (
+        {open && !disabled && (
           <ul className="absolute z-50 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white text-sm shadow-lg">
             {filtered.length === 0 && (
               <li className="px-3 py-2 text-gray-400">{isRTL ? 'لا توجد نتائج' : 'No results'}</li>
@@ -160,6 +185,42 @@ export function DocumentForm({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialTab: DocumentTargetTab = driverOnlyDocumentTypes.has(initialValues.type) ? 'driver' : 'vehicle';
+  const [activeTab, setActiveTab] = useState<DocumentTargetTab>(initialTab);
+
+  const isVehicleOnlyType = vehicleOnlyDocumentTypes.has(form.type);
+  const isDriverOnlyType = driverOnlyDocumentTypes.has(form.type);
+  const visibleTypeOptions = activeTab === 'vehicle' ? vehicleDocumentTypeOptions : driverDocumentTypeOptions;
+
+  useEffect(() => {
+    setForm((prev) => {
+      if (vehicleOnlyDocumentTypes.has(prev.type) && prev.driverIds.length > 0) {
+        return { ...prev, driverIds: [] };
+      }
+      if (driverOnlyDocumentTypes.has(prev.type) && prev.vehicleIds.length > 0) {
+        return { ...prev, vehicleIds: [] };
+      }
+      return prev;
+    });
+  }, [form.type]);
+
+  const switchTab = (tab: DocumentTargetTab) => {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    setForm((prev) => {
+      if (tab === 'vehicle') {
+        const nextType = vehicleOnlyDocumentTypes.has(prev.type)
+          ? prev.type
+          : vehicleDocumentTypeOptions[0] ?? DocumentType.VEHICLE_REGISTRATION;
+        return { ...prev, type: nextType, driverIds: [] };
+      }
+
+      const nextType = driverOnlyDocumentTypes.has(prev.type)
+        ? prev.type
+        : driverDocumentTypeOptions[0] ?? DocumentType.DRIVER_LICENSE;
+      return { ...prev, type: nextType, vehicleIds: [] };
+    });
+  };
 
   const vehicleOptions = useMemo(() => vehicles.map((v) => ({ id: v.id, label: vehicleLabel(v) })), [vehicles]);
   const driverOptions = useMemo(() => drivers.map((d) => ({ id: d.id, label: d.fullName })), [drivers]);
@@ -176,6 +237,31 @@ export function DocumentForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div className={`flex gap-2 ${isRTL ? 'justify-end' : 'justify-start'}`}>
+        <button
+          type="button"
+          onClick={() => switchTab('vehicle')}
+          className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'vehicle'
+              ? 'border-blue-600 bg-blue-600 text-white'
+              : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          {isRTL ? 'وثائق المركبات' : 'Vehicle Documents'}
+        </button>
+        <button
+          type="button"
+          onClick={() => switchTab('driver')}
+          className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'driver'
+              ? 'border-blue-600 bg-blue-600 text-white'
+              : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          {isRTL ? 'وثائق السائقين' : 'Driver Documents'}
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Type */}
         <div>
@@ -185,7 +271,7 @@ export function DocumentForm({
             onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value as DocumentType }))}
             className={`w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'text-right' : 'text-left'}`}
           >
-            {docTypes.map((item) => (
+            {visibleTypeOptions.map((item) => (
               <option key={item} value={item}>{formatEnumLabel('documentType', item, locale)}</option>
             ))}
           </select>
@@ -242,25 +328,27 @@ export function DocumentForm({
         <DatePicker label={td.expiryDate} value={expiryDate} onChange={setExpiryDate} placeholder={td.expiryDate} isRTL={isRTL} outputCalendar="gregorian" />
       </div>
 
-      {/* Vehicles multi-select — full width */}
-      <MultiSelect
-        label={isRTL ? 'المركبات المرتبطة' : 'Linked Vehicles'}
-        placeholder={isRTL ? 'ابحث عن مركبة...' : 'Search vehicles...'}
-        selectedIds={form.vehicleIds}
-        options={vehicleOptions}
-        onChange={(ids) => setForm((prev) => ({ ...prev, vehicleIds: ids }))}
-        isRTL={isRTL}
-      />
-
-      {/* Drivers multi-select — full width */}
-      <MultiSelect
-        label={isRTL ? 'السائقون المرتبطون' : 'Linked Drivers'}
-        placeholder={isRTL ? 'ابحث عن سائق...' : 'Search drivers...'}
-        selectedIds={form.driverIds}
-        options={driverOptions}
-        onChange={(ids) => setForm((prev) => ({ ...prev, driverIds: ids }))}
-        isRTL={isRTL}
-      />
+      {activeTab === 'vehicle' ? (
+        <MultiSelect
+          label={isRTL ? 'المركبات المرتبطة' : 'Linked Vehicles'}
+          placeholder={isRTL ? 'ابحث عن مركبة...' : 'Search vehicles...'}
+          selectedIds={form.vehicleIds}
+          options={vehicleOptions}
+          onChange={(ids) => setForm((prev) => ({ ...prev, vehicleIds: ids }))}
+          isRTL={isRTL}
+          disabled={isDriverOnlyType}
+        />
+      ) : (
+        <MultiSelect
+          label={isRTL ? 'السائقون المرتبطون' : 'Linked Drivers'}
+          placeholder={isRTL ? 'ابحث عن سائق...' : 'Search drivers...'}
+          selectedIds={form.driverIds}
+          options={driverOptions}
+          onChange={(ids) => setForm((prev) => ({ ...prev, driverIds: ids }))}
+          isRTL={isRTL}
+          disabled={isVehicleOnlyType}
+        />
+      )}
 
       {/* Notes */}
       <div>

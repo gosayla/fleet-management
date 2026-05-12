@@ -14,7 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import {api} from '../lib/api';
-import {Locale, t} from '../lib/i18n';
+import {Locale, t, isRTL} from '../lib/i18n';
 import {Colors, Spacing} from '../lib/theme';
 import {AppIcon} from '../components/ui/AppIcon';
 
@@ -50,6 +50,7 @@ function fmtDate(iso?: string) {
 
 export function MaintenanceDetailScreen({maintenanceId, locale, onBack, onEdit, onDeleted}: Props) {
   const i18n = t(locale);
+  const rtl = isRTL(locale);
   const [log, setLog] = useState<MaintenanceLog | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -189,9 +190,9 @@ export function MaintenanceDetailScreen({maintenanceId, locale, onBack, onEdit, 
       {/* Header */}
       <View style={styles.header}>
         <View style={{height: SB_HEIGHT}} />
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, {flexDirection: !rtl ? 'row-reverse' : 'row'}]}>
           <TouchableOpacity onPress={onBack} style={styles.iconBtn}>
-            <AppIcon name="arrow-left" size={22} color="#fff" />
+            <AppIcon name={rtl ? "arrow-right" : "arrow-left"} size={22} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{i18n.viewMaintenance}</Text>
           <View style={styles.headerRight}>

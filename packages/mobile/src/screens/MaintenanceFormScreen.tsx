@@ -346,6 +346,9 @@ export function MaintenanceFormScreen({maintenanceId, locale, onBack, onSuccess}
       <DateWheelModal
         visible={datePickerField === 'scheduledDate'}
         value={form.scheduledDate}
+        locale={locale}
+        cancelLabel={i18n.cancel}
+        doneLabel={i18n.done}
         label={i18n.scheduledDateLabel}
         onConfirm={d => { set('scheduledDate', d); setDatePickerField(null); }}
         onClose={() => setDatePickerField(null)}
@@ -353,6 +356,9 @@ export function MaintenanceFormScreen({maintenanceId, locale, onBack, onSuccess}
       <DateWheelModal
         visible={datePickerField === 'nextServiceDate'}
         value={form.nextServiceDate}
+        locale={locale}
+        cancelLabel={i18n.cancel}
+        doneLabel={i18n.done}
         label={i18n.nextServiceDateLabel}
         onConfirm={d => { set('nextServiceDate', d); setDatePickerField(null); }}
         onClose={() => setDatePickerField(null)}
@@ -361,6 +367,9 @@ export function MaintenanceFormScreen({maintenanceId, locale, onBack, onSuccess}
         <DateWheelModal
           visible={datePickerField === 'completedDate'}
           value={form.completedDate}
+          locale={locale}
+          cancelLabel={i18n.cancel}
+          doneLabel={i18n.done}
           label={i18n.completedDateLabel}
           onConfirm={d => { set('completedDate', d); setDatePickerField(null); }}
           onClose={() => setDatePickerField(null)}

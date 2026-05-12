@@ -82,6 +82,36 @@ function Wheel({items, initialIndex, onChange, width, resetKey}: WheelProps) {
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+const HIJRI_MONTHS = [
+  'Muharram',
+  'Safar',
+  'Rabi I',
+  'Rabi II',
+  'Jumada I',
+  'Jumada II',
+  'Rajab',
+  "Sha'ban",
+  'Ramadan',
+  'Shawwal',
+  "Dhul Qi'dah",
+  'Dhul Hijjah',
+];
+
+const HIJRI_MONTHS_AR = [
+  'محرم',
+  'صفر',
+  'ربيع الأول',
+  'ربيع الثاني',
+  'جمادى الأولى',
+  'جمادى الآخرة',
+  'رجب',
+  'شعبان',
+  'رمضان',
+  'شوال',
+  'ذو القعدة',
+  'ذو الحجة',
+];
+
 function pad(n: number) {
   return String(n).padStart(2, '0');
 }
@@ -90,10 +120,25 @@ function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
 }
 
-function parseDate(value: string, now: Date): [number, number, number] {
-  if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [y, m, d] = value.split('-').map(Number);
+function isHijriLeapYear(year: number) {
+  const y = ((year - 1) % 30) + 1;
+  return [2, 5, 7, 10, 13, 16, 18, 21, 24, 26, 29].includes(y);
+}
+
+function hijriDaysInMonth(year: number, month: number) {
+  if (month === 12) {
+    return isHijriLeapYear(year) ? 30 : 29;
+  }
+  return month % 2 === 1 ? 30 : 29;
+}
+
+function parseDate(value: string, now: Date, calendar: 'gregorian' | 'hijri'): [number, number, number] {
+  if (value && /^\d{4}[-/]\d{2}[-/]\d{2}$/.test(value)) {
+    const [y, m, d] = value.split(/[-/]/).map(Number);
     return [y, m, d];
+  }
+  if (calendar === 'hijri') {
+    return [1447, 1, 1];
   }
   return [now.getFullYear(), now.getMonth() + 1, now.getDate()];
 }
@@ -107,6 +152,10 @@ export interface DateWheelModalProps {
   label?: string;
   minYear?: number;
   maxYear?: number;
+  calendar?: 'gregorian' | 'hijri';
+  locale?: string;
+  cancelLabel?: string;
+  doneLabel?: string;
 }
 
 export function DateWheelModal({
@@ -117,9 +166,13 @@ export function DateWheelModal({
   label,
   minYear = 2020,
   maxYear = 2035,
+  calendar = 'gregorian',
+  locale = 'en',
+  cancelLabel,
+  doneLabel,
 }: DateWheelModalProps) {
   const now = new Date();
-  const [initY, initM, initD] = parseDate(value, now);
+  const [initY, initM, initD] = parseDate(value, now, calendar);
 
   const [year, setYear]   = useState(initY);
   const [month, setMonth] = useState(initM);
@@ -128,19 +181,27 @@ export function DateWheelModal({
   // Sync state whenever modal opens with a new value
   useEffect(() => {
     if (visible) {
-      const [y, m, d] = parseDate(value, now);
+      const [y, m, d] = parseDate(value, now, calendar);
       setYear(y);
       setMonth(m);
       setDay(d);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, [visible, calendar]);
 
   const years  = Array.from({length: maxYear - minYear + 1}, (_, i) => String(minYear + i));
-  const months = MONTH_LABELS.map((name, i) => `${pad(i + 1)} ${name}`);
-  const numDays = daysInMonth(year, month);
+  const monthNames = calendar === 'hijri'
+    ? (locale.startsWith('ar') ? HIJRI_MONTHS_AR : HIJRI_MONTHS)
+    : MONTH_LABELS;
+  const months = monthNames.map((name, i) => `${pad(i + 1)} ${name}`);
+  const numDays = calendar === 'hijri' ? hijriDaysInMonth(year, month) : daysInMonth(year, month);
   const days  = Array.from({length: numDays}, (_, i) => pad(i + 1));
   const safeDay = Math.min(day, numDays);
+  const yearLabel = locale.startsWith('ar') ? 'السنة' : 'Year';
+  const monthLabel = locale.startsWith('ar') ? 'الشهر' : 'Month';
+  const dayLabel = locale.startsWith('ar') ? 'اليوم' : 'Day';
+  const cancelText = cancelLabel ?? (locale.startsWith('ar') ? 'إلغاء' : 'Cancel');
+  const doneText = doneLabel ?? (locale.startsWith('ar') ? 'تم' : 'Done');
 
   function handleConfirm() {
     onConfirm(`${year}-${pad(month)}-${pad(safeDay)}`);
@@ -155,19 +216,19 @@ export function DateWheelModal({
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.headerSide}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{cancelText}</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>{label ?? 'Select Date'}</Text>
             <TouchableOpacity onPress={handleConfirm} style={styles.headerSide}>
-              <Text style={styles.doneText}>Done</Text>
+              <Text style={styles.doneText}>{doneText}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Column labels */}
           <View style={styles.colLabels}>
-            <Text style={[styles.colLabel, {width: 80}]}>Year</Text>
-            <Text style={[styles.colLabel, {width: 110}]}>Month</Text>
-            <Text style={[styles.colLabel, {width: 60}]}>Day</Text>
+            <Text style={[styles.colLabel, {width: 80}]}>{yearLabel}</Text>
+            <Text style={[styles.colLabel, {width: 110}]}>{monthLabel}</Text>
+            <Text style={[styles.colLabel, {width: 60}]}>{dayLabel}</Text>
           </View>
 
           {/* Wheels */}

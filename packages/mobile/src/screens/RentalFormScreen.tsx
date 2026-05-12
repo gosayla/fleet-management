@@ -400,6 +400,9 @@ export function RentalFormScreen({rentalId, locale, onBack, onSuccess}: Props) {
       <DateWheelModal
         visible={datePickerField !== null}
         value={datePickerField ? form[datePickerField] : ''}
+        locale={locale}
+        cancelLabel={i18n.cancel}
+        doneLabel={i18n.done}
         label={datePickerField === 'rentalStart' ? i18n.rentalStart : i18n.rentalEnd}
         onClose={() => setDatePickerField(null)}
         onConfirm={date => {
