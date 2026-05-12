@@ -29,7 +29,9 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 # Prisma query engine requires openssl
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl tzdata
+
+ENV TZ=Asia/Riyadh
 
 RUN npm install -g pnpm
 

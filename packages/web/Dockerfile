@@ -24,9 +24,12 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+RUN apk add --no-cache tzdata
+
 RUN npm install -g pnpm
 
 ENV NODE_ENV=production
+ENV TZ=Asia/Riyadh
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared ./packages/shared

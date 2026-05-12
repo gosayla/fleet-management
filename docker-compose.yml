@@ -5,6 +5,8 @@ services:
     container_name: fleet_postgres
     restart: unless-stopped
     environment:
+      TZ: Asia/Riyadh
+      PGTZ: Asia/Riyadh
       POSTGRES_DB: fleet_db
       POSTGRES_USER: fleet_user
       POSTGRES_PASSWORD: fleet_pass
@@ -44,6 +46,7 @@ services:
       redis:
         condition: service_healthy
     environment:
+      TZ: Asia/Riyadh
       NODE_ENV: production
       PORT: 3001
       DATABASE_URL: postgresql://fleet_user:fleet_pass@postgres:5432/fleet_db?schema=public
@@ -89,6 +92,7 @@ services:
     depends_on:
       - backend
     environment:
+      TZ: Asia/Riyadh
       BACKEND_INTERNAL_URL: http://backend:3001
       NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:3001}
     ports:
