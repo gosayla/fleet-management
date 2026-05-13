@@ -26,8 +26,8 @@ interface Contract {
   notes?: string;
   vehicle: { id: string; plateNumber: string; make: string; model: string };
   driver: { id: string; fullName: string };
-  trips?: { id: string }[];
   vacations?: { id: string }[];
+  _count?: { trips: number };
 }
 
 function fmt(dateStr: string) {
@@ -125,7 +125,7 @@ export default function ContractsPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
-                          {c.trips?.length ?? 0}
+                          {c._count?.trips ?? 0}
                         </span>
                       </td>
                       <td className="px-4 py-3">
