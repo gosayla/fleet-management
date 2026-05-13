@@ -263,7 +263,7 @@ export class DocumentsService {
   }
 
   async findAll(companyId: string, query: DocumentsQueryDto) {
-    const { page = 1, limit = 20, search, type, status = 'all', vehicleId, driverId } = query;
+    const { page = 1, limit = 20, search, type, status = 'all', vehicleId, driverId, target } = query;
     const skip = (page - 1) * limit;
 
     const now = new Date();
@@ -273,6 +273,8 @@ export class DocumentsService {
     const baseWhere: Prisma.FleetDocumentWhereInput = {
       companyId,
       ...(type ? { type } : {}),
+      ...(target === 'vehicle' ? { vehicles: { some: {} } } : {}),
+      ...(target === 'driver' ? { drivers: { some: {} } } : {}),
       ...(vehicleId ? { vehicles: { some: { id: vehicleId } } } : {}),
       ...(driverId ? { drivers: { some: { id: driverId } } } : {}),
       ...(search

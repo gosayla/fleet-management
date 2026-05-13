@@ -60,6 +60,7 @@ interface DocumentsResponse {
 
 type StatusFilter = 'all' | 'expired' | 'expiring' | 'valid';
 type TypeFilter = string | null;
+type Segment = 'vehicle' | 'driver';
 
 interface Props {
   locale: Locale;
@@ -84,15 +85,18 @@ function docTypeLabel(type: string, i18n: ReturnType<typeof t>): string {
   return map[type] ?? i18n.docTypeOther;
 }
 
-const ALL_TYPES = [
-  'DRIVER_LICENSE',
-  'DRIVER_CARD',
+const VEHICLE_TYPES = [
   'VEHICLE_INSURANCE',
   'PERIODIC_INSPECTION',
   'VEHICLE_REGISTRATION',
   'OPERATION_CARD',
   'TRANSPORT_PERMIT',
   'OWNERSHIP_DEED',
+];
+
+const DRIVER_TYPES = [
+  'DRIVER_LICENSE',
+  'DRIVER_CARD',
 ];
 
 // ── Status badge ──────────────────────────────────────────────────────────────
@@ -116,8 +120,10 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
   const isRTL = isRTLFn(locale);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatus);
+  const [segment, setSegment] = useState<Segment>('vehicle');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>(null);
   const [search, setSearch] = useState('');
+  const [searchVisible, setSearchVisible] = useState(false);
   const [page, setPage] = useState(1);
   const [docs, setDocs] = useState<FleetDocument[]>([]);
   const [total, setTotal] = useState(0);
@@ -126,6 +132,7 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
   const [loadingMore, setLoadingMore] = useState(false);
 
   const LIMIT = 20;
+  const visibleTypes = segment === 'vehicle' ? VEHICLE_TYPES : DRIVER_TYPES;
 
   async function fetchDocs(p: number, replace: boolean, isRefresh = false) {
     if (replace) {
@@ -139,6 +146,7 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
         page: String(p),
         limit: String(LIMIT),
         status: statusFilter,
+        target: segment,
       };
       if (typeFilter) params.type = typeFilter;
       if (search.trim()) params.search = search.trim();
@@ -162,7 +170,21 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
   useEffect(() => {
     fetchDocs(1, true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, typeFilter]);
+  }, [statusFilter, typeFilter, segment]);
+
+  useEffect(() => {
+    if (typeFilter && !visibleTypes.includes(typeFilter)) {
+      setTypeFilter(null);
+    }
+  }, [segment, typeFilter, visibleTypes]);
+
+  useEffect(() => {
+    if (!searchVisible && search.trim()) {
+      setSearch('');
+      fetchDocs(1, true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchVisible]);
 
   function onRefresh() {
     fetchDocs(1, true, true);
@@ -198,11 +220,11 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
     return (
       <TouchableOpacity style={styles.card} onPress={() => onSelectDoc(item)} activeOpacity={0.85}>
         {/* Header row: type + badge */}
-        <View style={[styles.cardHeader, isRTL && styles.rowReverse]}>
+        <View style={[styles.cardHeader, {flexDirection: isRTL ? 'row' : 'row-reverse'}]}>
           <View style={styles.iconWrap}>
             <AppIcon name="file-document-outline" size={20} color={Colors.primary} />
           </View>
-          <Text style={[styles.typeText, isRTL && styles.rtlText]} numberOfLines={1}>
+          <Text style={[styles.typeText, {textAlign: isRTL ? 'left' : 'right'}]} numberOfLines={1}>
             {typeStr}
           </Text>
           <View style={[styles.badge, {backgroundColor: badge.bg}]}>
@@ -212,16 +234,16 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
 
         {/* Linked plates / drivers */}
         {allLinked.length > 0 && (
-          <View style={[styles.metaRow, isRTL && styles.rowReverse]}>
+          <View style={[styles.metaRow, {flexDirection: isRTL ? 'row' : 'row-reverse'}]}>
             <AppIcon name="link-variant" size={13} color={Colors.textMuted} />
-            <Text style={[styles.metaText, isRTL && styles.rtlText]} numberOfLines={1}>
+            <Text style={[styles.metaText, {textAlign: isRTL ? 'left' : 'right'}]} numberOfLines={1}>
               {allLinked.join(' · ')}
             </Text>
           </View>
         )}
 
         {/* Dates */}
-        <View style={[styles.datesRow, isRTL && styles.rowReverse]}>
+        <View style={[styles.datesRow, {flexDirection: isRTL ? 'row' : 'row-reverse'}]}>
           <View style={styles.datePair}>
             <Text style={styles.dateLabel}>{i18n.issueDateLabel}</Text>
             <Text style={styles.dateValue}>{formatDateSmart(item.issueDate, locale)}</Text>
@@ -237,7 +259,7 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
 
         {/* Reference number if any */}
         {!!item.referenceNumber && (
-          <Text style={[styles.refText, isRTL && styles.rtlText]} numberOfLines={1}>
+          <Text style={[styles.refText, {textAlign: isRTL ? 'left' : 'right'}]} numberOfLines={1}>
             # {item.referenceNumber}
           </Text>
         )}
@@ -254,36 +276,66 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
       {/* Teal header */}
       <View style={styles.header}>
         <View style={{height: SB_HEIGHT}} />
-        <View style={[styles.headerRow, isRTL && styles.rowReverse]}>
-          <View style={{width: 38}} />
+        <View style={[styles.headerRow, {flexDirection: isRTL ? 'row' : 'row-reverse'}]}>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => setSearchVisible(v => !v)}
+              activeOpacity={0.7}>
+              <AppIcon name={searchVisible ? 'close' : 'magnify'} size={20} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.backBtn} onPress={onAddPress} activeOpacity={0.7}>
+              <AppIcon name="plus" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.headerTitle}>{i18n.documents}</Text>
-          <TouchableOpacity style={styles.backBtn} onPress={onAddPress} activeOpacity={0.7}>
-            <AppIcon name="plus" size={22} color="#fff" />
+          <View style={styles.headerActionsPlaceholder} />
+        </View>
+
+        <View style={[styles.segmentRow, {flexDirection: isRTL ? 'row' : 'row-reverse'}]}>
+          <TouchableOpacity
+            style={[styles.segmentBtn, segment === 'vehicle' && styles.segmentBtnActive]}
+            onPress={() => setSegment('vehicle')}
+            activeOpacity={0.8}>
+            <Text style={[styles.segmentBtnText, segment === 'vehicle' && styles.segmentBtnTextActive]}>
+              {i18n.vehicleDocs}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segmentBtn, segment === 'driver' && styles.segmentBtnActive]}
+            onPress={() => setSegment('driver')}
+            activeOpacity={0.8}>
+            <Text style={[styles.segmentBtnText, segment === 'driver' && styles.segmentBtnTextActive]}>
+              {i18n.driverDocs}
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Search */}
-        <View style={[styles.searchRow, isRTL && styles.rowReverse]}>
-          <AppIcon name="magnify" size={16} color="rgba(255,255,255,0.7)" />
-          <TextInput
-            style={[styles.searchInput, isRTL && styles.rtlText]}
-            placeholder={i18n.searchPlaceholder}
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            value={search}
-            onChangeText={setSearch}
-            onSubmitEditing={onSearch}
-            returnKeyType="search"
-            textAlign={isRTL ? 'right' : 'left'}
-          />
-          {!!search && (
-            <TouchableOpacity onPress={() => { setSearch(''); fetchDocs(1, true); }}>
-              <AppIcon name="close-circle" size={16} color="rgba(255,255,255,0.7)" />
-            </TouchableOpacity>
-          )}
-        </View>
+        {searchVisible && (
+          <View style={[styles.searchRow, isRTL && styles.rowReverse]}>
+            <AppIcon name="magnify" size={16} color="rgba(255,255,255,0.7)" />
+            <TextInput
+              style={[styles.searchInput, isRTL && styles.rtlText]}
+              placeholder={i18n.searchPlaceholder}
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              value={search}
+              onChangeText={setSearch}
+              onSubmitEditing={onSearch}
+              returnKeyType="search"
+              autoFocus
+              textAlign={isRTL ? 'right' : 'left'}
+            />
+            {!!search && (
+              <TouchableOpacity onPress={() => { setSearch(''); fetchDocs(1, true); }}>
+                <AppIcon name="close-circle" size={16} color="rgba(255,255,255,0.7)" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Status tabs */}
-        <View style={[styles.statusRow, isRTL && styles.rowReverse]}>
+        <View style={[styles.statusRow, {flexDirection: isRTL ? 'row' : 'row-reverse'}]}>
           {STATUS_TABS.map(tab => (
             <TouchableOpacity
               key={tab.key}
@@ -306,7 +358,7 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.typeChips}
           style={styles.typeChipsScroll}>
-          {ALL_TYPES.map(typ => (
+          {visibleTypes.map(typ => (
             <TouchableOpacity
               key={typ}
               style={[styles.typeChip, typeFilter === typ && styles.typeChipActive]}
@@ -363,6 +415,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   headerTitle: {fontSize: 22, fontWeight: '700', color: '#fff', letterSpacing: 0.3},
+  headerActions: {
+    width: 84,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerActionsPlaceholder: {
+    width: 84,
+  },
   backBtn: {
     width: 38,
     height: 38,
@@ -383,6 +444,30 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchInput: {flex: 1, color: '#fff', fontSize: 14, padding: 0},
+  segmentRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: 10,
+  },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+  },
+  segmentBtnActive: {
+    backgroundColor: '#fff',
+  },
+  segmentBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.88)',
+  },
+  segmentBtnTextActive: {
+    color: Colors.primary,
+  },
   statusRow: {
     flexDirection: 'row',
     gap: 6,

@@ -101,4 +101,9 @@ export class DocumentsQueryDto {
   @IsOptional()
   @IsString()
   driverId?: string;
+
+  @ApiPropertyOptional({ enum: ['vehicle', 'driver'], description: 'Filter documents by linked target type' })
+  @IsOptional()
+  @IsEnum(['vehicle', 'driver'])
+  target?: 'vehicle' | 'driver';
 }
