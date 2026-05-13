@@ -8,6 +8,9 @@ type PreferredLanguage = 'ar' | 'en' | 'hi' | 'bn' | 'ur';
 type NotificationMessage = { title: string; body: string };
 type StoredUser = { id: string; language: string; fcmToken: string | null };
 
+const RIYADH_TIMEZONE = 'Asia/Riyadh';
+const DAILY_NOTIFICATIONS_CRON = '0 11 * * *';
+
 @Injectable()
 export class NotificationsService implements OnModuleInit {
   private readonly logger = new Logger(NotificationsService.name);
@@ -407,7 +410,7 @@ export class NotificationsService implements OnModuleInit {
     }
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_8AM)
+  @Cron(DAILY_NOTIFICATIONS_CRON, { timeZone: RIYADH_TIMEZONE })
   async checkExpiringDocuments() {
     const now = new Date();
     const threshold = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -441,7 +444,7 @@ export class NotificationsService implements OnModuleInit {
     this.logger.log(`Checked ${expiringDocs.length} expiring documents`);
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_8AM)
+  @Cron(DAILY_NOTIFICATIONS_CRON, { timeZone: RIYADH_TIMEZONE })
   async checkMaintenanceDue() {
     const now = new Date();
     const threshold = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
