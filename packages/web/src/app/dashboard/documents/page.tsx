@@ -99,7 +99,7 @@ export default function DocumentsPage() {
   const [status, setStatus] = useState<'all' | 'expired' | 'expiring' | 'valid'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | DocumentType>('all');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
 
   const { data, isLoading } = useQuery<DocumentsResponse>({
     queryKey: ['documents', search, status, typeFilter, page, pageSize],
