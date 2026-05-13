@@ -21,7 +21,7 @@ export class DriversService {
             }
           : {}),
       },
-      include: { vehicles: { select: { id: true, plateNumber: true, make: true, model: true, status: true } } },
+      include: { vehicles: { select: { id: true, plateNumber: true, make: true, model: true, type: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -30,7 +30,7 @@ export class DriversService {
     const driver = await this.prisma.driver.findFirst({
       where: { id, companyId },
       include: {
-        vehicles: { select: { id: true, plateNumber: true, make: true, model: true, status: true } },
+        vehicles: { select: { id: true, plateNumber: true, make: true, model: true, type: true } },
         trips: { orderBy: { scheduledStart: 'desc' }, take: 5 },
         documents: {
           include: {
@@ -118,7 +118,7 @@ export class DriversService {
   async findMe(companyId: string, userId: string) {
     return this.prisma.driver.findFirst({
       where: { companyId, userId },
-      include: { vehicles: { select: { id: true, plateNumber: true, make: true, model: true } } },
+      include: { vehicles: { select: { id: true, plateNumber: true, make: true, model: true, type: true } } },
     });
   }
 }
