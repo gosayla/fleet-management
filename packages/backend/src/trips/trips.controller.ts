@@ -13,7 +13,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { TripsService } from './trips.service';
 import { CreateTripDto, TripLocationDto, UpdateTripDto } from './trips.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { AuthTokenPayload } from '@fleet/shared';
+import { AuthTokenPayload, TripStatus } from '@fleet/shared';
 
 @ApiTags('trips')
 @ApiBearerAuth()
@@ -25,8 +25,11 @@ export class TripsController {
   findAll(
     @CurrentUser() user: AuthTokenPayload,
     @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('status') status?: TripStatus,
   ) {
-    return this.tripsService.findAll(user.companyId, user, search);
+    return this.tripsService.findAll(user.companyId, user, search, page, pageSize, status);
   }
 
   @Get(':id')

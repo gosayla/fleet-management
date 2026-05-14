@@ -25,8 +25,13 @@ export class ContractsController {
 
   @Get()
   @ApiOperation({ summary: 'List all daily contracts' })
-  findAll(@CurrentUser() user: AuthTokenPayload) {
-    return this.contractsService.findAll(user.companyId);
+  findAll(
+    @CurrentUser() user: AuthTokenPayload,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.contractsService.findAll(user.companyId, page, pageSize, search);
   }
 
   @Get(':id/trips')

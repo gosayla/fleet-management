@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -24,8 +25,13 @@ export class RentalsController {
 
   @Get()
   @ApiOperation({ summary: 'List all vehicle rentals' })
-  findAll(@CurrentUser() user: AuthTokenPayload) {
-    return this.rentalsService.findAll(user.companyId);
+  findAll(
+    @CurrentUser() user: AuthTokenPayload,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.rentalsService.findAll(user.companyId, page, pageSize, search);
   }
 
   @Get(':id')

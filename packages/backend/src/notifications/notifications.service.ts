@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import * as admin from 'firebase-admin';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaginatedResult } from '@fleet/shared';
 
 type PreferredLanguage = 'ar' | 'en' | 'hi' | 'bn' | 'ur';
 type NotificationMessage = { title: string; body: string };
@@ -586,17 +587,50 @@ export class NotificationsService implements OnModuleInit {
     await this.notifyAccountUpdated(userId, 'password');
   }
 
-  async getUserNotifications(userId: string) {
-    return this.prisma.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+  async getUserNotifications(userId: string, page?: string, pageSize?: string): Promise<any[] | (PaginatedResult<any> & {unreadCount: number})> {
+    if (page == null && pageSize == null) {
+      return this.prisma.notification.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      });
+    }
+
+    const normalizedPageSize = Math.min(Math.max(Number(pageSize) || 20, 1), 100);
+    const normalizedPage = Math.max(Number(page) || 1, 1);
+    const skip = (normalizedPage - 1) * normalizedPageSize;
+
+    const [data, total, unreadCount] = await Promise.all([
+      this.prisma.notification.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: normalizedPageSize,
+      }),
+      this.prisma.notification.count({where: {userId}}),
+      this.prisma.notification.count({where: {userId, isRead: false}}),
+    ]);
+
+    return {
+      data,
+      total,
+      page: normalizedPage,
+      pageSize: normalizedPageSize,
+      totalPages: Math.max(1, Math.ceil(total / normalizedPageSize)),
+      unreadCount,
+    };
   }
 
   async markRead(userId: string, notificationId: string) {
     return this.prisma.notification.updateMany({
       where: { id: notificationId, userId },
+      data: { isRead: true },
+    });
+  }
+
+  async markAllRead(userId: string) {
+    return this.prisma.notification.updateMany({
+      where: { userId, isRead: false },
       data: { isRead: true },
     });
   }

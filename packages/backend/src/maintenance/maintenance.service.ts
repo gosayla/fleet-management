@@ -2,8 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { IsDate, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { MaintenanceType, MaintenanceStatus } from '@fleet/shared';
+import { MaintenanceType, MaintenanceStatus, PaginatedResult } from '@fleet/shared';
 import { Type } from 'class-transformer';
+import { Prisma } from '@prisma/client';
 
 export class CreateMaintenanceDto {
   @ApiProperty() @IsString() @IsNotEmpty() vehicleId: string;
@@ -25,12 +26,52 @@ export class UpdateMaintenanceDto extends PartialType(CreateMaintenanceDto) {
 export class MaintenanceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(companyId: string) {
-    return this.prisma.maintenanceLog.findMany({
-      where: { companyId },
+  findAll(
+    companyId: string,
+    page?: string,
+    pageSize?: string,
+    search?: string,
+    status?: MaintenanceStatus,
+  ): Promise<any[] | PaginatedResult<any>> | any[] {
+    const where = {
+      companyId,
+      ...(status ? {status} : {}),
+      ...(search?.trim()
+        ? {
+            OR: [
+              { description: { contains: search.trim(), mode: 'insensitive' as const } },
+              { vehicle: { plateNumber: { contains: search.trim(), mode: 'insensitive' as const } } },
+              { vehicle: { make: { contains: search.trim(), mode: 'insensitive' as const } } },
+              { vehicle: { model: { contains: search.trim(), mode: 'insensitive' as const } } },
+            ],
+          }
+        : {}),
+    };
+
+    const query = {
+      where,
       include: { vehicle: true },
       orderBy: { scheduledDate: 'asc' },
-    });
+    } satisfies Prisma.MaintenanceLogFindManyArgs;
+
+    if (page == null && pageSize == null) {
+      return this.prisma.maintenanceLog.findMany(query);
+    }
+
+    const normalizedPageSize = Math.min(Math.max(Number(pageSize) || 20, 1), 100);
+    const normalizedPage = Math.max(Number(page) || 1, 1);
+    const skip = (normalizedPage - 1) * normalizedPageSize;
+
+    return Promise.all([
+      this.prisma.maintenanceLog.findMany({...query, skip, take: normalizedPageSize}),
+      this.prisma.maintenanceLog.count({where}),
+    ]).then(([data, total]) => ({
+      data,
+      total,
+      page: normalizedPage,
+      pageSize: normalizedPageSize,
+      totalPages: Math.max(1, Math.ceil(total / normalizedPageSize)),
+    }));
   }
 
   async findOne(companyId: string, id: string) {

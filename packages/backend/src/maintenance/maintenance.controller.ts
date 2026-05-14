@@ -1,8 +1,8 @@
-import { Controller, Delete, Get, Post, Patch, Body, Param } from '@nestjs/common';
+import { Controller, Delete, Get, Post, Patch, Body, Param, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { MaintenanceService, CreateMaintenanceDto, UpdateMaintenanceDto } from './maintenance.service';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { AuthTokenPayload, UserRole } from '@fleet/shared';
+import { AuthTokenPayload, MaintenanceStatus, UserRole } from '@fleet/shared';
 import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('maintenance')
@@ -12,8 +12,14 @@ import { Roles } from '../auth/roles.decorator';
 export class MaintenanceController {
   constructor(private readonly maintenanceService: MaintenanceService) {}
 
-  @Get() findAll(@CurrentUser() user: AuthTokenPayload) {
-    return this.maintenanceService.findAll(user.companyId);
+  @Get() findAll(
+    @CurrentUser() user: AuthTokenPayload,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('search') search?: string,
+    @Query('status') status?: MaintenanceStatus,
+  ) {
+    return this.maintenanceService.findAll(user.companyId, page, pageSize, search, status);
   }
 
   @Get(':id') findOne(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {

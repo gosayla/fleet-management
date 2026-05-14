@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthTokenPayload } from '@fleet/shared';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -11,8 +11,12 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
-  findMyNotifications(@CurrentUser() user: AuthTokenPayload) {
-    return this.notificationsService.getUserNotifications(user.sub);
+  findMyNotifications(
+    @CurrentUser() user: AuthTokenPayload,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.notificationsService.getUserNotifications(user.sub, page, pageSize);
   }
 
   /** GET /notifications/fcm-status — returns all users with their FCM token status */
@@ -24,6 +28,11 @@ export class NotificationsController {
   @Patch(':id/read')
   markRead(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
     return this.notificationsService.markRead(user.sub, id);
+  }
+
+  @Post('read-all')
+  markAllRead(@CurrentUser() user: AuthTokenPayload) {
+    return this.notificationsService.markAllRead(user.sub);
   }
 
   /**

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AddVacationDto, CreateContractDto, UpdateContractDto } from './contracts.dto';
-import { AuthTokenPayload } from '@fleet/shared';
+import { AuthTokenPayload, PaginatedResult } from '@fleet/shared';
 import { Prisma, TripLeg, TripStatus, TripType } from '@prisma/client';
 
 @Injectable()
@@ -56,9 +56,28 @@ export class ContractsService {
 
   // ─── CRUD ───────────────────────────────────────────────────────────────────
 
-  async findAll(companyId: string) {
-    return this.prisma.tripContract.findMany({
-      where: { companyId },
+  async findAll(
+    companyId: string,
+    page?: string,
+    pageSize?: string,
+    search?: string,
+  ): Promise<any[] | PaginatedResult<any>> {
+    const where = {
+      companyId,
+      ...(search?.trim()
+        ? {
+            OR: [
+              { clientName: { contains: search.trim(), mode: 'insensitive' as const } },
+              { contractNumber: { contains: search.trim(), mode: 'insensitive' as const } },
+              { origin: { contains: search.trim(), mode: 'insensitive' as const } },
+              { destination: { contains: search.trim(), mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+    };
+
+    const query = {
+      where,
       include: {
         vehicle: { select: { id: true, plateNumber: true, make: true, model: true } },
         driver: { select: { id: true, fullName: true, phone: true } },
@@ -66,7 +85,28 @@ export class ContractsService {
         _count: { select: { trips: true } },
       },
       orderBy: { contractStart: 'desc' },
-    });
+    } satisfies Prisma.TripContractFindManyArgs;
+
+    if (page == null && pageSize == null) {
+      return this.prisma.tripContract.findMany(query);
+    }
+
+    const normalizedPageSize = Math.min(Math.max(Number(pageSize) || 20, 1), 100);
+    const normalizedPage = Math.max(Number(page) || 1, 1);
+    const skip = (normalizedPage - 1) * normalizedPageSize;
+
+    const [data, total] = await Promise.all([
+      this.prisma.tripContract.findMany({...query, skip, take: normalizedPageSize}),
+      this.prisma.tripContract.count({where}),
+    ]);
+
+    return {
+      data,
+      total,
+      page: normalizedPage,
+      pageSize: normalizedPageSize,
+      totalPages: Math.max(1, Math.ceil(total / normalizedPageSize)),
+    };
   }
 
   async findOne(companyId: string, id: string) {
@@ -208,6 +248,20 @@ export class ContractsService {
     if (!contract) this.notFound(contractId);
 
     const vacDate = new Date(`${dto.date}T00:00:00.000Z`);
+
+    const existingVacation = await this.prisma.contractVacation.findFirst({
+      where: {
+        contractId,
+        date: {
+          gte: new Date(`${dto.date}T00:00:00.000Z`),
+          lt: new Date(`${dto.date}T23:59:59.999Z`),
+        },
+      },
+    });
+
+    if (existingVacation) {
+      return existingVacation;
+    }
 
     const vacation = await this.prisma.contractVacation.create({
       data: { contractId, date: vacDate, reason: dto.reason },

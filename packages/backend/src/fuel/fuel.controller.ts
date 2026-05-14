@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, HttpCode, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FuelService, CreateFuelLogDto } from './fuel.service';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -12,8 +12,13 @@ import { Roles } from '../auth/roles.decorator';
 export class FuelController {
   constructor(private readonly fuelService: FuelService) {}
 
-  @Get() findAll(@CurrentUser() user: AuthTokenPayload) {
-    return this.fuelService.findAll(user.companyId);
+  @Get() findAll(
+    @CurrentUser() user: AuthTokenPayload,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.fuelService.findAll(user.companyId, page, pageSize, search);
   }
 
   @Get('report') getReport(@CurrentUser() user: AuthTokenPayload) {

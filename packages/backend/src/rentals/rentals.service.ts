@@ -5,7 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRentalDto, UpdateRentalDto } from './rentals.dto';
-import { RentalStatus } from '@prisma/client';
+import { Prisma, RentalStatus } from '@prisma/client';
+import { PaginatedResult } from '@fleet/shared';
 
 @Injectable()
 export class RentalsService {
@@ -15,16 +16,55 @@ export class RentalsService {
     throw new NotFoundException(`الإيجار ${id} غير موجود`);
   }
 
-  async findAll(companyId: string) {
-    return this.prisma.vehicleRental.findMany({
-      where: { companyId },
+  async findAll(
+    companyId: string,
+    page?: string,
+    pageSize?: string,
+    search?: string,
+  ): Promise<any[] | PaginatedResult<any>> {
+    const where = {
+      companyId,
+      ...(search?.trim()
+        ? {
+            OR: [
+              { clientName: { contains: search.trim(), mode: 'insensitive' as const } },
+              { contractNumber: { contains: search.trim(), mode: 'insensitive' as const } },
+              { vehicle: { plateNumber: { contains: search.trim(), mode: 'insensitive' as const } } },
+            ],
+          }
+        : {}),
+    };
+
+    const query = {
+      where,
       include: {
         vehicle: {
           select: { id: true, plateNumber: true, make: true, model: true, color: true },
         },
       },
       orderBy: { rentalStart: 'desc' },
-    });
+    } satisfies Prisma.VehicleRentalFindManyArgs;
+
+    if (page == null && pageSize == null) {
+      return this.prisma.vehicleRental.findMany(query);
+    }
+
+    const normalizedPageSize = Math.min(Math.max(Number(pageSize) || 20, 1), 100);
+    const normalizedPage = Math.max(Number(page) || 1, 1);
+    const skip = (normalizedPage - 1) * normalizedPageSize;
+
+    const [data, total] = await Promise.all([
+      this.prisma.vehicleRental.findMany({...query, skip, take: normalizedPageSize}),
+      this.prisma.vehicleRental.count({where}),
+    ]);
+
+    return {
+      data,
+      total,
+      page: normalizedPage,
+      pageSize: normalizedPageSize,
+      totalPages: Math.max(1, Math.ceil(total / normalizedPageSize)),
+    };
   }
 
   async findOne(companyId: string, id: string) {

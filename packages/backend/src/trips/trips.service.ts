@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto, TripLocationDto, UpdateTripDto } from './trips.dto';
-import { AuthTokenPayload, TripStatus } from '@fleet/shared';
+import { AuthTokenPayload, PaginatedResult, Trip, TripStatus } from '@fleet/shared';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -69,27 +69,62 @@ export class TripsService {
     throw new ForbiddenException('حساب السائق غير مرتبط بملف سائق');
   }
 
-  async findAll(companyId: string, user: AuthTokenPayload, search?: string) {
+  async findAll(
+    companyId: string,
+    user: AuthTokenPayload,
+    search?: string,
+    page?: string,
+    pageSize?: string,
+    status?: TripStatus,
+  ): Promise<Trip[] | PaginatedResult<Trip>> {
     const driverFilter = user.role === 'DRIVER'
       ? { driverId: await this.getDriverIdForUser(companyId, user.sub) }
       : {};
 
-    return this.prisma.trip.findMany({
-      where: {
-        companyId,
-        ...driverFilter,
-        ...(search
-          ? {
-              OR: [
-                { origin: { contains: search, mode: 'insensitive' } },
-                { destination: { contains: search, mode: 'insensitive' } },
-              ],
-            }
-          : {}),
-      },
-      include: { vehicle: true, driver: true, permit: true },
-      orderBy: { scheduledStart: 'desc' },
-    });
+    const where = {
+      companyId,
+      ...driverFilter,
+      ...(status ? { status } : {}),
+      ...(search
+        ? {
+            OR: [
+              { origin: { contains: search, mode: 'insensitive' as const } },
+              { destination: { contains: search, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+    };
+
+    if (page == null && pageSize == null) {
+      return this.prisma.trip.findMany({
+        where,
+        include: { vehicle: true, driver: true, permit: true },
+        orderBy: { scheduledStart: 'desc' },
+      });
+    }
+
+    const normalizedPageSize = Math.min(Math.max(Number(pageSize) || 20, 1), 100);
+    const normalizedPage = Math.max(Number(page) || 1, 1);
+    const skip = (normalizedPage - 1) * normalizedPageSize;
+
+    const [data, total] = await Promise.all([
+      this.prisma.trip.findMany({
+        where,
+        include: { vehicle: true, driver: true, permit: true },
+        orderBy: { scheduledStart: 'desc' },
+        skip,
+        take: normalizedPageSize,
+      }),
+      this.prisma.trip.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page: normalizedPage,
+      pageSize: normalizedPageSize,
+      totalPages: Math.max(1, Math.ceil(total / normalizedPageSize)),
+    };
   }
 
   async findOne(companyId: string, id: string, user?: AuthTokenPayload) {

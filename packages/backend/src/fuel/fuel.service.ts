@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { IsDate, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { PaginatedResult } from '@fleet/shared';
+import { Prisma } from '@prisma/client';
 
 export class CreateFuelLogDto {
   @ApiProperty() @IsString() @IsNotEmpty() vehicleId: string;
@@ -18,12 +20,51 @@ export class CreateFuelLogDto {
 export class FuelService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(companyId: string) {
-    return this.prisma.fuelLog.findMany({
-      where: { companyId },
+  findAll(
+    companyId: string,
+    page?: string,
+    pageSize?: string,
+    search?: string,
+  ): Promise<any[] | PaginatedResult<any>> | any[] {
+    const where = {
+      companyId,
+      ...(search?.trim()
+        ? {
+            OR: [
+              { station: { contains: search.trim(), mode: 'insensitive' as const } },
+              { vehicle: { plateNumber: { contains: search.trim(), mode: 'insensitive' as const } } },
+              { vehicle: { make: { contains: search.trim(), mode: 'insensitive' as const } } },
+              { vehicle: { model: { contains: search.trim(), mode: 'insensitive' as const } } },
+              { driver: { fullName: { contains: search.trim(), mode: 'insensitive' as const } } },
+            ],
+          }
+        : {}),
+    };
+
+    const query = {
+      where,
       include: { vehicle: true, driver: true },
       orderBy: { filledAt: 'desc' },
-    });
+    } satisfies Prisma.FuelLogFindManyArgs;
+
+    if (page == null && pageSize == null) {
+      return this.prisma.fuelLog.findMany(query);
+    }
+
+    const normalizedPageSize = Math.min(Math.max(Number(pageSize) || 20, 1), 100);
+    const normalizedPage = Math.max(Number(page) || 1, 1);
+    const skip = (normalizedPage - 1) * normalizedPageSize;
+
+    return Promise.all([
+      this.prisma.fuelLog.findMany({...query, skip, take: normalizedPageSize}),
+      this.prisma.fuelLog.count({where}),
+    ]).then(([data, total]) => ({
+      data,
+      total,
+      page: normalizedPage,
+      pageSize: normalizedPageSize,
+      totalPages: Math.max(1, Math.ceil(total / normalizedPageSize)),
+    }));
   }
 
   findOne(companyId: string, id: string) {
