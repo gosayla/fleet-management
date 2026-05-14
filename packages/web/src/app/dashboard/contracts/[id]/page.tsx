@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useLocale } from '@/providers/locale-provider';
 import { ArrowLeft, ArrowRight, CalendarDays, RefreshCw, Trash2, Plus, X } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface Vacation { id: string; date: string; reason?: string }
 interface Trip {
@@ -83,6 +84,7 @@ export default function ContractDetailPage() {
   const ArrowBack = isRTL ? ArrowRight : ArrowLeft;
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [vacationDate, setVacationDate] = useState('');
+  const [vacationEndDate, setVacationEndDate] = useState('');
   const [vacationReason, setVacationReason] = useState('');
   const [vacationDeleteTarget, setVacationDeleteTarget] = useState<Vacation | null>(null);
   const [tripPage, setTripPage] = useState(1);
@@ -112,10 +114,25 @@ export default function ContractDetailPage() {
   });
 
   const addVacationMutation = useMutation({
-    mutationFn: (payload: { date: string; reason?: string }) => api.post(`/contracts/${id}/vacations`, payload).then(r => r.data),
+    mutationFn: async (payload: { startDate: string; endDate?: string; reason?: string }) => {
+      const start = payload.startDate;
+      const end = payload.endDate && payload.endDate >= payload.startDate ? payload.endDate : payload.startDate;
+      const existingDates = new Set((contract?.vacations ?? []).map((item) => item.date.slice(0, 10)));
+      const requests: Promise<unknown>[] = [];
+
+      for (let cursor = new Date(`${start}T00:00:00.000Z`); cursor <= new Date(`${end}T00:00:00.000Z`); cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+        const nextDate = cursor.toISOString().slice(0, 10);
+        if (existingDates.has(nextDate)) continue;
+        requests.push(api.post(`/contracts/${id}/vacations`, { date: nextDate, reason: payload.reason }).then(r => r.data));
+      }
+
+      return Promise.all(requests);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts', id] });
+      queryClient.invalidateQueries({ queryKey: ['contracts', id, 'trips'] });
       setVacationDate('');
+      setVacationEndDate('');
       setVacationReason('');
     },
   });
@@ -124,6 +141,7 @@ export default function ContractDetailPage() {
     mutationFn: (vacId: string) => api.delete(`/contracts/${id}/vacations/${vacId}`).then(r => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts', id] });
+      queryClient.invalidateQueries({ queryKey: ['contracts', id, 'trips'] });
       setVacationDeleteTarget(null);
     },
   });
@@ -138,6 +156,7 @@ export default function ContractDetailPage() {
 
   const sortedTrips = [...trips].sort((a, b) => new Date(a.tripDate).getTime() - new Date(b.tripDate).getTime() || (a.leg === 'OUTBOUND' ? -1 : 1));
   const paginatedTrips = sortedTrips.slice((tripPage - 1) * tripsPerPage, tripPage * tripsPerPage);
+  const hasVacationRange = Boolean(vacationEndDate);
 
   function Detail({ label, value }: { label: string; value?: string | null }) {
     if (!value) return null;
@@ -231,26 +250,42 @@ export default function ContractDetailPage() {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-4">{tc.vacations}</h2>
         <div className="flex gap-2 mb-4 flex-wrap">
-          <input
-            type="date"
-            value={vacationDate}
-            onChange={e => setVacationDate(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div className="min-w-56 flex-1">
+            <DatePicker
+              label={locale === 'ar' ? 'تاريخ بداية الإجازة' : 'Vacation start'}
+              value={vacationDate}
+              onChange={(value) => setVacationDate(value ?? '')}
+              placeholder={locale === 'ar' ? 'تاريخ البداية' : 'Start date'}
+              isRTL={isRTL}
+              outputCalendar="gregorian"
+            />
+          </div>
+          <div className="min-w-56 flex-1">
+            <DatePicker
+              label={locale === 'ar' ? 'تاريخ نهاية الإجازة اختياري' : 'Vacation end optional'}
+              value={vacationEndDate}
+              onChange={(value) => setVacationEndDate(value ?? '')}
+              placeholder={locale === 'ar' ? 'تاريخ النهاية الاختياري' : 'Optional end date'}
+              isRTL={isRTL}
+              outputCalendar="gregorian"
+            />
+          </div>
           <input
             type="text"
             value={vacationReason}
             onChange={e => setVacationReason(e.target.value)}
             placeholder={tc.vacationReason}
-            className="flex-1 min-w-32 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 min-w-32 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 self-start mt-7"
           />
           <button
-            onClick={() => vacationDate && addVacationMutation.mutate({ date: vacationDate, reason: vacationReason || undefined })}
+            onClick={() => vacationDate && addVacationMutation.mutate({ startDate: vacationDate, endDate: vacationEndDate || undefined, reason: vacationReason || undefined })}
             disabled={!vacationDate || addVacationMutation.isPending}
-            className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors self-start mt-7"
           >
             <Plus className="w-3.5 h-3.5" />
-            {tc.addVacation}
+            {hasVacationRange
+              ? (locale === 'ar' ? 'إضافة فترة إجازة' : 'Add vacation range')
+              : tc.addVacation}
           </button>
         </div>
         {contract.vacations.length === 0 ? (
