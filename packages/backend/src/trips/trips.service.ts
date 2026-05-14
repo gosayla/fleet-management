@@ -1,8 +1,13 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto, TripLocationDto, UpdateTripDto } from './trips.dto';
 import { AuthTokenPayload, PaginatedResult, Trip, TripStatus } from '@fleet/shared';
 import { NotificationsService } from '../notifications/notifications.service';
+
+type TripWithRelations = Prisma.TripGetPayload<{
+  include: { vehicle: true; driver: true; permit: true };
+}>;
 
 @Injectable()
 export class TripsService {
@@ -10,6 +15,22 @@ export class TripsService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  private normalizeTrip(trip: TripWithRelations): Trip {
+    return {
+      ...trip,
+      name: trip.name ?? undefined,
+      actualStart: trip.actualStart ?? undefined,
+      actualEnd: trip.actualEnd ?? undefined,
+      distanceKm: trip.distanceKm ?? undefined,
+      notes: trip.notes ?? undefined,
+      naqlPermitId: trip.naqlPermitId ?? undefined,
+      clientName: trip.clientName ?? undefined,
+      contractNumber: trip.contractNumber ?? undefined,
+      contractStart: trip.contractStart ?? undefined,
+      contractEnd: trip.contractEnd ?? undefined,
+    } as unknown as Trip;
+  }
 
   private async assertCanWriteLocation(
     companyId: string,
@@ -96,11 +117,12 @@ export class TripsService {
     };
 
     if (page == null && pageSize == null) {
-      return this.prisma.trip.findMany({
+      const trips = await this.prisma.trip.findMany({
         where,
         include: { vehicle: true, driver: true, permit: true },
         orderBy: { scheduledStart: 'desc' },
       });
+      return trips.map((trip) => this.normalizeTrip(trip));
     }
 
     const normalizedPageSize = Math.min(Math.max(Number(pageSize) || 20, 1), 100);
@@ -119,7 +141,7 @@ export class TripsService {
     ]);
 
     return {
-      data,
+      data: data.map((trip) => this.normalizeTrip(trip)),
       total,
       page: normalizedPage,
       pageSize: normalizedPageSize,
