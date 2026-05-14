@@ -28,11 +28,12 @@ export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
 
   @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.VIEWER, UserRole.MAINTENANCE_TECH, UserRole.DRIVER)
   findAll(
     @CurrentUser() user: AuthTokenPayload,
     @Query() query: VehiclesQueryDto,
   ) {
-    return this.vehiclesService.findAll(user.companyId, query);
+    return this.vehiclesService.findAll(user.companyId, query, user);
   }
 
   @Get(':id')

@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { IsDate, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { PaginatedResult } from '@fleet/shared';
+import { AuthTokenPayload, PaginatedResult } from '@fleet/shared';
 import { Prisma } from '@prisma/client';
 
 export class CreateFuelLogDto {
@@ -20,14 +20,39 @@ export class CreateFuelLogDto {
 export class FuelService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(
+  private async getDriverVehicleIds(companyId: string, userId: string): Promise<string[]> {
+    const driver = await this.prisma.driver.findFirst({
+      where: {companyId, userId},
+      select: {vehicles: {select: {id: true}}},
+    });
+
+    return driver?.vehicles.map((vehicle) => vehicle.id) ?? [];
+  }
+
+  async findAll(
     companyId: string,
     page?: string,
     pageSize?: string,
     search?: string,
-  ): Promise<any[] | PaginatedResult<any>> | any[] {
+    user?: AuthTokenPayload,
+  ): Promise<any[] | PaginatedResult<any>> {
+    const driverVehicleIds = user?.role === 'DRIVER'
+      ? await this.getDriverVehicleIds(companyId, user.sub)
+      : null;
+
+    if (user?.role === 'DRIVER' && (!driverVehicleIds || driverVehicleIds.length === 0)) {
+      if (page == null && pageSize == null) {
+        return [];
+      }
+
+      const normalizedPageSize = Math.min(Math.max(Number(pageSize) || 20, 1), 100);
+      const normalizedPage = Math.max(Number(page) || 1, 1);
+      return {data: [], total: 0, page: normalizedPage, pageSize: normalizedPageSize, totalPages: 0};
+    }
+
     const where = {
       companyId,
+      ...(driverVehicleIds ? {vehicleId: {in: driverVehicleIds}} : {}),
       ...(search?.trim()
         ? {
             OR: [

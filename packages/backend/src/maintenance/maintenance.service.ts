@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { IsDate, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { MaintenanceType, MaintenanceStatus, PaginatedResult } from '@fleet/shared';
+import { AuthTokenPayload, MaintenanceType, MaintenanceStatus, PaginatedResult } from '@fleet/shared';
 import { Type } from 'class-transformer';
 import { Prisma } from '@prisma/client';
 
@@ -26,15 +26,40 @@ export class UpdateMaintenanceDto extends PartialType(CreateMaintenanceDto) {
 export class MaintenanceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(
+  private async getDriverVehicleIds(companyId: string, userId: string): Promise<string[]> {
+    const driver = await this.prisma.driver.findFirst({
+      where: {companyId, userId},
+      select: {vehicles: {select: {id: true}}},
+    });
+
+    return driver?.vehicles.map((vehicle) => vehicle.id) ?? [];
+  }
+
+  async findAll(
     companyId: string,
     page?: string,
     pageSize?: string,
     search?: string,
     status?: MaintenanceStatus,
-  ): Promise<any[] | PaginatedResult<any>> | any[] {
+    user?: AuthTokenPayload,
+  ): Promise<any[] | PaginatedResult<any>> {
+    const driverVehicleIds = user?.role === 'DRIVER'
+      ? await this.getDriverVehicleIds(companyId, user.sub)
+      : null;
+
+    if (user?.role === 'DRIVER' && (!driverVehicleIds || driverVehicleIds.length === 0)) {
+      if (page == null && pageSize == null) {
+        return [];
+      }
+
+      const normalizedPageSize = Math.min(Math.max(Number(pageSize) || 20, 1), 100);
+      const normalizedPage = Math.max(Number(page) || 1, 1);
+      return {data: [], total: 0, page: normalizedPage, pageSize: normalizedPageSize, totalPages: 0};
+    }
+
     const where = {
       companyId,
+      ...(driverVehicleIds ? {vehicleId: {in: driverVehicleIds}} : {}),
       ...(status ? {status} : {}),
       ...(search?.trim()
         ? {

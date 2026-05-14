@@ -12,14 +12,16 @@ import { Roles } from '../auth/roles.decorator';
 export class MaintenanceController {
   constructor(private readonly maintenanceService: MaintenanceService) {}
 
-  @Get() findAll(
+  @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.VIEWER, UserRole.MAINTENANCE_TECH, UserRole.DRIVER)
+  findAll(
     @CurrentUser() user: AuthTokenPayload,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('search') search?: string,
     @Query('status') status?: MaintenanceStatus,
   ) {
-    return this.maintenanceService.findAll(user.companyId, page, pageSize, search, status);
+    return this.maintenanceService.findAll(user.companyId, page, pageSize, search, status, user);
   }
 
   @Get(':id') findOne(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {

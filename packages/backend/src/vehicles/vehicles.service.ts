@@ -36,7 +36,19 @@ export class VehiclesService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  async findAll(companyId: string, query: VehiclesQueryDto) {
+  private async getDriverVehicleIds(companyId: string, userId: string) {
+    const driver = await this.prisma.driver.findFirst({
+      where: { companyId, userId },
+      select: { id: true, vehicles: { select: { id: true } } },
+    });
+
+    return {
+      driverId: driver?.id,
+      vehicleIds: driver?.vehicles.map((vehicle) => vehicle.id) ?? [],
+    };
+  }
+
+  async findAll(companyId: string, query: VehiclesQueryDto, user?: AuthTokenPayload) {
     const {
       search,
       page = 1,
@@ -49,6 +61,14 @@ export class VehiclesService {
     const skip = (page - 1) * limit;
 
     const conditions: Record<string, unknown>[] = [{ companyId }];
+
+    if (user?.role === 'DRIVER') {
+      const {driverId, vehicleIds} = await this.getDriverVehicleIds(companyId, user.sub);
+      if (!driverId || vehicleIds.length === 0) {
+        return {data: [], total: 0, page, limit, totalPages: 0};
+      }
+      conditions.push({drivers: {some: {id: driverId}}});
+    }
 
     if (search) {
       conditions.push({

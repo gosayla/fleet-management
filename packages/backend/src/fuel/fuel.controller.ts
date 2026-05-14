@@ -12,13 +12,15 @@ import { Roles } from '../auth/roles.decorator';
 export class FuelController {
   constructor(private readonly fuelService: FuelService) {}
 
-  @Get() findAll(
+  @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.VIEWER, UserRole.DRIVER)
+  findAll(
     @CurrentUser() user: AuthTokenPayload,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('search') search?: string,
   ) {
-    return this.fuelService.findAll(user.companyId, page, pageSize, search);
+    return this.fuelService.findAll(user.companyId, page, pageSize, search, user);
   }
 
   @Get('report') getReport(@CurrentUser() user: AuthTokenPayload) {
