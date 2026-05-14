@@ -51,21 +51,26 @@ export class VehiclesService {
   async findAll(companyId: string, query: VehiclesQueryDto, user?: AuthTokenPayload) {
     const {
       search,
-      page = 1,
-      limit = 20,
+      page,
+      limit,
       sortBy = 'createdAt',
       sortOrder = 'desc',
       operationCard = 'all',
       gpsFilter = 'all',
     } = query;
-    const skip = (page - 1) * limit;
+    const shouldPaginate = page != null || limit != null;
+    const normalizedPage = Math.max(page ?? 1, 1);
+    const normalizedLimit = Math.min(Math.max(limit ?? 20, 1), 100);
+    const skip = (normalizedPage - 1) * normalizedLimit;
 
     const conditions: Record<string, unknown>[] = [{ companyId }];
 
     if (user?.role === 'DRIVER') {
       const {driverId, vehicleIds} = await this.getDriverVehicleIds(companyId, user.sub);
       if (!driverId || vehicleIds.length === 0) {
-        return {data: [], total: 0, page, limit, totalPages: 0};
+        return shouldPaginate
+          ? {data: [], total: 0, page: normalizedPage, limit: normalizedLimit, totalPages: 0}
+          : [];
       }
       conditions.push({drivers: {some: {id: driverId}}});
     }
@@ -100,6 +105,17 @@ export class VehiclesService {
 
     const where = conditions.length === 1 ? conditions[0] : { AND: conditions };
 
+    if (!shouldPaginate) {
+      return this.prisma.vehicle.findMany({
+        where,
+        include: {
+          drivers: { select: { id: true, fullName: true, phone: true, status: true, photoUrl: true } },
+          photos: { where: { isProfile: true }, take: 1 },
+        },
+        orderBy: { [sortBy]: sortOrder },
+      });
+    }
+
     const [data, total] = await this.prisma.$transaction([
       this.prisma.vehicle.findMany({
         where,
@@ -109,12 +125,18 @@ export class VehiclesService {
         },
         orderBy: { [sortBy]: sortOrder },
         skip,
-        take: limit,
+        take: normalizedLimit,
       }),
       this.prisma.vehicle.count({ where }),
     ]);
 
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      data,
+      total,
+      page: normalizedPage,
+      limit: normalizedLimit,
+      totalPages: Math.ceil(total / normalizedLimit),
+    };
   }
 
   async findOne(companyId: string, id: string) {

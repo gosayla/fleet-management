@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 import { useLocale } from '@/providers/locale-provider';
 import { DocumentForm, DocumentFormValues, DriverOption, VehicleOption } from '../../document-form';
 
-type VehiclesResponse = { data: VehicleOption[] };
+type VehiclesResponse = { data: VehicleOption[] } | VehicleOption[];
 
 type DocumentDetail = {
   id: string;
@@ -49,7 +49,7 @@ export default function EditDocumentPage() {
   const { data: vehiclesData } = useQuery<VehiclesResponse>({
     queryKey: ['documents-form-vehicles'],
     queryFn: () =>
-      api.get('/vehicles', { params: { page: 1, limit: 100, sortBy: 'plateNumber', sortOrder: 'asc' } }).then((r) => r.data),
+      api.get('/vehicles').then((r) => r.data),
   });
 
   const { data: driversData } = useQuery<DriverOption[]>({
@@ -91,7 +91,7 @@ export default function EditDocumentPage() {
     updateMutation.mutate({ values, file });
   };
 
-  const vehicles = vehiclesData?.data ?? [];
+  const vehicles = Array.isArray(vehiclesData) ? vehiclesData : (vehiclesData?.data ?? []);
   const drivers = driversData ?? [];
 
   if (docLoading || !doc) {

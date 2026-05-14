@@ -98,6 +98,9 @@ export class TripsService {
     pageSize?: string,
     status?: TripStatus,
   ): Promise<Trip[] | PaginatedResult<Trip>> {
+    const orderDirection: Prisma.SortOrder = status === TripStatus.SCHEDULED ? 'asc' : 'desc';
+    const orderBy: Prisma.TripOrderByWithRelationInput = { scheduledStart: orderDirection };
+
     const driverFilter = user.role === 'DRIVER'
       ? { driverId: await this.getDriverIdForUser(companyId, user.sub) }
       : {};
@@ -120,7 +123,7 @@ export class TripsService {
       const trips = await this.prisma.trip.findMany({
         where,
         include: { vehicle: true, driver: true, permit: true },
-        orderBy: { scheduledStart: 'desc' },
+        orderBy,
       });
       return trips.map((trip) => this.normalizeTrip(trip));
     }
@@ -133,7 +136,7 @@ export class TripsService {
       this.prisma.trip.findMany({
         where,
         include: { vehicle: true, driver: true, permit: true },
-        orderBy: { scheduledStart: 'desc' },
+        orderBy,
         skip,
         take: normalizedPageSize,
       }),
