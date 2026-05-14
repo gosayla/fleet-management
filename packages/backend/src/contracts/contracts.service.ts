@@ -12,19 +12,35 @@ import { Prisma, TripLeg, TripStatus, TripType } from '@prisma/client';
 export class ContractsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private static readonly RIYADH_UTC_OFFSET_HOURS = 3;
+
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
   private notFound(id: string): never {
     throw new NotFoundException(`العقد ${id} غير موجود`);
   }
 
-  /** Build a Date for a given calendar date string + HH:MM time string (UTC midnight + offset). */
+  /**
+   * Build a UTC Date for a Riyadh-local calendar date + HH:MM time string.
+   *
+   * Daily contract times are entered as local Saudi times. If we store them as
+   * UTC clock time directly, every client in Riyadh renders them +3 hours late.
+   */
   private buildDatetime(dateStr: string, timeStr: string): Date {
     // dateStr: 'YYYY-MM-DD', timeStr: 'HH:MM'
+    const [year, month, day] = dateStr.split('-').map(Number);
     const [hh, mm] = timeStr.split(':').map(Number);
-    const d = new Date(`${dateStr}T00:00:00.000Z`);
-    d.setUTCHours(hh, mm, 0, 0);
-    return d;
+    return new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        day,
+        hh - ContractsService.RIYADH_UTC_OFFSET_HOURS,
+        mm,
+        0,
+        0,
+      ),
+    );
   }
 
   /** Enumerate every calendar date [start, end] that should have a trip. */
