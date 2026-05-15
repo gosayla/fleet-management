@@ -28,8 +28,10 @@ const typeColors: Record<TripType, string> = {
 
 const ALL_STATUS = 'ALL_STATUS';
 const ALL_TYPE = 'ALL_TYPE';
+const ALL_SCOPE = 'all';
 type StatusFilter = TripStatus | typeof ALL_STATUS;
 type TypeFilter = TripType | typeof ALL_TYPE;
+type TripScopeFilter = 'all' | 'standalone' | 'contract';
 
 export default function TripsPage() {
   const { isRTL, locale, t } = useLocale();
@@ -37,6 +39,7 @@ export default function TripsPage() {
   const tc = t.common;
   const [userRole, setUserRole] = useState<string | null>(null);
   const isDriver = userRole === 'DRIVER';
+  const [scopeFilter, setScopeFilter] = useState<TripScopeFilter>(ALL_SCOPE);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(ALL_STATUS);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>(ALL_TYPE);
   const [page, setPage] = useState(1);
@@ -49,8 +52,17 @@ export default function TripsPage() {
   }, []);
 
   const { data: trips = [], isLoading } = useQuery<Trip[]>({
-    queryKey: ['trips'],
-    queryFn: () => api.get('/trips').then(r => r.data),
+    queryKey: ['trips', scopeFilter],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (scopeFilter !== ALL_SCOPE) {
+        params.set('scope', scopeFilter);
+      }
+
+      const suffix = params.toString();
+      const path = suffix ? `/trips?${suffix}` : '/trips';
+      return api.get(path).then(r => r.data);
+    },
   });
 
   const cancelMutation = useMutation({
@@ -100,6 +112,29 @@ export default function TripsPage() {
 
       {/* Type + Status filter row */}
       <div className="flex gap-2 flex-wrap items-center">
+        {([
+          ALL_SCOPE,
+          'standalone',
+          'contract',
+        ] as TripScopeFilter[]).map(scope => (
+          <button
+            key={scope}
+            onClick={() => {
+              setScopeFilter(scope);
+              setPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              scopeFilter === scope ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {scope === ALL_SCOPE
+              ? tt.scopeAll
+              : scope === 'standalone'
+                ? tt.scopeStandalone
+                : tt.scopeContract}
+          </button>
+        ))}
+        <span className="w-px h-5 bg-gray-200 mx-1" />
         {([ALL_TYPE, 'ONE_TIME', 'DAILY', 'CAR_RENT'] as TypeFilter[]).map(tp => (
           <button
             key={tp}

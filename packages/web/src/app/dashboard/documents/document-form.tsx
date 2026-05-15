@@ -37,6 +37,7 @@ type DocumentFormProps = {
   initialValues: DocumentFormValues;
   vehicles: VehicleOption[];
   drivers: DriverOption[];
+  isEdit?: boolean;
   isSubmitting?: boolean;
   submitLabel: string;
   currentFileUrl?: string;
@@ -170,6 +171,7 @@ export function DocumentForm({
   initialValues,
   vehicles,
   drivers,
+  isEdit = false,
   isSubmitting,
   submitLabel,
   currentFileUrl,
@@ -237,30 +239,32 @@ export function DocumentForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className={`flex gap-2 ${isRTL ? 'justify-end' : 'justify-start'}`}>
-        <button
-          type="button"
-          onClick={() => switchTab('vehicle')}
-          className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-            activeTab === 'vehicle'
-              ? 'border-blue-600 bg-blue-600 text-white'
-              : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          {isRTL ? 'وثائق المركبات' : 'Vehicle Documents'}
-        </button>
-        <button
-          type="button"
-          onClick={() => switchTab('driver')}
-          className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-            activeTab === 'driver'
-              ? 'border-blue-600 bg-blue-600 text-white'
-              : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          {isRTL ? 'وثائق السائقين' : 'Driver Documents'}
-        </button>
-      </div>
+      {!isEdit && (
+        <div className={`flex gap-2 ${isRTL ? 'justify-end' : 'justify-start'}`}>
+          <button
+            type="button"
+            onClick={() => switchTab('vehicle')}
+            className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'vehicle'
+                ? 'border-blue-600 bg-blue-600 text-white'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {isRTL ? 'وثائق المركبات' : 'Vehicle Documents'}
+          </button>
+          <button
+            type="button"
+            onClick={() => switchTab('driver')}
+            className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'driver'
+                ? 'border-blue-600 bg-blue-600 text-white'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {isRTL ? 'وثائق السائقين' : 'Driver Documents'}
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Type */}

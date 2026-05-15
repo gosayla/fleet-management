@@ -539,7 +539,7 @@ export function DocumentFormScreen({
 
           {/* ── Document Type ── */}
           <SectionTitle title={i18n.docTypeSection} />
-          {!driverOnly && (
+          {!driverOnly && !isEdit && (
             <View style={[styles.scopeTabs, rowDirectionStyle]}>
               <TouchableOpacity
                 style={[

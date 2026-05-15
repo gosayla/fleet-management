@@ -140,6 +140,7 @@ export default function EditDocumentPage() {
           initialValues={initialValues}
           vehicles={vehicles}
           drivers={drivers}
+          isEdit
           isSubmitting={updateMutation.isPending}
           submitLabel={td.saveUpdate}
           currentFileUrl={doc.fileUrl}

@@ -209,6 +209,9 @@ export const messages = {
     trips: {
       title: 'الرحلات',
       all: 'الكل',
+      scopeAll: 'كل الرحلات',
+      scopeStandalone: 'مستقلة',
+      scopeContract: 'مرتبطة بعقد',
       route: 'المسار',
       driver: 'السائق',
       vehicle: 'المركبة',
@@ -666,6 +669,9 @@ export const messages = {
     trips: {
       title: 'Trips',
       all: 'All',
+      scopeAll: 'All Trips',
+      scopeStandalone: 'Standalone',
+      scopeContract: 'Contract Trips',
       route: 'Route',
       driver: 'Driver',
       vehicle: 'Vehicle',
