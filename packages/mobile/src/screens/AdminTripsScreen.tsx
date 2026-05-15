@@ -37,6 +37,8 @@ export interface TripListItem {
   destination: string;
   status: string;
   tripType: string;
+  clientName?: string;
+  contractNumber?: string;
   scheduledStart: string;
   scheduledEnd: string;
   driver?: { fullName: string };
@@ -163,53 +165,40 @@ export function AdminTripsScreen({
   const [searchQuery, setSearchQuery] = useState('');
   const [trips, setTrips] = useState<TripListItem[]>([]);
   const [tripsPage, setTripsPage] = useState(1);
-  const [tripsTotal, setTripsTotal] = useState(0);
   const [tripsHasMore, setTripsHasMore] = useState(true);
   const [tripsRefreshing, setTripsRefreshing] = useState(false);
   const [tripsLoadingMore, setTripsLoadingMore] = useState(false);
   const [tripsLoading, setTripsLoading] = useState(false);
+  const [tripsError, setTripsError] = useState<string | null>(null);
   const tripsRequestIdRef = useRef(0);
 
-  const tripStatusParam = useMemo(() => {
-    if (filter === 'ALL') {
-      return '';
-    }
-    return filter === 'IN_PROGRESS' ? 'IN_PROGRESS' : filter;
-  }, [filter]);
-
   const fetchTrips = useCallback(
-    async (nextPage: number, replace: boolean, isRefresh = false) => {
+    async (_nextPage: number, _replace: boolean, isRefresh = false) => {
       const requestId = ++tripsRequestIdRef.current;
 
-      if (replace) {
-        isRefresh ? setTripsRefreshing(true) : setTripsLoading(true);
-      } else {
-        setTripsLoadingMore(true);
-      }
+      isRefresh ? setTripsRefreshing(true) : setTripsLoading(true);
+      setTripsLoadingMore(false);
       try {
-        const params = new URLSearchParams({
-          page: String(nextPage),
-          pageSize: String(PAGE_SIZE),
-        });
-        if (searchQuery.trim()) {
-          params.set('search', searchQuery.trim());
-        }
-        if (tripStatusParam) {
-          params.set('status', tripStatusParam);
-        }
-
-        const res = await api.get<PaginatedResult<TripListItem>>(
-          `/trips?${params.toString()}`
-        );
+        const res = await api.get<TripListItem[]>('/trips?scope=standalone');
         if (requestId !== tripsRequestIdRef.current) {
           return;
         }
 
-        setTrips((prev) => (replace ? res.data : [...prev, ...res.data]));
-        setTripsPage(res.page);
-        setTripsTotal(res.total);
-        setTripsHasMore(res.page < res.totalPages);
-      } catch {
+        setTrips(res);
+        setTripsPage(1);
+        setTripsHasMore(false);
+        setTripsError(null);
+      } catch (error) {
+        if (requestId !== tripsRequestIdRef.current) {
+          return;
+        }
+
+        setTrips([]);
+        setTripsPage(1);
+        setTripsHasMore(false);
+        setTripsError(
+          error instanceof Error ? error.message : 'Failed to load trips'
+        );
       } finally {
         if (requestId !== tripsRequestIdRef.current) {
           return;
@@ -220,22 +209,49 @@ export function AdminTripsScreen({
         setTripsLoadingMore(false);
       }
     },
-    [searchQuery, tripStatusParam]
+    []
   );
 
   useEffect(() => {
+    if (segment !== 'trips') {
+      return;
+    }
+
+    setTrips([]);
+    setTripsPage(1);
+    setTripsHasMore(false);
+
     const timer = setTimeout(() => {
       fetchTrips(1, true);
     }, 300);
     return () => clearTimeout(timer);
-  }, [fetchTrips]);
+  }, [fetchTrips, segment]);
 
-  const visible = useMemo(() => {
-    if (filter === 'ALL') {
-      return trips;
-    }
-    return trips.filter((trip) => trip.status === filter);
-  }, [filter, trips]);
+  const visibleTrips = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLocaleLowerCase();
+
+    return trips.filter((trip) => {
+      const matchesFilter = filter === 'ALL' || trip.status === filter;
+
+      if (!matchesFilter) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return [
+        trip.name,
+        trip.origin,
+        trip.destination,
+        trip.clientName,
+        trip.contractNumber,
+        trip.driver?.fullName,
+        trip.vehicle?.plateNumber,
+      ].some((value) => value?.toLocaleLowerCase().includes(normalizedSearch));
+    });
+  }, [filter, searchQuery, trips]);
 
   const renderTripItem = useCallback(
     ({ item }: { item: TripListItem }) => (
@@ -381,7 +397,7 @@ export function AdminTripsScreen({
       : i18n.rentals;
   const headerCount =
     segment === 'trips'
-      ? `${tripsTotal} ${i18n.tripsUnit}`
+      ? `${visibleTrips.length} ${i18n.tripsUnit}`
       : segment === 'contracts'
       ? `${contractsTotal} ${i18n.contractsUnit}`
       : `${rentalsTotal} ${i18n.rentalsUnit}`;
@@ -649,7 +665,7 @@ export function AdminTripsScreen({
               ))}
             </View>
             <FlatList
-              data={visible}
+              data={visibleTrips}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.list}
               showsVerticalScrollIndicator={false}
@@ -658,7 +674,9 @@ export function AdminTripsScreen({
               maxToRenderPerBatch={8}
               windowSize={7}
               updateCellsBatchingPeriod={50}
-              extraData={filter}
+              extraData={`${filter}:${searchQuery}:${tripsLoading}:${
+                tripsError ?? ''
+              }`}
               refreshControl={
                 <RefreshControl
                   refreshing={tripsRefreshing}
@@ -679,12 +697,24 @@ export function AdminTripsScreen({
               }
               ListEmptyComponent={
                 <View style={styles.emptyWrap}>
-                  <AppIcon
-                    name="calendar-outline"
-                    size={48}
-                    color={Colors.border}
-                  />
-                  <Text style={styles.emptyText}>{i18n.noTripsFound}</Text>
+                  {tripsLoading ? (
+                    <ActivityIndicator
+                      color={Colors.primary}
+                      size="large"
+                      style={styles.emptyLoader}
+                    />
+                  ) : (
+                    <>
+                      <AppIcon
+                        name="calendar-outline"
+                        size={48}
+                        color={Colors.border}
+                      />
+                      <Text style={styles.emptyText}>
+                        {tripsError ?? i18n.noTripsFound}
+                      </Text>
+                    </>
+                  )}
                 </View>
               }
             />
@@ -978,6 +1008,7 @@ const styles = StyleSheet.create({
   filterTextActive: { color: '#fff' },
   list: { padding: Spacing.md, gap: 10, paddingBottom: 24 },
   footerLoader: { paddingVertical: Spacing.md },
+  emptyLoader: { paddingVertical: Spacing.md },
   emptyWrap: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 15, color: Colors.textMuted },
   // Cards (contracts / rentals)

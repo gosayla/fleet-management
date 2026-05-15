@@ -9,6 +9,8 @@ type TripWithRelations = Prisma.TripGetPayload<{
   include: { vehicle: true; driver: true; permit: true };
 }>;
 
+type TripScope = 'all' | 'standalone' | 'contract';
+
 @Injectable()
 export class TripsService {
   constructor(
@@ -97,6 +99,7 @@ export class TripsService {
     page?: string,
     pageSize?: string,
     status?: TripStatus,
+    scope: TripScope = 'all',
   ): Promise<Trip[] | PaginatedResult<Trip>> {
     const orderDirection: Prisma.SortOrder = status === TripStatus.SCHEDULED ? 'asc' : 'desc';
     const orderBy: Prisma.TripOrderByWithRelationInput = { scheduledStart: orderDirection };
@@ -106,9 +109,17 @@ export class TripsService {
       ? { driverId: await this.getDriverIdForUser(companyId, user.sub) }
       : {};
 
+    const scopeFilter: Prisma.TripWhereInput =
+      scope === 'standalone'
+        ? { contractId: null }
+        : scope === 'contract'
+          ? { contractId: { not: null } }
+          : {};
+
     const where: Prisma.TripWhereInput = {
       companyId,
       ...driverFilter,
+      ...scopeFilter,
       ...(status ? { status } : {}),
       ...(normalizedSearch
         ? {

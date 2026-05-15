@@ -15,6 +15,8 @@ import { CreateTripDto, TripLocationDto, UpdateTripDto } from './trips.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AuthTokenPayload, TripStatus } from '@fleet/shared';
 
+type TripScope = 'all' | 'standalone' | 'contract';
+
 @ApiTags('trips')
 @ApiBearerAuth()
 @Controller('trips')
@@ -28,8 +30,17 @@ export class TripsController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('status') status?: TripStatus,
+    @Query('scope') scope?: TripScope,
   ) {
-    return this.tripsService.findAll(user.companyId, user, search, page, pageSize, status);
+    return this.tripsService.findAll(
+      user.companyId,
+      user,
+      search,
+      page,
+      pageSize,
+      status,
+      scope,
+    );
   }
 
   @Get(':id')
