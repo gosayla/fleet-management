@@ -60,6 +60,8 @@ interface TripLocationPoint {
 const SB_H = Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 44;
 const HEADER_H = 220;
 const HEADER_MIN_H = 116;
+const MAX_ROUTE_POINTS = 240;
+const MAX_ROUTE_SPEED_KMH = 180;
 
 const STATUS_CONFIG: Record<
   string,
@@ -123,6 +125,84 @@ function fmtTime(iso: string | undefined, locale: Locale) {
   }).format(new Date(iso));
 }
 
+function haversineDistanceKm(
+  startLat: number,
+  startLng: number,
+  endLat: number,
+  endLng: number
+) {
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const earthRadiusKm = 6371;
+  const dLat = toRadians(endLat - startLat);
+  const dLng = toRadians(endLng - startLng);
+  const lat1 = toRadians(startLat);
+  const lat2 = toRadians(endLat);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLng / 2) * Math.sin(dLng / 2) * Math.cos(lat1) * Math.cos(lat2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return earthRadiusKm * c;
+}
+
+function buildRenderableRoute(points: TripLocationPoint[]) {
+  const validPoints = points.filter(
+    (point) =>
+      Number.isFinite(point.lat) &&
+      Number.isFinite(point.lng) &&
+      Math.abs(point.lat) <= 90 &&
+      Math.abs(point.lng) <= 180
+  );
+
+  if (validPoints.length === 0) {
+    return [] as TripLocationPoint[];
+  }
+
+  const filteredPoints: TripLocationPoint[] = [validPoints[0]];
+
+  for (const point of validPoints.slice(1)) {
+    const previousPoint = filteredPoints[filteredPoints.length - 1];
+    const elapsedMs =
+      new Date(point.recordedAt).getTime() -
+      new Date(previousPoint.recordedAt).getTime();
+
+    if (elapsedMs <= 0) {
+      continue;
+    }
+
+    const distanceKm = haversineDistanceKm(
+      previousPoint.lat,
+      previousPoint.lng,
+      point.lat,
+      point.lng
+    );
+    const speedKmh = distanceKm / (elapsedMs / 3_600_000);
+
+    if (speedKmh > MAX_ROUTE_SPEED_KMH) {
+      continue;
+    }
+
+    filteredPoints.push(point);
+  }
+
+  if (filteredPoints.length <= MAX_ROUTE_POINTS) {
+    return filteredPoints;
+  }
+
+  const step = Math.ceil(filteredPoints.length / MAX_ROUTE_POINTS);
+  const sampledPoints = filteredPoints.filter(
+    (_point, index) => index % step === 0
+  );
+  const lastPoint = filteredPoints[filteredPoints.length - 1];
+
+  if (sampledPoints[sampledPoints.length - 1]?.id !== lastPoint.id) {
+    sampledPoints.push(lastPoint);
+  }
+
+  return sampledPoints;
+}
+
 interface Props {
   tripId: string;
   locale: Locale;
@@ -151,8 +231,7 @@ export function TripDetailScreen({
         `/trips/${tripId}/locations`
       );
       const pts = Array.isArray(data) ? data : [];
-      // Keep recent points only for rendering performance.
-      setLocations(pts.slice(-120));
+      setLocations(pts);
     } catch {}
   }, [tripId]);
 
@@ -213,12 +292,16 @@ export function TripDetailScreen({
       : 0;
   const durationHrs =
     durationMs > 0 ? (durationMs / 3_600_000).toFixed(1) : '—';
+  const renderableLocations = buildRenderableRoute(locations);
   const latestLocation =
-    locations.length > 0 ? locations[locations.length - 1] : null;
-  const routeCoords = locations.map((p) => ({
+    renderableLocations.length > 0
+      ? renderableLocations[renderableLocations.length - 1]
+      : null;
+  const routeCoords = renderableLocations.map((p) => ({
     latitude: p.lat,
     longitude: p.lng,
   }));
+  const hasRoutePath = routeCoords.length > 2;
   const collapseDistance = HEADER_H - HEADER_MIN_H;
 
   const animatedHeaderHeight = scrollY.interpolate({
@@ -454,7 +537,7 @@ export function TripDetailScreen({
                   latitude: latestLocation.lat,
                   longitude: latestLocation.lng,
                 }}
-                route={routeCoords}
+                route={hasRoutePath ? routeCoords : []}
                 zoom={14}
                 interactive={false}
               />
