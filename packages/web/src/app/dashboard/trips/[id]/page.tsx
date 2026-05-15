@@ -9,6 +9,7 @@ import { useLocale } from '@/providers/locale-provider';
 import { formatDateTime, formatEnumLabel } from '@/lib/i18n';
 import { Trip, TripStatus, TripType } from '@fleet/shared';
 import { ArrowLeft, ArrowRight, Car, MapPin, User } from 'lucide-react';
+import { TripLegBadge } from '@/components/ui/trip-leg-badge';
 
 type TripDetails = Trip & {
   vehicle?: { id: string; plateNumber: string; make: string; model: string } | null;
@@ -99,6 +100,7 @@ export default function TripDetailPage() {
             <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${typeColors[tripType]}`}>
               {tripTypeLabel(tripType, locale, t)}
             </span>
+            <TripLegBadge leg={(trip as any).leg} locale={locale} />
           </div>
         </div>
       </div>

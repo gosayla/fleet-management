@@ -288,6 +288,7 @@ export interface Trip {
   vehicleId: string;
   driverId: string;
   name?: string;
+  leg?: TripLeg;
   status: TripStatus;
   tripType: TripType;
   origin: string;

@@ -7,7 +7,7 @@
  *   - @react-native-firebase/app and @react-native-firebase/messaging installed
  */
 import messaging from '@react-native-firebase/messaging';
-import {Alert, Platform} from 'react-native';
+import { Alert } from './alert';
 
 export interface NotificationTapData {
   notificationType?: string;
@@ -18,7 +18,9 @@ export interface NotificationTapData {
 let _onNotificationTap: ((data: NotificationTapData) => void) | null = null;
 
 /** Register a handler that fires whenever the user taps a push notification. */
-export function setNotificationTapHandler(handler: (data: NotificationTapData) => void) {
+export function setNotificationTapHandler(
+  handler: (data: NotificationTapData) => void
+) {
   _onNotificationTap = handler;
 }
 
@@ -30,20 +32,22 @@ export async function initNotifications(): Promise<string | null> {
       authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-    if (!enabled) return null;
+    if (!enabled) {
+      return null;
+    }
 
     // Get FCM token to send to backend
     const token = await messaging().getToken();
 
     // Handle foreground messages
-    messaging().onMessage(async remoteMessage => {
+    messaging().onMessage(async (remoteMessage) => {
       const title = remoteMessage.notification?.title ?? 'Fleet';
       const body = remoteMessage.notification?.body ?? '';
       Alert.alert(title, body);
     });
 
     // Handle background/quit tap — app was opened from notification
-    messaging().onNotificationOpenedApp(remoteMessage => {
+    messaging().onNotificationOpenedApp((remoteMessage) => {
       if (_onNotificationTap && remoteMessage.data) {
         _onNotificationTap(remoteMessage.data as NotificationTapData);
       }

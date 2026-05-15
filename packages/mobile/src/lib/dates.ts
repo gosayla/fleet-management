@@ -8,15 +8,33 @@
  */
 
 const HIJRI_MONTHS_AR = [
-  'محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني',
-  'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان',
-  'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة',
+  'محرم',
+  'صفر',
+  'ربيع الأول',
+  'ربيع الثاني',
+  'جمادى الأولى',
+  'جمادى الآخرة',
+  'رجب',
+  'شعبان',
+  'رمضان',
+  'شوال',
+  'ذو القعدة',
+  'ذو الحجة',
 ];
 
 const HIJRI_MONTHS_EN = [
-  'Muharram', 'Safar', 'Rabi I', 'Rabi II',
-  'Jumada I', 'Jumada II', 'Rajab', "Sha'ban",
-  'Ramadan', 'Shawwal', "Dhul Qi'dah", 'Dhul Hijjah',
+  'Muharram',
+  'Safar',
+  'Rabi I',
+  'Rabi II',
+  'Jumada I',
+  'Jumada II',
+  'Rajab',
+  "Sha'ban",
+  'Ramadan',
+  'Shawwal',
+  "Dhul Qi'dah",
+  'Dhul Hijjah',
 ];
 
 /**
@@ -26,9 +44,14 @@ const HIJRI_MONTHS_EN = [
  */
 function isHijriString(value: string): boolean {
   // Accepts formats: YYYY/MM/DD  YYYY-MM-DD  DD/MM/YYYY  DD-MM-YYYY
-  const parts = value.split(/[-\/]/).map(Number).filter(n => !isNaN(n));
-  if (parts.length < 2) return false;
-  return parts.some(n => n >= 1200 && n <= 1600);
+  const parts = value
+    .split(/[-/]/)
+    .map(Number)
+    .filter((n) => !isNaN(n));
+  if (parts.length < 2) {
+    return false;
+  }
+  return parts.some((n) => n >= 1200 && n <= 1600);
 }
 
 /**
@@ -36,8 +59,10 @@ function isHijriString(value: string): boolean {
  * using proper Hijri month names.
  */
 function formatHijri(value: string, lang: 'ar' | 'other'): string {
-  const parts = value.split(/[-\/]/).map(Number);
-  if (parts.length < 3) return value;
+  const parts = value.split(/[-/]/).map(Number);
+  if (parts.length < 3) {
+    return value;
+  }
 
   let year: number, month: number, day: number;
 
@@ -50,9 +75,12 @@ function formatHijri(value: string, lang: 'ar' | 'other'): string {
   }
 
   const monthIndex = month - 1;
-  if (monthIndex < 0 || monthIndex > 11) return value;
+  if (monthIndex < 0 || monthIndex > 11) {
+    return value;
+  }
 
-  const monthName = lang === 'ar' ? HIJRI_MONTHS_AR[monthIndex] : HIJRI_MONTHS_EN[monthIndex];
+  const monthName =
+    lang === 'ar' ? HIJRI_MONTHS_AR[monthIndex] : HIJRI_MONTHS_EN[monthIndex];
   const dd = String(day).padStart(2, '0');
 
   return `${dd} ${monthName} ${year}`;
@@ -66,11 +94,18 @@ function formatHijri(value: string, lang: 'ar' | 'other'): string {
  * @param value  Raw date string from the server (may be Hijri or ISO 8601)
  * @param locale App locale code ('ar' | 'en' | 'hi' | 'bn' | 'ur')
  */
-export function formatDateSmart(value: string | null | undefined, locale: string): string {
-  if (!value) return '—';
+export function formatDateSmart(
+  value: string | null | undefined,
+  locale: string
+): string {
+  if (!value) {
+    return '—';
+  }
 
   const trimmed = value.trim();
-  if (!trimmed) return '—';
+  if (!trimmed) {
+    return '—';
+  }
 
   if (isHijriString(trimmed)) {
     return formatHijri(trimmed, locale === 'ar' ? 'ar' : 'other');
@@ -78,12 +113,20 @@ export function formatDateSmart(value: string | null | undefined, locale: string
 
   // Gregorian ISO
   const d = new Date(trimmed);
-  if (isNaN(d.getTime())) return trimmed; // unparseable — show as-is
+  if (isNaN(d.getTime())) {
+    return trimmed;
+  } // unparseable — show as-is
 
   const localeCode: Record<string, string> = {
-    ar: 'ar-SA', en: 'en-GB', hi: 'hi-IN', bn: 'bn-BD', ur: 'ur-PK',
+    ar: 'ar-SA',
+    en: 'en-GB',
+    hi: 'hi-IN',
+    bn: 'bn-BD',
+    ur: 'ur-PK',
   };
   return d.toLocaleDateString(localeCode[locale] ?? 'en-GB', {
-    day: '2-digit', month: 'short', year: 'numeric',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
   });
 }

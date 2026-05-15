@@ -1,8 +1,14 @@
 ﻿import React from 'react';
-import {View, Text, TouchableOpacity, StyleSheet, Platform} from 'react-native';
-import {Locale, isRTL} from '../../lib/i18n';
-import {Colors, Spacing} from '../../lib/theme';
-import {AppIcon} from './AppIcon';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+} from 'react-native';
+import { Locale, isRTL } from '../../lib/i18n';
+import { Colors, Spacing } from '../../lib/theme';
+import { AppIcon } from './AppIcon';
 
 export interface TabItem {
   key: string;
@@ -18,11 +24,17 @@ interface Props {
   badgeByKey?: Record<string, number | undefined>;
 }
 
-export function BottomTabBar({tabs, activeKey, locale, onPress, badgeByKey}: Props) {
+export function BottomTabBar({
+  tabs,
+  activeKey,
+  locale,
+  onPress,
+  badgeByKey,
+}: Props) {
   const isRTLLayout = isRTL(locale);
   return (
-    <View style={[styles.bar, !isRTLLayout && {flexDirection: 'row-reverse'}]}>
-      {tabs.map(tab => {
+    <View style={[styles.bar, !isRTLLayout && styles.barReverse]}>
+      {tabs.map((tab) => {
         const active = tab.key === activeKey;
         const label = tab.labels[locale];
         const badge = badgeByKey?.[tab.key] ?? 0;
@@ -33,9 +45,12 @@ export function BottomTabBar({tabs, activeKey, locale, onPress, badgeByKey}: Pro
             key={tab.key}
             style={styles.item}
             onPress={() => onPress(tab.key)}
-            activeOpacity={0.7}>
+            activeOpacity={0.7}
+          >
             {/* Active indicator dot at top */}
-            <View style={[styles.indicator, active && styles.indicatorActive]} />
+            <View
+              style={[styles.indicator, active && styles.indicatorActive]}
+            />
             <View style={styles.iconWrap}>
               <AppIcon
                 name={tab.icon}
@@ -48,7 +63,10 @@ export function BottomTabBar({tabs, activeKey, locale, onPress, badgeByKey}: Pro
                 </View>
               )}
             </View>
-            <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
+            <Text
+              style={[styles.label, active && styles.labelActive]}
+              numberOfLines={1}
+            >
               {label}
             </Text>
           </TouchableOpacity>
@@ -66,8 +84,9 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 24 : 10,
     paddingHorizontal: Spacing.xs,
   },
-  item: {flex: 1, alignItems: 'center', paddingTop: 6, gap: 3},
-  iconWrap: {position: 'relative'},
+  barReverse: { flexDirection: 'row-reverse' },
+  item: { flex: 1, alignItems: 'center', paddingTop: 6, gap: 3 },
+  iconWrap: { position: 'relative' },
   badge: {
     position: 'absolute',
     top: -6,
@@ -93,7 +112,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     marginBottom: 4,
   },
-  indicatorActive: {backgroundColor: Colors.tabActive},
-  label: {fontSize: 10, fontWeight: '500' as const, color: Colors.tabInactive, textAlign: 'center'},
-  labelActive: {color: Colors.tabActive, fontWeight: '700' as const},
+  indicatorActive: { backgroundColor: Colors.tabActive },
+  label: {
+    fontSize: 10,
+    fontWeight: '500' as const,
+    color: Colors.tabInactive,
+    textAlign: 'center',
+  },
+  labelActive: { color: Colors.tabActive, fontWeight: '700' as const },
 });

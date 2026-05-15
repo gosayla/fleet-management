@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { Eye, Plus, XCircle } from 'lucide-react';
 import { Pagination } from '@/components/ui/pagination';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { TripLegBadge } from '@/components/ui/trip-leg-badge';
 
 const statusColors: Record<TripStatus, string> = {
   SCHEDULED: 'bg-indigo-100 text-indigo-700',
@@ -157,7 +158,10 @@ export default function TripsPage() {
 
                       {/* Route + optional client/contract sub-info */}
                       <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{trip.origin} → {trip.destination}</div>
+                        <div className="font-medium text-gray-900">{isRTL ? trip.destination : trip.origin} {isRTL ? '←' : '→'} {isRTL ? trip.origin : trip.destination}</div>
+                        <div className="mt-1">
+                          <TripLegBadge leg={(trip as any).leg} locale={locale} />
+                        </div>
                         {(trip as any).clientName && (
                           <div className="text-xs text-gray-400 mt-0.5">{tt.clientName}: {(trip as any).clientName}</div>
                         )}

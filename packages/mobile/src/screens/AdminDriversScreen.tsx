@@ -7,22 +7,25 @@ import {
   RefreshControl,
   StatusBar,
 } from 'react-native';
-import {api} from '../lib/api';
-import {Locale, t} from '../lib/i18n';
-import {Colors, Spacing, Typography} from '../lib/theme';
-import {ScreenHeader} from '../components/ui/ScreenHeader';
-import {DriverCard, DriverCardData} from '../components/ui/cards/DriverCard';
-import {useCachedFetch} from '../hooks/useCachedFetch';
+import { api } from '../lib/api';
+import { Locale, t } from '../lib/i18n';
+import { Colors, Spacing, Typography } from '../lib/theme';
+import { ScreenHeader } from '../components/ui/ScreenHeader';
+import { DriverCard, DriverCardData } from '../components/ui/cards/DriverCard';
+import { useCachedFetch } from '../hooks/useCachedFetch';
 
 interface Props {
   locale: Locale;
 }
 
-export function AdminDriversScreen({locale}: Props) {
+export function AdminDriversScreen({ locale }: Props) {
   const i18n = t(locale);
-  const {data: raw, refreshing, refresh: load} = useCachedFetch(
-    'admin:drivers',
-    () => api.get<DriverCardData[]>('/drivers'),
+  const {
+    data: raw,
+    refreshing,
+    refresh: load,
+  } = useCachedFetch('admin:drivers', () =>
+    api.get<DriverCardData[]>('/drivers')
   );
   const drivers: DriverCardData[] = raw ?? [];
 
@@ -37,11 +40,17 @@ export function AdminDriversScreen({locale}: Props) {
 
       <FlatList
         data={drivers}
-        keyExtractor={d => d.id}
+        keyExtractor={(d) => d.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} tintColor={Colors.primary} />}
-        renderItem={({item}) => <DriverCard driver={item} locale={locale} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={load}
+            tintColor={Colors.primary}
+          />
+        }
+        renderItem={({ item }) => <DriverCard driver={item} locale={locale} />}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyIcon}>👤</Text>
@@ -54,9 +63,9 @@ export function AdminDriversScreen({locale}: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: Colors.bg},
-  list: {padding: Spacing.md, gap: Spacing.sm},
-  emptyWrap: {alignItems: 'center', paddingTop: Spacing.xxl},
-  emptyIcon: {fontSize: 48, marginBottom: Spacing.md},
-  emptyText: {...Typography.body, color: Colors.textMuted},
+  container: { flex: 1, backgroundColor: Colors.bg },
+  list: { padding: Spacing.md, gap: Spacing.sm },
+  emptyWrap: { alignItems: 'center', paddingTop: Spacing.xxl },
+  emptyIcon: { fontSize: 48, marginBottom: Spacing.md },
+  emptyText: { ...Typography.body, color: Colors.textMuted },
 });

@@ -1,8 +1,8 @@
-import React, {useMemo} from 'react';
-import {StyleProp, StyleSheet, View, ViewStyle} from 'react-native';
-import {WebView} from 'react-native-webview';
+import React, { useMemo } from 'react';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { WebView } from 'react-native-webview';
 
-type Coord = {latitude: number; longitude: number};
+type Coord = { latitude: number; longitude: number };
 
 interface Props {
   center: Coord;
@@ -13,9 +13,22 @@ interface Props {
   interactive?: boolean;
 }
 
-export function OsmMapView({center, marker, route = [], zoom = 15, style, interactive = true}: Props) {
+export function OsmMapView({
+  center,
+  marker,
+  route = [],
+  zoom = 15,
+  style,
+  interactive = true,
+}: Props) {
   const source = useMemo(() => {
-    const payload = JSON.stringify({center, marker, route, zoom, interactive});
+    const payload = JSON.stringify({
+      center,
+      marker,
+      route,
+      zoom,
+      interactive,
+    });
 
     return {
       html: `<!DOCTYPE html>
@@ -72,7 +85,7 @@ export function OsmMapView({center, marker, route = [], zoom = 15, style, intera
   return (
     <View style={[styles.wrap, style]}>
       <WebView
-        originWhitelist={["*"]}
+        originWhitelist={['*']}
         source={source}
         javaScriptEnabled
         domStorageEnabled
@@ -85,6 +98,6 @@ export function OsmMapView({center, marker, route = [], zoom = 15, style, intera
 }
 
 const styles = StyleSheet.create({
-  wrap: {overflow: 'hidden'},
-  webview: {backgroundColor: '#e5e7eb'},
+  wrap: { overflow: 'hidden' },
+  webview: { backgroundColor: '#e5e7eb' },
 });

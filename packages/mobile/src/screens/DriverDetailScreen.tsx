@@ -1,8 +1,7 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   StyleSheet,
   StatusBar,
@@ -11,14 +10,16 @@ import {
   Linking,
   Image,
   Modal,
-  Alert,
   Animated,
 } from 'react-native';
-import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
-import {api, resolvePhotoUrl} from '../lib/api';
-import {Colors, Spacing} from '../lib/theme';
-import {AppIcon} from '../components/ui/AppIcon';
-import {Locale, t} from '../lib/i18n';
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
+import { api, resolvePhotoUrl } from '../lib/api';
+import { formatDateSmart } from '../lib/dates';
+import { Colors, Spacing } from '../lib/theme';
+import { AppIcon } from '../components/ui/AppIcon';
+import { Locale, t, isRTL } from '../lib/i18n';
+import { Alert } from '../lib/alert';
+import { TripLegBadge } from '../components/ui/TripLegBadge';
 
 interface DriverDetail {
   id: string;
@@ -32,35 +33,105 @@ interface DriverDetail {
   status: string;
   photoUrl?: string | null;
   createdAt: string;
-  vehicles?: {id: string; plateNumber: string; make: string; model: string; type: string}[];
-  trips?: {id: string; origin: string; destination: string; status: string; scheduledStart: string}[];
-  documents?: {id: string; type: string; fileUrl: string; issueDate: string; expiryDate: string}[];
+  vehicles?: {
+    id: string;
+    plateNumber: string;
+    make: string;
+    model: string;
+    type: string;
+  }[];
+  trips?: {
+    id: string;
+    origin: string;
+    destination: string;
+    status: string;
+    scheduledStart: string;
+    leg?: string;
+  }[];
+  documents?: {
+    id: string;
+    type: string;
+    fileUrl: string;
+    issueDate: string;
+    expiryDate: string;
+  }[];
 }
 
-const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
+const SB_H = Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 44;
 const HEADER_H = 220;
 const HEADER_MIN_H = 116;
 
-const STATUS_CONFIG: Record<string, {label: Record<Locale, string>; color: string; bg: string}> = {
-  ACTIVE:     {label: {en: 'Active',      ar: 'نشط',          hi: 'सक्रिय',     bn: 'সক্রিয়',    ur: 'فعال'},       color: '#fff',            bg: Colors.primary},
-  OFF_DUTY:   {label: {en: 'Off Duty',    ar: 'خارج الخدمة', hi: 'ड्यूटी से बाहर', bn: 'ড্যুটি থেকে বাইরে', ur: 'ڈیوٹی سے باہر'}, color: Colors.textMuted,  bg: Colors.borderLight},
-  ON_LEAVE:   {label: {en: 'On Leave',    ar: 'إجازة',       hi: 'छुट्टी पर',   bn: 'ছুটিতে',    ur: 'چھٹی پر'},   color: '#d68910',         bg: '#fef9e7'},
-  SUSPENDED:  {label: {en: 'Suspended',   ar: 'موقوف',       hi: 'निलंबिت',   bn: 'স্থগিত',    ur: 'معطل'},       color: '#c0392b',         bg: '#fdecea'},
-  TERMINATED: {label: {en: 'Terminated',  ar: 'منتهي',       hi: 'समाप्ت',     bn: 'সমাপ্ত',    ur: 'ختم'},       color: '#c0392b',         bg: '#fdecea'},
+const STATUS_CONFIG: Record<
+  string,
+  { label: Record<Locale, string>; color: string; bg: string }
+> = {
+  ACTIVE: {
+    label: { en: 'Active', ar: 'نشط', hi: 'सक्रिय', bn: 'সক্রিয়', ur: 'فعال' },
+    color: '#fff',
+    bg: Colors.primary,
+  },
+  OFF_DUTY: {
+    label: {
+      en: 'Off Duty',
+      ar: 'خارج الخدمة',
+      hi: 'ड्यूटी से बाहर',
+      bn: 'ড্যুটি থেকে বাইরে',
+      ur: 'ڈیوٹی سے باہر',
+    },
+    color: Colors.textMuted,
+    bg: Colors.borderLight,
+  },
+  ON_LEAVE: {
+    label: {
+      en: 'On Leave',
+      ar: 'إجازة',
+      hi: 'छुट्टी पर',
+      bn: 'ছুটিতে',
+      ur: 'چھٹی پر',
+    },
+    color: '#d68910',
+    bg: '#fef9e7',
+  },
+  SUSPENDED: {
+    label: {
+      en: 'Suspended',
+      ar: 'موقوف',
+      hi: 'निलंबिت',
+      bn: 'স্থগিত',
+      ur: 'معطل',
+    },
+    color: '#c0392b',
+    bg: '#fdecea',
+  },
+  TERMINATED: {
+    label: {
+      en: 'Terminated',
+      ar: 'منتهي',
+      hi: 'समाप्ت',
+      bn: 'সমাপ্ত',
+      ur: 'ختم',
+    },
+    color: '#c0392b',
+    bg: '#fdecea',
+  },
 };
 
 const BLOOD_TYPE_LABELS: Record<string, string> = {
-  A_POS: 'A+', A_NEG: 'A-',
-  B_POS: 'B+', B_NEG: 'B-',
-  AB_POS: 'AB+', AB_NEG: 'AB-',
-  O_POS: 'O+', O_NEG: 'O-',
+  A_POS: 'A+',
+  A_NEG: 'A-',
+  B_POS: 'B+',
+  B_NEG: 'B-',
+  AB_POS: 'AB+',
+  AB_NEG: 'AB-',
+  O_POS: 'O+',
+  O_NEG: 'O-',
 };
 
 const TRIP_STATUS_COLOR: Record<string, string> = {
-  COMPLETED:  '#27ae60',
-  IN_PROGRESS:'#2980b9',
-  SCHEDULED:  Colors.primary,
-  CANCELLED:  '#c0392b',
+  COMPLETED: '#27ae60',
+  IN_PROGRESS: '#2980b9',
+  SCHEDULED: Colors.primary,
+  CANCELLED: '#c0392b',
 };
 
 interface Props {
@@ -70,8 +141,14 @@ interface Props {
   onEdit?: () => void;
 }
 
-export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
+export function DriverDetailScreen({
+  driverId,
+  locale,
+  onBack,
+  onEdit,
+}: Props) {
   const i18n = t(locale);
+  const rtl = isRTL(locale);
   const scrollY = useRef(new Animated.Value(0)).current;
   const [driver, setDriver] = useState<DriverDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,7 +156,8 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    api.get<DriverDetail>(`/drivers/${driverId}`)
+    api
+      .get<DriverDetail>(`/drivers/${driverId}`)
       .then(setDriver)
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -89,9 +167,14 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
     setUploading(true);
     try {
       const form = new FormData();
-      form.append('file', {uri, name: fileName, type} as any);
-      const updated = await api.upload<{photoUrl: string}>(`/drivers/${driverId}/photo`, form);
-      setDriver(prev => prev ? {...prev, photoUrl: updated.photoUrl} : prev);
+      form.append('file', { uri, name: fileName, type } as any);
+      const updated = await api.upload<{ photoUrl: string }>(
+        `/drivers/${driverId}/photo`,
+        form
+      );
+      setDriver((prev) =>
+        prev ? { ...prev, photoUrl: updated.photoUrl } : prev
+      );
     } catch (e: any) {
       Alert.alert(i18n.error, e?.message ?? 'Upload failed');
     } finally {
@@ -100,35 +183,49 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
   }
 
   function showPhotoOptions() {
-    Alert.alert(
-      i18n.changePhoto,
-      '',
-      [
-        {
-          text: i18n.camera,
-          onPress: () => launchCamera(
-            {mediaType: 'photo', quality: 0.8, saveToPhotos: false},
-            res => {
-              if (res.didCancel || res.errorCode) return;
+    Alert.alert(i18n.changePhoto, '', [
+      {
+        text: i18n.camera,
+        onPress: () =>
+          launchCamera(
+            { mediaType: 'photo', quality: 0.8, saveToPhotos: false },
+            (res) => {
+              if (res.didCancel || res.errorCode) {
+                return;
+              }
               const asset = res.assets?.[0];
-              if (asset?.uri) uploadPhoto(asset.uri, asset.fileName ?? 'photo.jpg', asset.type ?? 'image/jpeg');
-            },
+              if (asset?.uri) {
+                uploadPhoto(
+                  asset.uri,
+                  asset.fileName ?? 'photo.jpg',
+                  asset.type ?? 'image/jpeg'
+                );
+              }
+            }
           ),
-        },
-        {
-          text: i18n.gallery,
-          onPress: () => launchImageLibrary(
-            {mediaType: 'photo', quality: 0.8, selectionLimit: 1},
-            res => {
-              if (res.didCancel || res.errorCode) return;
+      },
+      {
+        text: i18n.gallery,
+        onPress: () =>
+          launchImageLibrary(
+            { mediaType: 'photo', quality: 0.8, selectionLimit: 1 },
+            (res) => {
+              if (res.didCancel || res.errorCode) {
+                return;
+              }
               const asset = res.assets?.[0];
-              if (asset?.uri) uploadPhoto(asset.uri, asset.fileName ?? 'photo.jpg', asset.type ?? 'image/jpeg');
-            },
+              if (asset?.uri) {
+                uploadPhoto(
+                  asset.uri,
+                  asset.fileName ?? 'photo.jpg',
+                  asset.type ?? 'image/jpeg'
+                );
+              }
+            }
           ),
-        },
-        {text: i18n.cancel, style: 'cancel'},
-      ],
-    );
+      },
+      { text: i18n.cancel, style: 'cancel' },
+    ]);
   }
 
   if (loading) {
@@ -154,22 +251,28 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
   const statusCfg = STATUS_CONFIG[driver.status] ?? STATUS_CONFIG.OFF_DUTY;
   const statusLabel = statusCfg.label[locale];
   const initials = driver.fullName
-    .split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
-  const licenseExpiry = driver.licenseExpiry
-    ? new Date(driver.licenseExpiry).toLocaleDateString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric',
-      })
-    : '—';
+  const licenseExpiry = formatDateSmart(driver.licenseExpiry, locale);
 
   const isLicenseExpired = driver.licenseExpiry
     ? new Date(driver.licenseExpiry) < new Date()
     : false;
 
   const totalTrips = driver.trips?.length ?? 0;
-  const completedTrips = driver.trips?.filter(t => t.status === 'COMPLETED').length ?? 0;
-  const bloodTypeLabel = driver.bloodType ? (BLOOD_TYPE_LABELS[driver.bloodType] ?? driver.bloodType) : '—';
+  const completedTrips =
+    driver.trips?.filter((tripItem) => tripItem.status === 'COMPLETED')
+      .length ?? 0;
+  const bloodTypeLabel = driver.bloodType
+    ? BLOOD_TYPE_LABELS[driver.bloodType] ?? driver.bloodType
+    : '—';
   const collapseDistance = HEADER_H - HEADER_MIN_H;
+  const rowDirectionStyle = rtl ? styles.row : styles.rowReverse;
+  const textEndStyle = rtl ? styles.textLeft : styles.textRight;
 
   const animatedHeaderHeight = scrollY.interpolate({
     inputRange: [0, collapseDistance],
@@ -195,57 +298,86 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
     extrapolate: 'clamp',
   });
 
+  const topBarAnimatedStyle = { paddingTop: animatedTopPadding };
+  const headerHeightStyle = { height: animatedHeaderHeight };
+  const avatarSectionAnimatedStyle = {
+    opacity: animatedAvatarOpacity,
+    transform: [{ scale: animatedAvatarScale }],
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
       {/* ── Teal header with avatar ── */}
-      <Animated.View style={[styles.header, {height: animatedHeaderHeight}]}>
+      <Animated.View style={[styles.header, headerHeightStyle]}>
         {/* Subtle grid */}
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          {[0.3, 0.6].map(f => (
-            <View key={`h${f}`} style={[styles.gridLineH, {top: `${Math.round(f * 100)}%` as any}]} />
-          ))}
-          {[0.25, 0.5, 0.75].map(f => (
-            <View key={`v${f}`} style={[styles.gridLineV, {left: `${Math.round(f * 100)}%` as any}]} />
-          ))}
+          {[0.3, 0.6].map((f) => {
+            const linePositionStyle = { top: `${Math.round(f * 100)}%` as any };
+            return (
+              <View
+                key={`h${f}`}
+                style={[styles.gridLineH, linePositionStyle]}
+              />
+            );
+          })}
+          {[0.25, 0.5, 0.75].map((f) => {
+            const columnPositionStyle = {
+              left: `${Math.round(f * 100)}%` as any,
+            };
+            return (
+              <View
+                key={`v${f}`}
+                style={[styles.gridLineV, columnPositionStyle]}
+              />
+            );
+          })}
         </View>
 
         {/* Top bar */}
-        <Animated.View style={[styles.topBar, {paddingTop: animatedTopPadding}]}> 
-          <TouchableOpacity style={styles.circleBtn} onPress={onBack} activeOpacity={0.8}>
+        <Animated.View
+          style={[styles.topBar, topBarAnimatedStyle, rowDirectionStyle]}
+        >
+          <TouchableOpacity
+            style={styles.circleBtn}
+            onPress={onBack}
+            activeOpacity={0.8}
+          >
             <AppIcon name="close" size={20} color="#fff" />
           </TouchableOpacity>
-          <View style={{width: 36}} />
+          <View style={styles.topBarSpacer} />
           {onEdit ? (
-            <TouchableOpacity style={styles.circleBtn} onPress={onEdit} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.circleBtn}
+              onPress={onEdit}
+              activeOpacity={0.8}
+            >
               <AppIcon name="pencil" size={18} color="#fff" />
             </TouchableOpacity>
           ) : (
-            <View style={{width: 36}} />
+            <View style={styles.topBarSpacer} />
           )}
         </Animated.View>
 
         {/* Avatar + name */}
         <Animated.View
-          style={[
-            styles.avatarSection,
-            {
-              opacity: animatedAvatarOpacity,
-              transform: [{scale: animatedAvatarScale}],
-            },
-          ]}
+          style={[styles.avatarSection, avatarSectionAnimatedStyle]}
         >
-          <View style={{position: 'relative'}}>
+          <View style={styles.relativeWrap}>
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => { if (driver.photoUrl) setShowPhoto(true); }}
+              onPress={() => {
+                if (driver.photoUrl) {
+                  setShowPhoto(true);
+                }
+              }}
             >
               <View style={styles.avatar}>
                 {driver.photoUrl && resolvePhotoUrl(driver.photoUrl) ? (
                   <Image
-                    source={{uri: resolvePhotoUrl(driver.photoUrl)!}}
-                    style={{width: 72, height: 72, borderRadius: 36}}
+                    source={{ uri: resolvePhotoUrl(driver.photoUrl)! }}
+                    style={styles.avatarImage}
                     resizeMode="cover"
                   />
                 ) : (
@@ -260,14 +392,18 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
               activeOpacity={0.8}
               disabled={uploading}
             >
-              {uploading
-                ? <ActivityIndicator size={10} color="#fff" />
-                : <AppIcon name="camera" size={12} color="#fff" />}
+              {uploading ? (
+                <ActivityIndicator size={10} color="#fff" />
+              ) : (
+                <AppIcon name="camera" size={12} color="#fff" />
+              )}
             </TouchableOpacity>
           </View>
           <Text style={styles.driverName}>{driver.fullName}</Text>
-          <View style={[styles.statusPill, {backgroundColor: statusCfg.bg}]}>
-            <Text style={[styles.statusPillText, {color: statusCfg.color}]}>{statusLabel}</Text>
+          <View style={[styles.statusPill, { backgroundColor: statusCfg.bg }]}>
+            <Text style={[styles.statusPillText, { color: statusCfg.color }]}>
+              {statusLabel}
+            </Text>
           </View>
         </Animated.View>
       </Animated.View>
@@ -279,13 +415,12 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={Animated.event(
-          [{nativeEvent: {contentOffset: {y: scrollY}}}],
-          {useNativeDriver: false},
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
         )}
       >
-
         {/* 3-column info strip */}
-        <View style={styles.infoStrip}>
+        <View style={[styles.infoStrip, rowDirectionStyle]}>
           <InfoCol
             label={i18n.licenseExpiryLabel}
             value={licenseExpiry}
@@ -300,7 +435,7 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
         </View>
 
         {/* 4-tile stats row */}
-        <View style={styles.statsRow}>
+        <View style={[styles.statsRow, rowDirectionStyle]}>
           <StatTile
             icon="map-marker-distance"
             value={String(totalTrips)}
@@ -330,17 +465,23 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
         {/* ── Assigned Vehicles ── */}
         <Text style={styles.sectionTitle}>{i18n.assignedVehicles}</Text>
         {(driver.vehicles ?? []).length > 0 ? (
-          (driver.vehicles ?? []).map(v => (
-            <View key={v.id} style={styles.vehicleCard}>
+          (driver.vehicles ?? []).map((v) => (
+            <View key={v.id} style={[styles.vehicleCard, rowDirectionStyle]}>
               <View style={styles.vehicleIcon}>
                 <AppIcon name="truck" size={24} color={Colors.primary} />
               </View>
-              <View style={{flex: 1}}>
-                <Text style={styles.vehiclePlate}>{v.plateNumber}</Text>
-                <Text style={styles.vehicleSub}>{v.make} {v.model}</Text>
+              <View style={styles.flexOne}>
+                <Text style={[styles.vehiclePlate, textEndStyle]}>
+                  {v.plateNumber}
+                </Text>
+                <Text style={[styles.vehicleSub, textEndStyle]}>
+                  {v.make} {v.model}
+                </Text>
               </View>
               <View style={styles.vehicleTypePill}>
-                <Text style={styles.vehicleTypeText}>{v.type?.replace(/_/g, ' ')}</Text>
+                <Text style={styles.vehicleTypeText}>
+                  {v.type?.replace(/_/g, ' ')}
+                </Text>
               </View>
             </View>
           ))
@@ -352,13 +493,16 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
         )}
 
         {/* ── Contact Info ── */}
-        <Text style={[styles.sectionTitle, {marginTop: 20}]}>{i18n.contactInfo}</Text>
+        <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>
+          {i18n.contactInfo}
+        </Text>
         <View style={styles.contactCard}>
           <ContactRow
             icon="phone"
             label={i18n.phoneLabel}
             value={driver.phone}
             onPress={() => Linking.openURL(`tel:${driver.phone}`)}
+            rtl={!rtl}
           />
           {driver.email && (
             <ContactRow
@@ -367,6 +511,7 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
               value={driver.email}
               onPress={() => Linking.openURL(`mailto:${driver.email}`)}
               noBorder
+              rtl={!rtl}
             />
           )}
         </View>
@@ -376,34 +521,43 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
             icon="card-account-details"
             label={i18n.nationalIdField}
             value={driver.nationalId}
+            rtl={!rtl}
           />
         </View>
 
         {/* ── Recent Trips ── */}
         {driver.trips && driver.trips.length > 0 && (
           <>
-            <Text style={[styles.sectionTitle, {marginTop: 20}]}>
+            <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>
               {i18n.recentTrips}
             </Text>
-            {driver.trips.slice(0, 5).map(trip => {
-              const statusColor = TRIP_STATUS_COLOR[trip.status] ?? Colors.textMuted;
-              const date = trip.scheduledStart
-                ? new Date(trip.scheduledStart).toLocaleDateString('en-GB', {
-                    day: '2-digit', month: 'short',
-                  })
-                : '—';
+            {driver.trips.slice(0, 5).map((trip) => {
+              const statusColor =
+                TRIP_STATUS_COLOR[trip.status] ?? Colors.textMuted;
+              const date = formatDateSmart(trip.scheduledStart, locale);
               return (
-                <View key={trip.id} style={styles.tripRow}>
+                <View key={trip.id} style={[styles.tripRow, rowDirectionStyle]}>
                   <View style={styles.tripIconWrap}>
-                    <AppIcon name="map-marker-path" size={16} color={Colors.primary} />
+                    <AppIcon
+                      name="map-marker-path"
+                      size={16}
+                      color={Colors.primary}
+                    />
                   </View>
-                  <View style={{flex: 1}}>
-                    <Text style={styles.tripRoute} numberOfLines={1}>
-                      {trip.origin} → {trip.destination}
+                  <View style={styles.flexOne}>
+                    <Text
+                      style={[styles.tripRoute, textEndStyle]}
+                      numberOfLines={1}
+                    >
+                      {rtl ? trip.origin : trip.destination} {!rtl ? '→' : '←'}{' '}
+                      {rtl ? trip.destination : trip.origin}
                     </Text>
-                    <Text style={styles.tripDate}>{date}</Text>
+                    <View style={[styles.tripLegWrap, !rtl && styles.alignEnd]}>
+                      <TripLegBadge leg={trip.leg} locale={locale} />
+                    </View>
+                    <Text style={[styles.tripDate, textEndStyle]}>{date}</Text>
                   </View>
-                  <Text style={[styles.tripStatus, {color: statusColor}]}>
+                  <Text style={[styles.tripStatus, { color: statusColor }]}>
                     {trip.status.replace(/_/g, ' ')}
                   </Text>
                 </View>
@@ -412,20 +566,32 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
           </>
         )}
 
-        <View style={{height: 32}} />
+        <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
 
       {/* ── Photo lightbox ── */}
-      <Modal visible={showPhoto} transparent animationType="fade" onRequestClose={() => setShowPhoto(false)}>
-        <TouchableOpacity style={styles.lightboxOverlay} activeOpacity={1} onPress={() => setShowPhoto(false)}>
+      <Modal
+        visible={showPhoto}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPhoto(false)}
+      >
+        <TouchableOpacity
+          style={styles.lightboxOverlay}
+          activeOpacity={1}
+          onPress={() => setShowPhoto(false)}
+        >
           {driver.photoUrl && resolvePhotoUrl(driver.photoUrl) && (
             <Image
-              source={{uri: resolvePhotoUrl(driver.photoUrl)!}}
+              source={{ uri: resolvePhotoUrl(driver.photoUrl)! }}
               style={styles.lightboxImg}
               resizeMode="contain"
             />
           )}
-          <TouchableOpacity style={styles.lightboxClose} onPress={() => setShowPhoto(false)}>
+          <TouchableOpacity
+            style={styles.lightboxClose}
+            onPress={() => setShowPhoto(false)}
+          >
             <AppIcon name="close" size={20} color="#fff" />
           </TouchableOpacity>
         </TouchableOpacity>
@@ -436,27 +602,47 @@ export function DriverDetailScreen({driverId, locale, onBack, onEdit}: Props) {
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
-function InfoCol({label, value, highlight, warn}: {
-  label: string; value: string; highlight?: boolean; warn?: boolean;
+function InfoCol({
+  label,
+  value,
+  highlight,
+  warn,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+  warn?: boolean;
 }) {
   return (
     <View style={styles.infoCol}>
       <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={[
-        styles.infoValue,
-        highlight && {color: Colors.primary},
-        warn && {color: '#c0392b'},
-      ]}>
+      <Text
+        style={[
+          styles.infoValue,
+          highlight && styles.infoValueHighlight,
+          warn && styles.infoValueWarn,
+        ]}
+      >
         {value}
       </Text>
     </View>
   );
 }
 
-function StatTile({icon, value, unit, color}: {icon: string; value: string; unit: string; color: string}) {
+function StatTile({
+  icon,
+  value,
+  unit,
+  color,
+}: {
+  icon: string;
+  value: string;
+  unit: string;
+  color: string;
+}) {
   return (
     <View style={styles.statTile}>
-      <View style={[styles.statIcon, {backgroundColor: color + '20'}]}>
+      <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
         <AppIcon name={icon} size={20} color={color} />
       </View>
       <Text style={styles.statValue}>{value}</Text>
@@ -465,38 +651,78 @@ function StatTile({icon, value, unit, color}: {icon: string; value: string; unit
   );
 }
 
-function ContactRow({icon, label, value, onPress, noBorder}: {
-  icon: string; label: string; value: string;
-  onPress: () => void; noBorder?: boolean;
+function ContactRow({
+  icon,
+  label,
+  value,
+  onPress,
+  noBorder,
+  rtl,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  onPress: () => void;
+  noBorder?: boolean;
+  rtl?: boolean;
 }) {
+  const rowDirectionStyle = rtl ? styles.rowReverse : styles.row;
+  const textAlignStyle = rtl ? styles.textRight : styles.textLeft;
   return (
     <TouchableOpacity
-      style={[styles.contactRow, !noBorder && styles.contactBorder]}
+      style={[
+        styles.contactRow,
+        !noBorder && styles.contactBorder,
+        rowDirectionStyle,
+      ]}
       onPress={onPress}
-      activeOpacity={0.7}>
+      activeOpacity={0.7}
+    >
       <View style={styles.contactIconWrap}>
         <AppIcon name={icon} size={18} color={Colors.primary} />
       </View>
-      <View style={{flex: 1}}>
-        <Text style={styles.contactLabel}>{label}</Text>
-        <Text style={styles.contactValue}>{value}</Text>
+      <View style={styles.flexOne}>
+        <Text style={[styles.contactLabel, textAlignStyle]}>{label}</Text>
+        <Text style={[styles.contactValue, textAlignStyle]}>{value}</Text>
       </View>
-      <AppIcon name="chevron-right" size={18} color={Colors.textMuted} />
+      <AppIcon
+        name={!rtl ? 'chevron-left' : 'chevron-right'}
+        size={18}
+        color={Colors.textMuted}
+      />
     </TouchableOpacity>
   );
 }
 
-function InfoRow({icon, label, value, noBorder}: {
-  icon: string; label: string; value: string; noBorder?: boolean;
+function InfoRow({
+  icon,
+  label,
+  value,
+  noBorder,
+  rtl,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  noBorder?: boolean;
+  rtl?: boolean;
 }) {
+  const rowDirectionStyle = rtl ? styles.rowReverse : styles.row;
+  const textAlignStyle = rtl ? styles.textRight : styles.textLeft;
   return (
-    <View style={[styles.contactRow, !noBorder && styles.contactBorder]}>
+    <View
+      style={[
+        styles.contactRow,
+        !noBorder && styles.contactBorder,
+        rowDirectionStyle,
+      ]}
+    >
       <View style={styles.contactIconWrap}>
         <AppIcon name={icon} size={18} color={Colors.primary} />
       </View>
-      <View style={{flex: 1}}>
-        <Text style={styles.contactLabel}>{label}</Text>
-        <Text style={styles.contactValue}>{value}</Text>
+      <View style={styles.flexOne}>
+        <Text style={[styles.contactLabel, textAlignStyle]}>{label}</Text>
+        <Text style={[styles.contactValue, textAlignStyle]}>{value}</Text>
       </View>
     </View>
   );
@@ -504,154 +730,322 @@ function InfoRow({icon, label, value, noBorder}: {
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: Colors.bg},
-  center: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.bg, gap: 12},
-  errorText: {fontSize: 15, color: Colors.textMuted},
-  retryBtn: {paddingHorizontal: 24, paddingVertical: 10, backgroundColor: Colors.primary, borderRadius: 20},
-  retryText: {color: '#fff', fontWeight: '600' as const},
+  container: { flex: 1, backgroundColor: Colors.bg },
+  row: { flexDirection: 'row' },
+  rowReverse: { flexDirection: 'row-reverse' },
+  textLeft: { textAlign: 'left' },
+  textRight: { textAlign: 'right' },
+  flexOne: { flex: 1 },
+  alignEnd: { alignItems: 'flex-end' },
+  relativeWrap: { position: 'relative' },
+  avatarImage: { width: 72, height: 72, borderRadius: 36 },
+  topBarSpacer: { width: 36 },
+  sectionTitleSpaced: { marginTop: 20 },
+  bottomSpacer: { height: 32 },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.bg,
+    gap: 12,
+  },
+  errorText: { fontSize: 15, color: Colors.textMuted },
+  retryBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+  },
+  retryText: { color: '#fff', fontWeight: '600' as const },
 
   // Header
-  header: {backgroundColor: Colors.primary, justifyContent: 'center', overflow: 'hidden'},
-  gridLineH: {position: 'absolute', width: '100%', height: 1, backgroundColor: 'rgba(255,255,255,0.07)'},
-  gridLineV: {position: 'absolute', height: '100%', width: 1, backgroundColor: 'rgba(255,255,255,0.07)'},
+  header: {
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  gridLineH: {
+    position: 'absolute',
+    width: '100%',
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  gridLineV: {
+    position: 'absolute',
+    height: '100%',
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
   topBar: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md, paddingBottom: 10,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingBottom: 10,
     zIndex: 30,
     elevation: 30,
   },
   circleBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(0,0,0,0.25)',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerLabel: {fontSize: 16, fontWeight: '600' as const, color: '#fff', opacity: 0.9},
-  avatarSection: {alignItems: 'center', gap: 8, paddingTop: 16},
+  headerLabel: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#fff',
+    opacity: 0.9,
+  },
+  avatarSection: { alignItems: 'center', gap: 8, paddingTop: 16 },
   cameraBadge: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 22, height: 22, borderRadius: 11,
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: Colors.primary,
-    borderWidth: 2, borderColor: '#fff',
-    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   avatar: {
-    width: 72, height: 72, borderRadius: 36,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: 'rgba(255,255,255,0.22)',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)',
-    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  avatarText: {fontSize: 26, fontWeight: '800' as const, color: '#fff'},
-  driverName: {fontSize: 20, fontWeight: '700' as const, color: '#fff'},
+  avatarText: { fontSize: 26, fontWeight: '800' as const, color: '#fff' },
+  driverName: { fontSize: 20, fontWeight: '700' as const, color: '#fff' },
   statusPill: {
-    paddingHorizontal: 14, paddingVertical: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
     borderRadius: 20,
   },
-  statusPillText: {fontSize: 12, fontWeight: '600' as const},
+  statusPillText: { fontSize: 12, fontWeight: '600' as const },
 
   // Panel
-  panel: {flex: 1, backgroundColor: Colors.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -24},
-  panelContent: {padding: Spacing.md},
+  panel: {
+    flex: 1,
+    backgroundColor: Colors.bg,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -24,
+  },
+  panelContent: { padding: Spacing.md },
 
   // Info strip
   infoStrip: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 16, paddingHorizontal: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 4,
     marginBottom: 14,
   },
-  infoCol: {flex: 1, alignItems: 'center', gap: 5},
-  infoLabel: {fontSize: 10, color: Colors.textMuted, fontWeight: '500' as const, textAlign: 'center'},
-  infoValue: {fontSize: 12, fontWeight: '700' as const, color: Colors.textPrimary, textAlign: 'center'},
-  stripDiv: {width: 1, height: 32, backgroundColor: Colors.borderLight},
+  infoCol: { flex: 1, alignItems: 'center', gap: 5 },
+  infoLabel: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    fontWeight: '500' as const,
+    textAlign: 'center',
+  },
+  infoValue: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  infoValueHighlight: { color: Colors.primary },
+  infoValueWarn: { color: '#c0392b' },
+  stripDiv: { width: 1, height: 32, backgroundColor: Colors.borderLight },
 
   // Stats
-  statsRow: {flexDirection: 'row', gap: 8, marginBottom: 20},
+  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 20 },
   statTile: {
-    flex: 1, backgroundColor: '#fff', borderRadius: 14,
-    borderWidth: 1, borderColor: Colors.borderLight,
-    paddingVertical: 14, alignItems: 'center', gap: 5,
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    paddingVertical: 14,
+    alignItems: 'center',
+    gap: 5,
   },
-  statIcon: {width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center'},
-  statValue: {fontSize: 12, fontWeight: '800' as const, color: Colors.textPrimary},
-  statUnit: {fontSize: 9, color: Colors.textMuted, fontWeight: '500' as const},
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 12,
+    fontWeight: '800' as const,
+    color: Colors.textPrimary,
+  },
+  statUnit: {
+    fontSize: 9,
+    color: Colors.textMuted,
+    fontWeight: '500' as const,
+  },
 
   // Section title
-  sectionTitle: {fontSize: 16, fontWeight: '700' as const, color: Colors.textPrimary, marginBottom: 10},
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: Colors.textPrimary,
+    marginBottom: 10,
+  },
 
   // Vehicle card
   vehicleCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', borderRadius: 14,
-    borderWidth: 1, borderColor: Colors.borderLight,
-    paddingVertical: 14, paddingHorizontal: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.md,
   },
   vehicleIcon: {
-    width: 48, height: 48, borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: Colors.primaryLight,
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  vehiclePlate: {fontSize: 16, fontWeight: '700' as const, color: Colors.textPrimary, letterSpacing: 1},
-  vehicleSub: {fontSize: 13, color: Colors.textMuted, marginTop: 2},
+  vehiclePlate: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: Colors.textPrimary,
+    letterSpacing: 1,
+  },
+  vehicleSub: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
   vehicleTypePill: {
-    backgroundColor: Colors.primaryLight, borderRadius: 10,
-    paddingHorizontal: 8, paddingVertical: 4,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  vehicleTypeText: {fontSize: 10, fontWeight: '600' as const, color: Colors.primary},
+  vehicleTypeText: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    color: Colors.primary,
+  },
 
   // Empty card
   emptyCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#fff', borderRadius: 14,
-    borderWidth: 1, borderColor: Colors.borderLight,
-    paddingVertical: 16, paddingHorizontal: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    paddingVertical: 16,
+    paddingHorizontal: Spacing.md,
   },
-  emptyCardText: {fontSize: 14, color: Colors.textMuted},
+  emptyCardText: { fontSize: 14, color: Colors.textMuted },
 
   // Contact / Info rows
   contactCard: {
-    backgroundColor: '#fff', borderRadius: 14,
-    borderWidth: 1, borderColor: Colors.borderLight,
-    overflow: 'hidden', marginBottom: 8,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    overflow: 'hidden',
+    marginBottom: 8,
   },
   contactRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 14, paddingHorizontal: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.md,
   },
-  contactBorder: {borderBottomWidth: 1, borderBottomColor: Colors.borderLight},
+  contactBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
   contactIconWrap: {
-    width: 36, height: 36, borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: Colors.primaryLight,
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  contactLabel: {fontSize: 10, color: Colors.textMuted, fontWeight: '500' as const, marginBottom: 1},
-  contactValue: {fontSize: 14, fontWeight: '600' as const, color: Colors.textPrimary},
+  contactLabel: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    fontWeight: '500' as const,
+    marginBottom: 1,
+  },
+  contactValue: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: Colors.textPrimary,
+  },
 
   // Trip rows
   tripRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#fff', borderRadius: 12,
-    borderWidth: 1, borderColor: Colors.borderLight,
-    paddingVertical: 10, paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     marginBottom: 8,
   },
   tripIconWrap: {
-    width: 32, height: 32, borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     backgroundColor: Colors.primaryLight,
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  tripRoute: {fontSize: 13, fontWeight: '600' as const, color: Colors.textPrimary},
-  tripDate: {fontSize: 11, color: Colors.textMuted, marginTop: 1},
-  tripStatus: {fontSize: 10, fontWeight: '700' as const},
+  tripRoute: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: Colors.textPrimary,
+  },
+  tripLegWrap: { marginTop: 6 },
+  tripDate: { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
+  tripStatus: { fontSize: 10, fontWeight: '700' as const },
 
   // Lightbox
   lightboxOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.9)',
-    justifyContent: 'center', alignItems: 'center',
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  lightboxImg: {width: '100%', height: '80%'},
+  lightboxImg: { width: '100%', height: '80%' },
   lightboxClose: {
-    position: 'absolute', top: 50, right: 16,
+    position: 'absolute',
+    top: 50,
+    right: 16,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20, padding: 8,
+    borderRadius: 20,
+    padding: 8,
   },
 });

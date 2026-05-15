@@ -93,7 +93,7 @@ export default function ContractsPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {[tc.contractNumber, tc.clientName, tc.vehicle, tc.driver, `${tc.origin} → ${tc.destination}`, `${tc.contractStart} – ${tc.contractEnd}`, tc.departureTime, tc.trips, t.common.actions].map(h => (
+                    {[tc.contractNumber, tc.clientName, tc.vehicle, tc.driver, `${tc.origin} ${isRTL ? '←' : '→'} ${tc.destination}`, `${tc.contractStart} – ${tc.contractEnd}`, tc.departureTime, tc.trips, t.common.actions].map(h => (
                       <th key={h} className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>{h}</th>
                     ))}
                   </tr>
@@ -112,9 +112,9 @@ export default function ContractsPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-700">{c.driver.fullName}</td>
                       <td className="px-4 py-3 text-gray-700">
-                        <span className="text-xs">{c.origin}</span>
-                        <span className="mx-1 text-gray-300">→</span>
-                        <span className="text-xs">{c.destination}</span>
+                        <span className="text-xs">{!isRTL ? c.destination : c.origin}</span>
+                        <span className="mx-1 text-gray-300">{isRTL ? '←' : '→'}</span>
+                        <span className="text-xs">{!isRTL ? c.origin : c.destination}</span>
                       </td>
                       <td className="px-4 py-3 text-gray-600 text-xs whitespace-nowrap">
                         {fmt(c.contractStart)} – {fmt(c.contractEnd)}

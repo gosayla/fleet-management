@@ -1,7 +1,7 @@
 /**
  * DateWheelModal — drum-roll date picker (no external deps)
  */
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -13,7 +13,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {Colors} from '../../lib/theme';
+import { Colors } from '../../lib/theme';
+import { Locale, isRTL } from '../../lib/i18n';
 
 const ITEM_H = 46;
 const PAD = 2; // rows visible above/below selection
@@ -27,7 +28,7 @@ interface WheelProps {
   resetKey?: string | number;
 }
 
-function Wheel({items, initialIndex, onChange, width, resetKey}: WheelProps) {
+function Wheel({ items, initialIndex, onChange, width, resetKey }: WheelProps) {
   const ref = useRef<FlatList>(null);
   const [sel, setSel] = useState(initialIndex);
 
@@ -35,11 +36,11 @@ function Wheel({items, initialIndex, onChange, width, resetKey}: WheelProps) {
   useEffect(() => {
     const t = setTimeout(() => {
       const idx = Math.max(0, Math.min(initialIndex, items.length - 1));
-      ref.current?.scrollToIndex({index: idx, animated: false});
+      ref.current?.scrollToIndex({ index: idx, animated: false });
       setSel(idx);
     }, 60);
     return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
 
   const handleScrollEnd = useCallback(
@@ -49,11 +50,11 @@ function Wheel({items, initialIndex, onChange, width, resetKey}: WheelProps) {
       setSel(clamped);
       onChange(clamped);
     },
-    [items.length, onChange],
+    [items.length, onChange]
   );
 
   return (
-    <View style={[styles.wheelWrap, {width}]}>
+    <View style={[styles.wheelWrap, { width }]}>
       {/* Selection highlight band */}
       <View pointerEvents="none" style={styles.selBand} />
       <FlatList
@@ -63,12 +64,18 @@ function Wheel({items, initialIndex, onChange, width, resetKey}: WheelProps) {
         snapToInterval={ITEM_H}
         decelerationRate="fast"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingVertical: ITEM_H * PAD}}
+        contentContainerStyle={{ paddingVertical: ITEM_H * PAD }}
         onMomentumScrollEnd={handleScrollEnd}
-        getItemLayout={(_, index) => ({length: ITEM_H, offset: ITEM_H * index, index})}
-        renderItem={({item, index}) => (
+        getItemLayout={(_, index) => ({
+          length: ITEM_H,
+          offset: ITEM_H * index,
+          index,
+        })}
+        renderItem={({ item, index }) => (
           <View style={styles.wheelItem}>
-            <Text style={[styles.wheelText, index === sel && styles.wheelTextSel]}>
+            <Text
+              style={[styles.wheelText, index === sel && styles.wheelTextSel]}
+            >
               {item}
             </Text>
           </View>
@@ -79,8 +86,20 @@ function Wheel({items, initialIndex, onChange, width, resetKey}: WheelProps) {
 }
 
 // ── Month labels ──────────────────────────────────────────────────────────────
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 const HIJRI_MONTHS = [
   'Muharram',
@@ -132,7 +151,11 @@ function hijriDaysInMonth(year: number, month: number) {
   return month % 2 === 1 ? 30 : 29;
 }
 
-function parseDate(value: string, now: Date, calendar: 'gregorian' | 'hijri'): [number, number, number] {
+function parseDate(
+  value: string,
+  now: Date,
+  calendar: 'gregorian' | 'hijri'
+): [number, number, number] {
   if (value && /^\d{4}[-/]\d{2}[-/]\d{2}$/.test(value)) {
     const [y, m, d] = value.split(/[-/]/).map(Number);
     return [y, m, d];
@@ -153,7 +176,7 @@ export interface DateWheelModalProps {
   minYear?: number;
   maxYear?: number;
   calendar?: 'gregorian' | 'hijri';
-  locale?: string;
+  locale?: Locale;
   cancelLabel?: string;
   doneLabel?: string;
 }
@@ -171,12 +194,14 @@ export function DateWheelModal({
   cancelLabel,
   doneLabel,
 }: DateWheelModalProps) {
+  const rtl = isRTL(locale);
+
   const now = new Date();
   const [initY, initM, initD] = parseDate(value, now, calendar);
 
-  const [year, setYear]   = useState(initY);
+  const [year, setYear] = useState(initY);
   const [month, setMonth] = useState(initM);
-  const [day, setDay]     = useState(initD);
+  const [day, setDay] = useState(initD);
 
   // Sync state whenever modal opens with a new value
   useEffect(() => {
@@ -186,22 +211,34 @@ export function DateWheelModal({
       setMonth(m);
       setDay(d);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, calendar]);
 
-  const years  = Array.from({length: maxYear - minYear + 1}, (_, i) => String(minYear + i));
-  const monthNames = calendar === 'hijri'
-    ? (locale.startsWith('ar') ? HIJRI_MONTHS_AR : HIJRI_MONTHS)
-    : MONTH_LABELS;
+  const years = Array.from({ length: maxYear - minYear + 1 }, (_, i) =>
+    String(minYear + i)
+  );
+  const monthNames =
+    calendar === 'hijri'
+      ? locale.startsWith('ar')
+        ? HIJRI_MONTHS_AR
+        : HIJRI_MONTHS
+      : MONTH_LABELS;
   const months = monthNames.map((name, i) => `${pad(i + 1)} ${name}`);
-  const numDays = calendar === 'hijri' ? hijriDaysInMonth(year, month) : daysInMonth(year, month);
-  const days  = Array.from({length: numDays}, (_, i) => pad(i + 1));
+  const numDays =
+    calendar === 'hijri'
+      ? hijriDaysInMonth(year, month)
+      : daysInMonth(year, month);
+  const days = Array.from({ length: numDays }, (_, i) => pad(i + 1));
   const safeDay = Math.min(day, numDays);
   const yearLabel = locale.startsWith('ar') ? 'السنة' : 'Year';
   const monthLabel = locale.startsWith('ar') ? 'الشهر' : 'Month';
   const dayLabel = locale.startsWith('ar') ? 'اليوم' : 'Day';
-  const cancelText = cancelLabel ?? (locale.startsWith('ar') ? 'إلغاء' : 'Cancel');
+  const cancelText =
+    cancelLabel ?? (locale.startsWith('ar') ? 'إلغاء' : 'Cancel');
   const doneText = doneLabel ?? (locale.startsWith('ar') ? 'تم' : 'Done');
+  const headerDirectionStyle = rtl ? styles.row : styles.rowReverse;
+  const colLabelsDirectionStyle = rtl ? styles.row : styles.rowReverse;
+  const wheelsDirectionStyle = rtl ? styles.row : styles.rowReverse;
 
   function handleConfirm() {
     onConfirm(`${year}-${pad(month)}-${pad(safeDay)}`);
@@ -210,11 +247,16 @@ export function DateWheelModal({
   const openKey = visible ? 'open' : 'closed';
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, headerDirectionStyle]}>
             <TouchableOpacity onPress={onClose} style={styles.headerSide}>
               <Text style={styles.cancelText}>{cancelText}</Text>
             </TouchableOpacity>
@@ -225,26 +267,28 @@ export function DateWheelModal({
           </View>
 
           {/* Column labels */}
-          <View style={styles.colLabels}>
-            <Text style={[styles.colLabel, {width: 80}]}>{yearLabel}</Text>
-            <Text style={[styles.colLabel, {width: 110}]}>{monthLabel}</Text>
-            <Text style={[styles.colLabel, {width: 60}]}>{dayLabel}</Text>
+          <View style={[styles.colLabels, colLabelsDirectionStyle]}>
+            <Text style={[styles.colLabel, styles.yearLabel]}>{yearLabel}</Text>
+            <Text style={[styles.colLabel, styles.monthLabel]}>
+              {monthLabel}
+            </Text>
+            <Text style={[styles.colLabel, styles.dayLabel]}>{dayLabel}</Text>
           </View>
 
           {/* Wheels */}
-          <View style={styles.wheelsRow}>
+          <View style={[styles.wheelsRow, wheelsDirectionStyle]}>
             <Wheel
               resetKey={openKey}
               items={years}
               initialIndex={Math.max(0, year - minYear)}
-              onChange={i => setYear(minYear + i)}
+              onChange={(i) => setYear(minYear + i)}
               width={80}
             />
             <Wheel
               resetKey={openKey}
               items={months}
               initialIndex={Math.max(0, month - 1)}
-              onChange={i => setMonth(i + 1)}
+              onChange={(i) => setMonth(i + 1)}
               width={110}
             />
             <Wheel
@@ -252,7 +296,7 @@ export function DateWheelModal({
               resetKey={`${numDays}-${openKey}`}
               items={days}
               initialIndex={Math.max(0, safeDay - 1)}
-              onChange={i => setDay(i + 1)}
+              onChange={(i) => setDay(i + 1)}
               width={60}
             />
           </View>
@@ -264,7 +308,11 @@ export function DateWheelModal({
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  overlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end'},
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
   sheet: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
@@ -279,16 +327,32 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E0E0E0',
   },
-  headerSide: {minWidth: 64},
-  headerTitle: {flex: 1, textAlign: 'center', fontSize: 15, fontWeight: '600', color: Colors.textPrimary},
-  cancelText: {fontSize: 15, color: Colors.textMuted},
-  doneText: {fontSize: 15, fontWeight: '700', color: Colors.primary, textAlign: 'right'},
+  headerSide: { minWidth: 64 },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  cancelText: { fontSize: 15, color: Colors.textMuted },
+  doneText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.primary,
+    textAlign: 'right',
+  },
+  row: { flexDirection: 'row' },
+  rowReverse: { flexDirection: 'row-reverse' },
   colLabels: {
     flexDirection: 'row',
     paddingHorizontal: 8,
     paddingTop: 8,
     paddingBottom: 0,
   },
+  yearLabel: { width: 80 },
+  monthLabel: { width: 110 },
+  dayLabel: { width: 60 },
   colLabel: {
     textAlign: 'center',
     fontSize: 10,
@@ -302,10 +366,10 @@ const styles = StyleSheet.create({
     height: ITEM_H * (PAD * 2 + 1),
     paddingHorizontal: 8,
   },
-  wheelWrap: {overflow: 'hidden', position: 'relative'},
-  wheelItem: {height: ITEM_H, justifyContent: 'center', alignItems: 'center'},
-  wheelText: {fontSize: 15, color: Colors.textMuted},
-  wheelTextSel: {fontSize: 18, fontWeight: '700', color: Colors.textPrimary},
+  wheelWrap: { overflow: 'hidden', position: 'relative' },
+  wheelItem: { height: ITEM_H, justifyContent: 'center', alignItems: 'center' },
+  wheelText: { fontSize: 15, color: Colors.textMuted },
+  wheelTextSel: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   selBand: {
     position: 'absolute',
     top: ITEM_H * PAD,

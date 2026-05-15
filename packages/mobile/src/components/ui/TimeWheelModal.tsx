@@ -1,7 +1,7 @@
 /**
  * TimeWheelModal — drum-roll hour:minute picker
  */
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {Colors} from '../../lib/theme';
+import { Colors } from '../../lib/theme';
 
 const ITEM_H = 46;
 const PAD = 2;
@@ -27,18 +27,18 @@ interface WheelProps {
   resetKey?: string | number;
 }
 
-function Wheel({items, initialIndex, onChange, width, resetKey}: WheelProps) {
+function Wheel({ items, initialIndex, onChange, width, resetKey }: WheelProps) {
   const ref = useRef<FlatList>(null);
   const [sel, setSel] = useState(initialIndex);
 
   useEffect(() => {
     const t = setTimeout(() => {
       const idx = Math.max(0, Math.min(initialIndex, items.length - 1));
-      ref.current?.scrollToIndex({index: idx, animated: false});
+      ref.current?.scrollToIndex({ index: idx, animated: false });
       setSel(idx);
     }, 60);
     return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
 
   const handleScrollEnd = useCallback(
@@ -48,11 +48,11 @@ function Wheel({items, initialIndex, onChange, width, resetKey}: WheelProps) {
       setSel(clamped);
       onChange(clamped);
     },
-    [items.length, onChange],
+    [items.length, onChange]
   );
 
   return (
-    <View style={[styles.wheelWrap, {width}]}>
+    <View style={[styles.wheelWrap, { width }]}>
       <View pointerEvents="none" style={styles.selBand} />
       <FlatList
         ref={ref}
@@ -61,12 +61,18 @@ function Wheel({items, initialIndex, onChange, width, resetKey}: WheelProps) {
         snapToInterval={ITEM_H}
         decelerationRate="fast"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingVertical: ITEM_H * PAD}}
+        contentContainerStyle={{ paddingVertical: ITEM_H * PAD }}
         onMomentumScrollEnd={handleScrollEnd}
-        getItemLayout={(_, index) => ({length: ITEM_H, offset: ITEM_H * index, index})}
-        renderItem={({item, index}) => (
+        getItemLayout={(_, index) => ({
+          length: ITEM_H,
+          offset: ITEM_H * index,
+          index,
+        })}
+        renderItem={({ item, index }) => (
           <View style={styles.wheelItem}>
-            <Text style={[styles.wheelText, index === sel && styles.wheelTextSel]}>
+            <Text
+              style={[styles.wheelText, index === sel && styles.wheelTextSel]}
+            >
               {item}
             </Text>
           </View>
@@ -97,12 +103,18 @@ export interface TimeWheelModalProps {
   label?: string;
 }
 
-const HOURS   = Array.from({length: 24}, (_, i) => pad(i));
-const MINUTES = Array.from({length: 60}, (_, i) => pad(i));
+const HOURS = Array.from({ length: 24 }, (_, i) => pad(i));
+const MINUTES = Array.from({ length: 60 }, (_, i) => pad(i));
 
-export function TimeWheelModal({visible, value, onConfirm, onClose, label}: TimeWheelModalProps) {
+export function TimeWheelModal({
+  visible,
+  value,
+  onConfirm,
+  onClose,
+  label,
+}: TimeWheelModalProps) {
   const [initH, initM] = parseTime(value);
-  const [hour, setHour]     = useState(initH);
+  const [hour, setHour] = useState(initH);
   const [minute, setMinute] = useState(initM);
 
   useEffect(() => {
@@ -111,13 +123,18 @@ export function TimeWheelModal({visible, value, onConfirm, onClose, label}: Time
       setHour(h);
       setMinute(m);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const openKey = visible ? 'open' : 'closed';
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           {/* Header */}
@@ -126,16 +143,19 @@ export function TimeWheelModal({visible, value, onConfirm, onClose, label}: Time
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>{label ?? 'Select Time'}</Text>
-            <TouchableOpacity onPress={() => onConfirm(`${pad(hour)}:${pad(minute)}`)} style={styles.headerSide}>
+            <TouchableOpacity
+              onPress={() => onConfirm(`${pad(hour)}:${pad(minute)}`)}
+              style={styles.headerSide}
+            >
               <Text style={styles.doneText}>Done</Text>
             </TouchableOpacity>
           </View>
 
           {/* Column labels */}
           <View style={styles.colLabels}>
-            <Text style={[styles.colLabel, {width: 100}]}>Hour</Text>
-            <Text style={[styles.colLabel, {width: 20}]}> </Text>
-            <Text style={[styles.colLabel, {width: 100}]}>Minute</Text>
+            <Text style={[styles.colLabel, styles.hourLabel]}>Hour</Text>
+            <Text style={[styles.colLabel, styles.colonLabel]}> </Text>
+            <Text style={[styles.colLabel, styles.minuteLabel]}>Minute</Text>
           </View>
 
           {/* Wheels */}
@@ -147,7 +167,9 @@ export function TimeWheelModal({visible, value, onConfirm, onClose, label}: Time
               onChange={setHour}
               width={100}
             />
-            <View style={styles.colon}><Text style={styles.colonText}>:</Text></View>
+            <View style={styles.colon}>
+              <Text style={styles.colonText}>:</Text>
+            </View>
             <Wheel
               resetKey={openKey}
               items={MINUTES}
@@ -164,7 +186,11 @@ export function TimeWheelModal({visible, value, onConfirm, onClose, label}: Time
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  overlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end'},
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
   sheet: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
@@ -179,10 +205,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E0E0E0',
   },
-  headerSide: {minWidth: 64},
-  headerTitle: {flex: 1, textAlign: 'center', fontSize: 15, fontWeight: '600', color: Colors.textPrimary},
-  cancelText: {fontSize: 15, color: Colors.textMuted},
-  doneText: {fontSize: 15, fontWeight: '700', color: Colors.primary, textAlign: 'right'},
+  headerSide: { minWidth: 64 },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  cancelText: { fontSize: 15, color: Colors.textMuted },
+  doneText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.primary,
+    textAlign: 'right',
+  },
   colLabels: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -197,16 +234,19 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  hourLabel: { width: 100 },
+  colonLabel: { width: 20 },
+  minuteLabel: { width: 100 },
   wheelsRow: {
     flexDirection: 'row',
     height: ITEM_H * (PAD * 2 + 1),
     justifyContent: 'center',
     alignItems: 'center',
   },
-  wheelWrap: {overflow: 'hidden', position: 'relative'},
-  wheelItem: {height: ITEM_H, justifyContent: 'center', alignItems: 'center'},
-  wheelText: {fontSize: 18, color: Colors.textMuted},
-  wheelTextSel: {fontSize: 22, fontWeight: '700', color: Colors.textPrimary},
+  wheelWrap: { overflow: 'hidden', position: 'relative' },
+  wheelItem: { height: ITEM_H, justifyContent: 'center', alignItems: 'center' },
+  wheelText: { fontSize: 18, color: Colors.textMuted },
+  wheelTextSel: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
   selBand: {
     position: 'absolute',
     top: ITEM_H * PAD,
@@ -218,6 +258,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.primary + '40',
   },
-  colon: {width: 20, alignItems: 'center', paddingTop: 2},
-  colonText: {fontSize: 24, fontWeight: '700', color: Colors.textPrimary},
+  colon: { width: 20, alignItems: 'center', paddingTop: 2 },
+  colonText: { fontSize: 24, fontWeight: '700', color: Colors.textPrimary },
 });

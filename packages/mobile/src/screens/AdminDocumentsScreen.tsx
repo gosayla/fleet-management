@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,13 +12,14 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
-import {api} from '../lib/api';
-import {Locale, t, isRTL as isRTLFn} from '../lib/i18n';
-import {Colors, Radius, Shadow, Spacing, Typography} from '../lib/theme';
-import {AppIcon} from '../components/ui/AppIcon';
-import {formatDateSmart} from '../lib/dates';
+import { api } from '../lib/api';
+import { Locale, t, isRTL as isRTLFn } from '../lib/i18n';
+import { Colors, Radius, Shadow, Spacing, Typography } from '../lib/theme';
+import { AppIcon } from '../components/ui/AppIcon';
+import { formatDateSmart } from '../lib/dates';
 
-const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
+const SB_HEIGHT =
+  Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 44;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -94,28 +95,46 @@ const VEHICLE_TYPES = [
   'OWNERSHIP_DEED',
 ];
 
-const DRIVER_TYPES = [
-  'DRIVER_LICENSE',
-  'DRIVER_CARD',
-];
+const DRIVER_TYPES = ['DRIVER_LICENSE', 'DRIVER_CARD'];
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
 function statusBadge(
   expiryDate: string,
-  i18n: ReturnType<typeof t>,
-): {label: string; color: string; bg: string} {
+  i18n: ReturnType<typeof t>
+): { label: string; color: string; bg: string } {
   const now = new Date();
   const exp = new Date(expiryDate);
   const soon = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  if (exp < now) return {label: i18n.statusExpired, color: '#fff', bg: Colors.danger ?? '#E53935'};
-  if (exp <= soon) return {label: i18n.statusExpiring, color: '#fff', bg: Colors.warning ?? '#F57C00'};
-  return {label: i18n.statusValid, color: '#fff', bg: Colors.success ?? '#2E7D32'};
+  if (exp < now) {
+    return {
+      label: i18n.statusExpired,
+      color: '#fff',
+      bg: Colors.danger ?? '#E53935',
+    };
+  }
+  if (exp <= soon) {
+    return {
+      label: i18n.statusExpiring,
+      color: '#fff',
+      bg: Colors.warning ?? '#F57C00',
+    };
+  }
+  return {
+    label: i18n.statusValid,
+    color: '#fff',
+    bg: Colors.success ?? '#2E7D32',
+  };
 }
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
-export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialStatus = 'all'}: Props) {
+export function AdminDocumentsScreen({
+  locale,
+  onAddPress,
+  onSelectDoc,
+  initialStatus = 'all',
+}: Props) {
   const i18n = t(locale);
   const isRTL = isRTLFn(locale);
 
@@ -148,14 +167,18 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
         status: statusFilter,
         target: segment,
       };
-      if (typeFilter) params.type = typeFilter;
-      if (search.trim()) params.search = search.trim();
+      if (typeFilter) {
+        params.type = typeFilter;
+      }
+      if (search.trim()) {
+        params.search = search.trim();
+      }
 
       const qs = new URLSearchParams(params).toString();
       const res = await api.get<DocumentsResponse>(`/documents?${qs}`);
       const fetched = res.data ?? [];
       setTotal(res.total ?? 0);
-      setDocs(prev => replace ? fetched : [...prev, ...fetched]);
+      setDocs((prev) => (replace ? fetched : [...prev, ...fetched]));
       setPage(p);
     } catch {
       // keep existing data on error
@@ -169,7 +192,7 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
   // Re-fetch on filter change
   useEffect(() => {
     fetchDocs(1, true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, typeFilter, segment]);
 
   useEffect(() => {
@@ -183,7 +206,7 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
       setSearch('');
       fetchDocs(1, true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchVisible]);
 
   function onRefresh() {
@@ -195,77 +218,128 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
   }
 
   function loadMore() {
-    if (loadingMore || docs.length >= total) return;
+    if (loadingMore || docs.length >= total) {
+      return;
+    }
     fetchDocs(page + 1, false);
   }
 
   // ── Status chips ────────────────────────────────────────────────────────────
 
-  const STATUS_TABS: {key: StatusFilter; label: string}[] = [
-    {key: 'all', label: i18n.allDocs},
-    {key: 'expired', label: i18n.expiredDocs},
-    {key: 'expiring', label: i18n.expiringDocs2},
-    {key: 'valid', label: i18n.validDocs},
+  const STATUS_TABS: { key: StatusFilter; label: string }[] = [
+    { key: 'all', label: i18n.allDocs },
+    { key: 'expired', label: i18n.expiredDocs },
+    { key: 'expiring', label: i18n.expiringDocs2 },
+    { key: 'valid', label: i18n.validDocs },
   ];
 
   // ── Render item ─────────────────────────────────────────────────────────────
 
-  const renderItem = useCallback(({item}: {item: FleetDocument}) => {
-    const badge = statusBadge(item.expiryDate, i18n);
-    const typeStr = docTypeLabel(item.type, i18n);
-    const linkedPlates = item.vehicles.map(v => v.plateNumber);
-    const linkedDrivers = item.drivers.map(d => d.fullName);
-    const allLinked = [...linkedPlates, ...linkedDrivers];
+  const renderItem = useCallback(
+    ({ item }: { item: FleetDocument }) => {
+      const badge = statusBadge(item.expiryDate, i18n);
+      const typeStr = docTypeLabel(item.type, i18n);
+      const linkedPlates = item.vehicles.map((v) => v.plateNumber);
+      const linkedDrivers = item.drivers.map((d) => d.fullName);
+      const allLinked = [...linkedPlates, ...linkedDrivers];
 
-    return (
-      <TouchableOpacity style={styles.card} onPress={() => onSelectDoc(item)} activeOpacity={0.85}>
-        {/* Header row: type + badge */}
-        <View style={[styles.cardHeader, {flexDirection: isRTL ? 'row' : 'row-reverse'}]}>
-          <View style={styles.iconWrap}>
-            <AppIcon name="file-document-outline" size={20} color={Colors.primary} />
-          </View>
-          <Text style={[styles.typeText, {textAlign: isRTL ? 'left' : 'right'}]} numberOfLines={1}>
-            {typeStr}
-          </Text>
-          <View style={[styles.badge, {backgroundColor: badge.bg}]}>
-            <Text style={[styles.badgeText, {color: badge.color}]}>{badge.label}</Text>
-          </View>
-        </View>
-
-        {/* Linked plates / drivers */}
-        {allLinked.length > 0 && (
-          <View style={[styles.metaRow, {flexDirection: isRTL ? 'row' : 'row-reverse'}]}>
-            <AppIcon name="link-variant" size={13} color={Colors.textMuted} />
-            <Text style={[styles.metaText, {textAlign: isRTL ? 'left' : 'right'}]} numberOfLines={1}>
-              {allLinked.join(' · ')}
+      return (
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => onSelectDoc(item)}
+          activeOpacity={0.85}
+        >
+          {/* Header row: type + badge */}
+          <View
+            style={[
+              styles.cardHeader,
+              { flexDirection: isRTL ? 'row' : 'row-reverse' },
+            ]}
+          >
+            <View style={styles.iconWrap}>
+              <AppIcon
+                name="file-document-outline"
+                size={20}
+                color={Colors.primary}
+              />
+            </View>
+            <Text
+              style={[styles.typeText, { textAlign: isRTL ? 'left' : 'right' }]}
+              numberOfLines={1}
+            >
+              {typeStr}
             </Text>
+            <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+              <Text style={[styles.badgeText, { color: badge.color }]}>
+                {badge.label}
+              </Text>
+            </View>
           </View>
-        )}
 
-        {/* Dates */}
-        <View style={[styles.datesRow, {flexDirection: isRTL ? 'row' : 'row-reverse'}]}>
-          <View style={styles.datePair}>
-            <Text style={styles.dateLabel}>{i18n.issueDateLabel}</Text>
-            <Text style={styles.dateValue}>{formatDateSmart(item.issueDate, locale)}</Text>
+          {/* Linked plates / drivers */}
+          {allLinked.length > 0 && (
+            <View
+              style={[
+                styles.metaRow,
+                { flexDirection: isRTL ? 'row' : 'row-reverse' },
+              ]}
+            >
+              <AppIcon name="link-variant" size={13} color={Colors.textMuted} />
+              <Text
+                style={[
+                  styles.metaText,
+                  { textAlign: isRTL ? 'left' : 'right' },
+                ]}
+                numberOfLines={1}
+              >
+                {allLinked.join(' · ')}
+              </Text>
+            </View>
+          )}
+
+          {/* Dates */}
+          <View
+            style={[
+              styles.datesRow,
+              { flexDirection: isRTL ? 'row' : 'row-reverse' },
+            ]}
+          >
+            <View style={styles.datePair}>
+              <Text style={styles.dateLabel}>{i18n.issueDateLabel}</Text>
+              <Text style={styles.dateValue}>
+                {formatDateSmart(item.issueDate, locale)}
+              </Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.datePair}>
+              <Text style={styles.dateLabel}>{i18n.expiryLabel}</Text>
+              <Text
+                style={[
+                  styles.dateValue,
+                  badge.bg !== (Colors.success ?? '#2E7D32') && {
+                    color: badge.bg,
+                  },
+                ]}
+              >
+                {formatDateSmart(item.expiryDate, locale)}
+              </Text>
+            </View>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.datePair}>
-            <Text style={styles.dateLabel}>{i18n.expiryLabel}</Text>
-            <Text style={[styles.dateValue, badge.bg !== (Colors.success ?? '#2E7D32') && {color: badge.bg}]}>
-              {formatDateSmart(item.expiryDate, locale)}
+
+          {/* Reference number if any */}
+          {!!item.referenceNumber && (
+            <Text
+              style={[styles.refText, { textAlign: isRTL ? 'left' : 'right' }]}
+              numberOfLines={1}
+            >
+              # {item.referenceNumber}
             </Text>
-          </View>
-        </View>
-
-        {/* Reference number if any */}
-        {!!item.referenceNumber && (
-          <Text style={[styles.refText, {textAlign: isRTL ? 'left' : 'right'}]} numberOfLines={1}>
-            # {item.referenceNumber}
-          </Text>
-        )}
-      </TouchableOpacity>
-    );
-  }, [i18n, isRTL, locale, onSelectDoc]);
+          )}
+        </TouchableOpacity>
+      );
+    },
+    [i18n, isRTL, locale, onSelectDoc]
+  );
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -275,16 +349,30 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
 
       {/* Teal header */}
       <View style={styles.header}>
-        <View style={{height: SB_HEIGHT}} />
-        <View style={[styles.headerRow, {flexDirection: isRTL ? 'row' : 'row-reverse'}]}>
+        <View style={{ height: SB_HEIGHT }} />
+        <View
+          style={[
+            styles.headerRow,
+            { flexDirection: !isRTL ? 'row' : 'row-reverse' },
+          ]}
+        >
           <View style={styles.headerActions}>
             <TouchableOpacity
               style={styles.backBtn}
-              onPress={() => setSearchVisible(v => !v)}
-              activeOpacity={0.7}>
-              <AppIcon name={searchVisible ? 'close' : 'magnify'} size={20} color="#fff" />
+              onPress={() => setSearchVisible((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <AppIcon
+                name={searchVisible ? 'close' : 'magnify'}
+                size={20}
+                color="#fff"
+              />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.backBtn} onPress={onAddPress} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={onAddPress}
+              activeOpacity={0.7}
+            >
               <AppIcon name="plus" size={22} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -292,20 +380,43 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
           <View style={styles.headerActionsPlaceholder} />
         </View>
 
-        <View style={[styles.segmentRow, {flexDirection: isRTL ? 'row' : 'row-reverse'}]}>
+        <View
+          style={[
+            styles.segmentRow,
+            { flexDirection: isRTL ? 'row' : 'row-reverse' },
+          ]}
+        >
           <TouchableOpacity
-            style={[styles.segmentBtn, segment === 'vehicle' && styles.segmentBtnActive]}
+            style={[
+              styles.segmentBtn,
+              segment === 'vehicle' && styles.segmentBtnActive,
+            ]}
             onPress={() => setSegment('vehicle')}
-            activeOpacity={0.8}>
-            <Text style={[styles.segmentBtnText, segment === 'vehicle' && styles.segmentBtnTextActive]}>
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[
+                styles.segmentBtnText,
+                segment === 'vehicle' && styles.segmentBtnTextActive,
+              ]}
+            >
               {i18n.vehicleDocs}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.segmentBtn, segment === 'driver' && styles.segmentBtnActive]}
+            style={[
+              styles.segmentBtn,
+              segment === 'driver' && styles.segmentBtnActive,
+            ]}
             onPress={() => setSegment('driver')}
-            activeOpacity={0.8}>
-            <Text style={[styles.segmentBtnText, segment === 'driver' && styles.segmentBtnTextActive]}>
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[
+                styles.segmentBtnText,
+                segment === 'driver' && styles.segmentBtnTextActive,
+              ]}
+            >
               {i18n.driverDocs}
             </Text>
           </TouchableOpacity>
@@ -327,22 +438,45 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
               textAlign={isRTL ? 'right' : 'left'}
             />
             {!!search && (
-              <TouchableOpacity onPress={() => { setSearch(''); fetchDocs(1, true); }}>
-                <AppIcon name="close-circle" size={16} color="rgba(255,255,255,0.7)" />
+              <TouchableOpacity
+                onPress={() => {
+                  setSearch('');
+                  fetchDocs(1, true);
+                }}
+              >
+                <AppIcon
+                  name="close-circle"
+                  size={16}
+                  color="rgba(255,255,255,0.7)"
+                />
               </TouchableOpacity>
             )}
           </View>
         )}
 
         {/* Status tabs */}
-        <View style={[styles.statusRow, {flexDirection: isRTL ? 'row' : 'row-reverse'}]}>
-          {STATUS_TABS.map(tab => (
+        <View
+          style={[
+            styles.statusRow,
+            { flexDirection: isRTL ? 'row' : 'row-reverse' },
+          ]}
+        >
+          {STATUS_TABS.map((tab) => (
             <TouchableOpacity
               key={tab.key}
-              style={[styles.statusTab, statusFilter === tab.key && styles.statusTabActive]}
+              style={[
+                styles.statusTab,
+                statusFilter === tab.key && styles.statusTabActive,
+              ]}
               onPress={() => setStatusFilter(tab.key)}
-              activeOpacity={0.8}>
-              <Text style={[styles.statusTabText, statusFilter === tab.key && styles.statusTabTextActive]}>
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.statusTabText,
+                  statusFilter === tab.key && styles.statusTabTextActive,
+                ]}
+              >
                 {tab.label}
               </Text>
             </TouchableOpacity>
@@ -357,14 +491,24 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.typeChips}
-          style={styles.typeChipsScroll}>
-          {visibleTypes.map(typ => (
+          style={styles.typeChipsScroll}
+        >
+          {visibleTypes.map((typ) => (
             <TouchableOpacity
               key={typ}
-              style={[styles.typeChip, typeFilter === typ && styles.typeChipActive]}
+              style={[
+                styles.typeChip,
+                typeFilter === typ && styles.typeChipActive,
+              ]}
               onPress={() => setTypeFilter(typeFilter === typ ? null : typ)}
-              activeOpacity={0.8}>
-              <Text style={[styles.typeChipText, typeFilter === typ && styles.typeChipTextActive]}>
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.typeChipText,
+                  typeFilter === typ && styles.typeChipTextActive,
+                ]}
+              >
                 {docTypeLabel(typ, i18n)}
               </Text>
             </TouchableOpacity>
@@ -373,29 +517,40 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
 
         {/* Docs list — flex: 1 so it fills remaining space below chips */}
         <View style={styles.docsArea}>
-        {loading && docs.length === 0 ? (
-          <View style={styles.centred}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-          </View>
-        ) : (
-          <FlatList
-            data={docs}
-            keyExtractor={d => d.id}
-            contentContainerStyle={styles.list}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
-            }
-            onEndReached={loadMore}
-            onEndReachedThreshold={0.3}
-            renderItem={renderItem}
-            ListEmptyComponent={
-              <Text style={[styles.empty, isRTL && styles.rtlText]}>{i18n.noDocuments}</Text>
-            }
-            ListFooterComponent={
-              loadingMore ? <ActivityIndicator style={{marginVertical: 12}} color={Colors.primary} /> : null
-            }
-          />
-        )}
+          {loading && docs.length === 0 ? (
+            <View style={styles.centred}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          ) : (
+            <FlatList
+              data={docs}
+              keyExtractor={(d) => d.id}
+              contentContainerStyle={styles.list}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={Colors.primary}
+                />
+              }
+              onEndReached={loadMore}
+              onEndReachedThreshold={0.3}
+              renderItem={renderItem}
+              ListEmptyComponent={
+                <Text style={[styles.empty, isRTL && styles.rtlText]}>
+                  {i18n.noDocuments}
+                </Text>
+              }
+              ListFooterComponent={
+                loadingMore ? (
+                  <ActivityIndicator
+                    style={{ marginVertical: 12 }}
+                    color={Colors.primary}
+                  />
+                ) : null
+              }
+            />
+          )}
         </View>
       </View>
     </View>
@@ -405,8 +560,8 @@ export function AdminDocumentsScreen({locale, onAddPress, onSelectDoc, initialSt
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: Colors.primary},
-  header: {paddingBottom: 8},
+  container: { flex: 1, backgroundColor: Colors.primary },
+  header: { paddingBottom: 8 },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -414,7 +569,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 10,
   },
-  headerTitle: {fontSize: 22, fontWeight: '700', color: '#fff', letterSpacing: 0.3},
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3,
+  },
   headerActions: {
     width: 84,
     flexDirection: 'row',
@@ -443,7 +603,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 8,
   },
-  searchInput: {flex: 1, color: '#fff', fontSize: 14, padding: 0},
+  searchInput: { flex: 1, color: '#fff', fontSize: 14, padding: 0 },
   segmentRow: {
     flexDirection: 'row',
     gap: 8,
@@ -480,9 +640,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.15)',
   },
-  statusTabActive: {backgroundColor: '#fff'},
-  statusTabText: {fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '600'},
-  statusTabTextActive: {color: Colors.primary},
+  statusTabActive: { backgroundColor: '#fff' },
+  statusTabText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '600',
+  },
+  statusTabTextActive: { color: Colors.primary },
   panel: {
     flex: 1,
     backgroundColor: Colors.bg,
@@ -516,9 +680,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: Colors.primary + '15',
   },
-  typeChipText: {fontSize: 12, color: Colors.textSecondary, fontWeight: '500'},
-  typeChipTextActive: {color: Colors.primary, fontWeight: '700'},
-  list: {padding: Spacing.md, gap: Spacing.sm, paddingBottom: 24},
+  typeChipText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  typeChipTextActive: { color: Colors.primary, fontWeight: '700' },
+  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 24 },
   card: {
     backgroundColor: Colors.card,
     borderRadius: Radius.lg,
@@ -526,7 +694,7 @@ const styles = StyleSheet.create({
     gap: 10,
     ...Shadow.sm,
   },
-  cardHeader: {flexDirection: 'row', alignItems: 'center', gap: 10},
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   iconWrap: {
     width: 36,
     height: 36,
@@ -535,23 +703,50 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  typeText: {flex: 1, ...Typography.bodyMd, color: Colors.textPrimary, fontWeight: '600'},
+  typeText: {
+    flex: 1,
+    ...Typography.bodyMd,
+    color: Colors.textPrimary,
+    fontWeight: '600',
+  },
   badge: {
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  badgeText: {fontSize: 11, fontWeight: '700'},
-  metaRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
-  metaText: {...Typography.bodySm, color: Colors.textSecondary, flex: 1},
-  datesRow: {flexDirection: 'row', alignItems: 'center', gap: 12},
-  datePair: {flex: 1},
-  dateLabel: {...Typography.caption, color: Colors.textMuted, marginBottom: 2},
-  dateValue: {...Typography.bodySm, color: Colors.textPrimary, fontWeight: '500'},
-  divider: {width: 1, height: 30, backgroundColor: Colors.border ?? '#E0E0E0'},
-  refText: {...Typography.caption, color: Colors.textMuted},
-  centred: {flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 60},
-  empty: {textAlign: 'center', ...Typography.bodySm, color: Colors.textMuted, marginTop: 40},
-  rowReverse: {flexDirection: 'row-reverse'},
-  rtlText: {textAlign: 'right'},
+  badgeText: { fontSize: 11, fontWeight: '700' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaText: { ...Typography.bodySm, color: Colors.textSecondary, flex: 1 },
+  datesRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  datePair: { flex: 1 },
+  dateLabel: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+    marginBottom: 2,
+  },
+  dateValue: {
+    ...Typography.bodySm,
+    color: Colors.textPrimary,
+    fontWeight: '500',
+  },
+  divider: {
+    width: 1,
+    height: 30,
+    backgroundColor: Colors.border ?? '#E0E0E0',
+  },
+  refText: { ...Typography.caption, color: Colors.textMuted },
+  centred: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 60,
+  },
+  empty: {
+    textAlign: 'center',
+    ...Typography.bodySm,
+    color: Colors.textMuted,
+    marginTop: 40,
+  },
+  rowReverse: { flexDirection: 'row-reverse' },
+  rtlText: { textAlign: 'right' },
 });

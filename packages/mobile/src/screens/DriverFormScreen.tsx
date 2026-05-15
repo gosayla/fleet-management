@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,13 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import {api} from '../lib/api';
-import {Locale, t} from '../lib/i18n';
-import {Colors, Spacing} from '../lib/theme';
-import {AppIcon} from '../components/ui/AppIcon';
-import {DateWheelModal} from '../components/ui/DateWheelModal';
+import { api } from '../lib/api';
+import { Locale, t, isRTL } from '../lib/i18n';
+import { Colors, Spacing } from '../lib/theme';
+import { AppIcon } from '../components/ui/AppIcon';
+import { DateWheelModal } from '../components/ui/DateWheelModal';
 
-const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44;
+const SB_H = Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 44;
 
 const BLOOD_TYPES = [
   'A_POS',
@@ -43,20 +43,50 @@ const BLOOD_TYPE_LABELS: Record<BloodType, string> = {
 
 type BloodType = (typeof BLOOD_TYPES)[number];
 
-const DRIVER_STATUSES = ['ACTIVE', 'OFF_DUTY', 'ON_LEAVE', 'SUSPENDED', 'TERMINATED'] as const;
+const DRIVER_STATUSES = [
+  'ACTIVE',
+  'OFF_DUTY',
+  'ON_LEAVE',
+  'SUSPENDED',
+  'TERMINATED',
+] as const;
 type DriverStatus = (typeof DRIVER_STATUSES)[number];
 
 const STATUS_LABELS: Record<DriverStatus, Record<Locale, string>> = {
-  ACTIVE:     {en: 'Active',      ar: 'نشط',          hi: 'सक्रिय',     bn: 'সক্রিয়',    ur: 'فعال'},
-  OFF_DUTY:   {en: 'Off Duty',    ar: 'خارج الخدمة', hi: 'ड्यूटी से बाहर', bn: 'ড্যুটি থেকে বাইরে', ur: 'ڈیوٹی سے باہر'},
-  ON_LEAVE:   {en: 'On Leave',    ar: 'إجازة',       hi: 'छुट्टी पर',   bn: 'ছুটিতে',    ur: 'چھٹی پر'},
-  SUSPENDED:  {en: 'Suspended',   ar: 'موقوف',       hi: 'निलंबिت',   bn: 'স্থগিত',    ur: 'معطل'},
-  TERMINATED: {en: 'Terminated',  ar: 'منتهي',       hi: 'समाप्ت',     bn: 'সমাপ্ত',    ur: 'ختم'},
+  ACTIVE: { en: 'Active', ar: 'نشط', hi: 'सक्रिय', bn: 'সক্রিয়', ur: 'فعال' },
+  OFF_DUTY: {
+    en: 'Off Duty',
+    ar: 'خارج الخدمة',
+    hi: 'ड्यूटी से बाहर',
+    bn: 'ড্যুটি থেকে বাইরে',
+    ur: 'ڈیوٹی سے باہر',
+  },
+  ON_LEAVE: {
+    en: 'On Leave',
+    ar: 'إجازة',
+    hi: 'छुट्टी पर',
+    bn: 'ছুটিতে',
+    ur: 'چھٹی پر',
+  },
+  SUSPENDED: {
+    en: 'Suspended',
+    ar: 'موقوف',
+    hi: 'निलंबिت',
+    bn: 'স্থগিত',
+    ur: 'معطل',
+  },
+  TERMINATED: {
+    en: 'Terminated',
+    ar: 'منتهي',
+    hi: 'समाप्ت',
+    bn: 'সমাপ্ত',
+    ur: 'ختم',
+  },
 };
 
 interface Props {
   locale: Locale;
-  driverId?: string;   // present → edit mode
+  driverId?: string; // present → edit mode
   onBack: () => void;
   onSuccess: () => void;
 }
@@ -79,7 +109,12 @@ const EMPTY: FormState = {
   status: 'ACTIVE',
 };
 
-export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
+export function DriverFormScreen({
+  locale,
+  driverId,
+  onBack,
+  onSuccess,
+}: Props) {
   const i18n = t(locale);
   const isEdit = !!driverId;
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -87,12 +122,16 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [licenseDatePickerOpen, setLicenseDatePickerOpen] = useState(false);
+  const rtl = isRTL(locale);
 
   // Pre-fill form when editing
   useEffect(() => {
-    if (!driverId) return;
-    api.get<any>(`/drivers/${driverId}`)
-      .then(d => {
+    if (!driverId) {
+      return;
+    }
+    api
+      .get<any>(`/drivers/${driverId}`)
+      .then((d) => {
         const expiry = d.licenseExpiry
           ? new Date(d.licenseExpiry).toISOString().slice(0, 10)
           : '';
@@ -107,10 +146,10 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
       })
       .catch(() => setError(i18n.failedToLoadDriver))
       .finally(() => setLoadingDriver(false));
-  }, [driverId]);
+  }, [driverId, i18n.failedToLoadDriver]);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm(prev => ({...prev, [key]: value}));
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   async function handleSubmit() {
@@ -143,7 +182,7 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
         phone: form.phone.trim(),
         nationalId: form.nationalId.trim(),
         licenseExpiry: parsedExpiry.toISOString(),
-        ...(form.bloodType ? {bloodType: form.bloodType} : {}),
+        ...(form.bloodType ? { bloodType: form.bloodType } : {}),
       };
 
       if (isEdit) {
@@ -178,22 +217,47 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
       <View style={styles.header}>
-        <View style={{height: SB_H}} />
-        <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.8}>
+        <View style={{ height: SB_H }} />
+        <View
+          style={[
+            styles.headerRow,
+            { flexDirection: rtl ? 'row' : 'row-reverse' },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={onBack}
+            activeOpacity={0.8}
+          >
             <AppIcon name="close" size={21} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-          {isEdit ? i18n.editDriver : i18n.addDriver}
+            {isEdit ? i18n.editDriver : i18n.addDriver}
           </Text>
-          <TouchableOpacity style={[styles.saveBtn, submitting && {opacity: 0.6}]} onPress={handleSubmit} disabled={submitting} activeOpacity={0.8}>
-            {submitting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveText}>{i18n.save}</Text>}
+          <TouchableOpacity
+            style={[styles.saveBtn, submitting && { opacity: 0.6 }]}
+            onPress={handleSubmit}
+            disabled={submitting}
+            activeOpacity={0.8}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveText}>{i18n.save}</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
 
-      <KeyboardAvoidingView style={styles.panel} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        style={styles.panel}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           {!!error && (
             <View style={styles.errorBanner}>
               <AppIcon name="alert-circle-outline" size={16} color="#dc2626" />
@@ -204,20 +268,40 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
           <Text style={styles.section}>{i18n.basicInfo}</Text>
           <View style={styles.card}>
             <Field label={i18n.fullName} required>
-              <TextInput style={styles.input} value={form.fullName} onChangeText={v => set('fullName', v)} placeholder={locale === 'ar' ? 'محمد القحطاني' : 'Mohammed Al-Qahtani'} placeholderTextColor={Colors.textMuted} />
+              <TextInput
+                style={[styles.input, { textAlign: rtl ? 'right' : 'left' }]}
+                value={form.fullName}
+                onChangeText={(v) => set('fullName', v)}
+                placeholder={
+                  locale === 'ar' ? 'محمد القحطاني' : 'Mohammed Al-Qahtani'
+                }
+                placeholderTextColor={Colors.textMuted}
+              />
             </Field>
             <Divider />
             <Field label={i18n.phoneFieldLabel} required>
-              <TextInput style={styles.input} value={form.phone} onChangeText={v => set('phone', v)} keyboardType="phone-pad" placeholder="+966501234567" placeholderTextColor={Colors.textMuted} />
+              <TextInput
+                style={[styles.input, { textAlign: rtl ? 'right' : 'left' }]}
+                value={form.phone}
+                onChangeText={(v) => set('phone', v)}
+                keyboardType="phone-pad"
+                placeholder="+966501234567"
+                placeholderTextColor={Colors.textMuted}
+              />
             </Field>
             <Divider />
             <Field label={i18n.nationalIdLabel} required>
-              <TextInput style={styles.input} value={form.nationalId} onChangeText={v => set('nationalId', v)} placeholder="1098765432" placeholderTextColor={Colors.textMuted} keyboardType="number-pad" />
+              <TextInput
+                style={[styles.input, { textAlign: rtl ? 'right' : 'left' }]}
+                value={form.nationalId}
+                onChangeText={(v) => set('nationalId', v)}
+                placeholder="1098765432"
+                placeholderTextColor={Colors.textMuted}
+                keyboardType="number-pad"
+              />
             </Field>
             {!isEdit && (
-              <Text style={styles.helperText}>
-                {i18n.defaultPasswordNote}
-              </Text>
+              <Text style={styles.helperText}>{i18n.defaultPasswordNote}</Text>
             )}
           </View>
 
@@ -225,10 +309,20 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
           <View style={styles.card}>
             <Field label={i18n.licenseExpiryDate} required>
               <TouchableOpacity
-                style={styles.dateBtn}
+                style={[
+                  styles.dateBtn,
+                  { flexDirection: rtl ? 'row' : 'row-reverse' },
+                ]}
                 onPress={() => setLicenseDatePickerOpen(true)}
-                activeOpacity={0.8}>
-                <Text style={[styles.dateBtnText, !form.licenseExpiry && {color: Colors.textMuted}]}>
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.dateBtnText,
+                    !form.licenseExpiry && { color: Colors.textMuted },
+                    { textAlign: rtl ? 'right' : 'left' },
+                  ]}
+                >
                   {form.licenseExpiry || 'YYYY-MM-DD'}
                 </Text>
                 <AppIcon name="calendar" size={20} color={Colors.primary} />
@@ -237,17 +331,40 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
           </View>
 
           <Text style={styles.section}>{i18n.bloodTypeOptional}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsRow}>
-            {BLOOD_TYPES.map(type => (
-              <TouchableOpacity key={type} style={[styles.pill, form.bloodType === type && styles.pillActive]} onPress={() => set('bloodType', form.bloodType === type ? '' : type)} activeOpacity={0.8}>
-                <Text style={[styles.pillText, form.bloodType === type && styles.pillTextActive]}>{BLOOD_TYPE_LABELS[type]}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.pillsRow}
+          >
+            {BLOOD_TYPES.map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.pill,
+                  form.bloodType === type && styles.pillActive,
+                ]}
+                onPress={() =>
+                  set('bloodType', form.bloodType === type ? '' : type)
+                }
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.pillText,
+                    form.bloodType === type && styles.pillTextActive,
+                  ]}
+                >
+                  {BLOOD_TYPE_LABELS[type]}
+                </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
           {isEdit && (
             <>
-              <Text style={[styles.section, {marginTop: 20}]}>{i18n.statusSection}</Text>
+              <Text style={[styles.section, { marginTop: 20 }]}>
+                {i18n.statusSection}
+              </Text>
               <View style={styles.card}>
                 {DRIVER_STATUSES.map((s, idx) => {
                   const isFirst = idx === 0;
@@ -258,11 +375,26 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
                       <TouchableOpacity
                         style={styles.statusRow}
                         onPress={() => set('status', s)}
-                        activeOpacity={0.7}>
-                        <Text style={[styles.statusLabel, isActive && {color: Colors.primary, fontWeight: '700' as const}]}>
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.statusLabel,
+                            isActive && {
+                              color: Colors.primary,
+                              fontWeight: '700' as const,
+                            },
+                          ]}
+                        >
                           {STATUS_LABELS[s][locale]}
                         </Text>
-                        {isActive && <AppIcon name="check-circle" size={20} color={Colors.primary} />}
+                        {isActive && (
+                          <AppIcon
+                            name="check-circle"
+                            size={20}
+                            color={Colors.primary}
+                          />
+                        )}
                       </TouchableOpacity>
                     </React.Fragment>
                   );
@@ -271,7 +403,7 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
             </>
           )}
 
-          <View style={{height: 40}} />
+          <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -282,7 +414,7 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
         cancelLabel={i18n.cancel}
         doneLabel={i18n.done}
         label={i18n.licenseExpiryDate}
-        onConfirm={d => {
+        onConfirm={(d) => {
           set('licenseExpiry', d);
           setLicenseDatePickerOpen(false);
         }}
@@ -292,10 +424,21 @@ export function DriverFormScreen({locale, driverId, onBack, onSuccess}: Props) {
   );
 }
 
-function Field({label, required, children}: {label: string; required?: boolean; children: React.ReactNode}) {
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}{required ? <Text style={{color: '#ef4444'}}> *</Text> : null}</Text>
+      <Text style={styles.label}>
+        {label}
+        {required ? <Text style={{ color: '#ef4444' }}> *</Text> : null}
+      </Text>
       {children}
     </View>
   );
@@ -306,8 +449,8 @@ function Divider() {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: Colors.primary},
-  header: {paddingBottom: 24},
+  container: { flex: 1, backgroundColor: Colors.primary },
+  header: { paddingBottom: 24 },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -315,7 +458,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 10,
   },
-  headerTitle: {fontSize: 18, fontWeight: '700' as const, color: '#fff'},
+  headerTitle: { fontSize: 18, fontWeight: '700' as const, color: '#fff' },
   iconBtn: {
     width: 36,
     height: 36,
@@ -332,7 +475,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     backgroundColor: 'rgba(255,255,255,0.24)',
   },
-  saveText: {color: '#fff', fontWeight: '700' as const, fontSize: 14},
+  saveText: { color: '#fff', fontWeight: '700' as const, fontSize: 14 },
 
   panel: {
     flex: 1,
@@ -342,7 +485,7 @@ const styles = StyleSheet.create({
     marginTop: -20,
     overflow: 'hidden',
   },
-  content: {paddingHorizontal: Spacing.md, paddingTop: Spacing.md},
+  content: { paddingHorizontal: Spacing.md, paddingTop: Spacing.md },
 
   errorBanner: {
     flexDirection: 'row',
@@ -355,8 +498,13 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
   },
-  errorText: {flex: 1, fontSize: 13, color: '#dc2626'},
-  helperText: {fontSize: 12, color: Colors.textMuted, lineHeight: 18, marginTop: 10},
+  errorText: { flex: 1, fontSize: 13, color: '#dc2626' },
+  helperText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    lineHeight: 18,
+    marginTop: 10,
+  },
 
   section: {
     fontSize: 13,
@@ -374,7 +522,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderLight,
     paddingHorizontal: Spacing.md,
   },
-  field: {paddingVertical: 12},
+  field: { paddingVertical: 12 },
   label: {
     fontSize: 11,
     color: Colors.textMuted,
@@ -390,11 +538,20 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontWeight: '500' as const,
   },
-  dateBtn: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6},
-  dateBtnText: {fontSize: 15, color: Colors.textPrimary, fontWeight: '500' as const},
-  divider: {height: 1, backgroundColor: Colors.borderLight},
+  dateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  dateBtnText: {
+    fontSize: 15,
+    color: Colors.textPrimary,
+    fontWeight: '500' as const,
+  },
+  divider: { height: 1, backgroundColor: Colors.borderLight },
 
-  pillsRow: {gap: 8, paddingBottom: 4},
+  pillsRow: { gap: 8, paddingBottom: 4 },
   pill: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -403,11 +560,20 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderLight,
     backgroundColor: '#fff',
   },
-  pillActive: {borderColor: Colors.primary, backgroundColor: Colors.primary},
-  pillText: {fontSize: 13, color: Colors.textMuted, fontWeight: '600' as const},
-  pillTextActive: {color: '#fff'},
+  pillActive: { borderColor: Colors.primary, backgroundColor: Colors.primary },
+  pillText: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    fontWeight: '600' as const,
+  },
+  pillTextActive: { color: '#fff' },
 
-  loaderWrap: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.bg},
+  loaderWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.bg,
+  },
 
   statusRow: {
     flexDirection: 'row',
@@ -415,5 +581,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 14,
   },
-  statusLabel: {fontSize: 15, color: Colors.textPrimary, fontWeight: '500' as const},
+  statusLabel: {
+    fontSize: 15,
+    color: Colors.textPrimary,
+    fontWeight: '500' as const,
+  },
 });

@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VehicleLocationUpdate } from '@fleet/shared';
-import {SOCKET_URL} from './env';
+import { SOCKET_URL } from './env';
 
 let socket: Socket | null = null;
 
@@ -19,7 +19,7 @@ export async function getSocket(): Promise<Socket> {
 export async function startBroadcastingLocation(
   vehicleId: string,
   driverId: string,
-  onConnect?: () => void,
+  onConnect?: () => void
 ) {
   const s = await getSocket();
   if (!s.connected) {
@@ -39,13 +39,17 @@ export async function startBroadcastingLocation(
 
 export async function subscribeToVehicleLocation(
   vehicleId: string,
-  onUpdate: (update: VehicleLocationUpdate) => void,
+  onUpdate: (update: VehicleLocationUpdate) => void
 ) {
   const s = await getSocket();
-  if (!s.connected) s.connect();
+  if (!s.connected) {
+    s.connect();
+  }
 
   const handler = (data: VehicleLocationUpdate) => {
-    if (data.vehicleId === vehicleId) onUpdate(data);
+    if (data.vehicleId === vehicleId) {
+      onUpdate(data);
+    }
   };
 
   s.emit('subscribe:vehicle', vehicleId);

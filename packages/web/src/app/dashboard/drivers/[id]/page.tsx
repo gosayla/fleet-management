@@ -9,6 +9,7 @@ import { useLocale } from '@/providers/locale-provider';
 import { formatDate, formatEnumLabel } from '@/lib/i18n';
 import { Driver, DriverStatus } from '@fleet/shared';
 import { ArrowLeft, ArrowRight, Camera, Car, Pencil, Plus, User, X } from 'lucide-react';
+import { TripLegBadge } from '@/components/ui/trip-leg-badge';
 
 type VehicleBrief = { id: string; plateNumber: string; make: string; model: string; status: string };
 
@@ -17,6 +18,7 @@ type DriverDetails = Driver & {
   vehicles?: VehicleBrief[];
   trips?: Array<{
     id: string;
+    leg?: string;
     origin: string;
     destination: string;
     status: string;
@@ -247,6 +249,9 @@ export default function DriverDetailPage() {
                   <p className="text-sm font-medium text-gray-900">
                     {trip.origin} → {trip.destination}
                   </p>
+                  <div className="mt-1">
+                    <TripLegBadge leg={trip.leg} locale={locale} />
+                  </div>
                   <p className="text-xs text-gray-400">{formatDate(trip.scheduledStart, locale)}</p>
                 </div>
                 <Link

@@ -1,32 +1,44 @@
-﻿import React, {useState} from 'react';
+﻿import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
-  ScrollView, StatusBar, Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  Modal,
 } from 'react-native';
-import {useAuth} from '../context/AuthContext';
-import {Locale, t, isRTL as getIsRTL} from '../lib/i18n';
-import {Colors, Spacing, Typography} from '../lib/theme';
-import {Image} from 'react-native';
-import {AppIcon} from '../components/ui/AppIcon';
-import {api} from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import { Locale, t, isRTL as getIsRTL } from '../lib/i18n';
+import { Colors, Spacing, Typography } from '../lib/theme';
+import { Image } from 'react-native';
+import { AppIcon } from '../components/ui/AppIcon';
+import { api } from '../lib/api';
+import { Alert } from '../lib/alert';
 
 interface Props {
   locale: Locale;
   onSetLocale: (locale: Locale) => void;
 }
 
-export function LoginScreen({locale, onSetLocale}: Props) {
-  const {login} = useAuth();
+export function LoginScreen({ locale, onSetLocale }: Props) {
+  const { login } = useAuth();
   const i18n = t(locale);
   const isRTL = getIsRTL(locale);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [focusedField, setFocusedField] = useState<'phone' | 'password' | null>(null);
+  const [focusedField, setFocusedField] = useState<'phone' | 'password' | null>(
+    null
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
-  const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false);
+  const [showResetConfirmPassword, setShowResetConfirmPassword] =
+    useState(false);
   const [resetVisible, setResetVisible] = useState(false);
   const [resetIdentifier, setResetIdentifier] = useState('');
   const [resetCrNumber, setResetCrNumber] = useState('');
@@ -50,7 +62,12 @@ export function LoginScreen({locale, onSetLocale}: Props) {
   }
 
   async function handleResetPassword() {
-    if (!resetIdentifier.trim() || !resetCrNumber.trim() || !resetPassword || !resetConfirmPassword) {
+    if (
+      !resetIdentifier.trim() ||
+      !resetCrNumber.trim() ||
+      !resetPassword ||
+      !resetConfirmPassword
+    ) {
       Alert.alert(i18n.formErrorTitle, i18n.fillAllFields);
       return;
     }
@@ -87,7 +104,7 @@ export function LoginScreen({locale, onSetLocale}: Props) {
         i18n.resetFailed,
         message.includes('401') || message.includes('403')
           ? i18n.resetFailedVerify
-          : i18n.resetFailedGeneric,
+          : i18n.resetFailedGeneric
       );
     } finally {
       setResetLoading(false);
@@ -102,22 +119,31 @@ export function LoginScreen({locale, onSetLocale}: Props) {
       enabled={Platform.OS === 'ios'}
     >
       <StatusBar barStyle="dark-content" backgroundColor="#eaf3f2" />
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scroll} 
+        contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         scrollEnabled
         showsVerticalScrollIndicator={false}
       >
-
         {/* Hero Section */}
         <View style={styles.hero}>
           {/* Gradient overlay effect */}
-          <View style={[styles.heroGradient, isRTL ? styles.heroGradientRtl : styles.heroGradientLtr]} />
+          <View
+            style={[
+              styles.heroGradient,
+              isRTL ? styles.heroGradientRtl : styles.heroGradientLtr,
+            ]}
+          />
 
           {/* Logo Row */}
-          <View style={[styles.logoRow, !isRTL ? styles.logoRowRtl : styles.logoRowLtr]}>
+          <View
+            style={[
+              styles.logoRow,
+              !isRTL ? styles.logoRowRtl : styles.logoRowLtr,
+            ]}
+          >
             <View>
               <Image
                 source={require('../assets/app_logo_full.png')}
@@ -126,8 +152,12 @@ export function LoginScreen({locale, onSetLocale}: Props) {
               />
             </View>
             <View style={[styles.brandBlock]}>
-              <Text style={[styles.brand, isRTL && styles.brandRtl]}>{i18n.brand}</Text>
-              <Text style={[styles.brandSubline, isRTL && styles.brandRtl]}>{i18n.subtitle}</Text>
+              <Text style={[styles.brand, isRTL && styles.brandRtl]}>
+                {i18n.brand}
+              </Text>
+              <Text style={[styles.brandSubline, isRTL && styles.brandRtl]}>
+                {i18n.subtitle}
+              </Text>
             </View>
           </View>
 
@@ -146,16 +176,24 @@ export function LoginScreen({locale, onSetLocale}: Props) {
             <Text style={[styles.fieldLabel, !isRTL && styles.rtl]}>
               {i18n.phone}
             </Text>
-            <View style={[
-              styles.inputWrap,
-              isRTL && styles.inputWrapRtl,
-              focusedField === 'phone' && styles.inputWrapFocused,
-              !!phone && styles.inputWrapFilled,
-            ]}>
-              <AppIcon 
-                name="phone-outline" 
-                size={20} 
-                color={focusedField === 'phone' ? Colors.primary : (phone ? Colors.primary : Colors.textMuted)} 
+            <View
+              style={[
+                styles.inputWrap,
+                isRTL && styles.inputWrapRtl,
+                focusedField === 'phone' && styles.inputWrapFocused,
+                !!phone && styles.inputWrapFilled,
+              ]}
+            >
+              <AppIcon
+                name="phone-outline"
+                size={20}
+                color={
+                  focusedField === 'phone'
+                    ? Colors.primary
+                    : phone
+                    ? Colors.primary
+                    : Colors.textMuted
+                }
               />
               <TextInput
                 style={[styles.input, isRTL && styles.rtl]}
@@ -177,16 +215,24 @@ export function LoginScreen({locale, onSetLocale}: Props) {
             <Text style={[styles.fieldLabel, !isRTL && styles.rtl]}>
               {i18n.password}
             </Text>
-            <View style={[
-              styles.inputWrap,
-              isRTL && styles.inputWrapRtl,
-              focusedField === 'password' && styles.inputWrapFocused,
-              !!password && styles.inputWrapFilled,
-            ]}>
-              <AppIcon 
-                name="lock-outline" 
-                size={20} 
-                color={focusedField === 'password' ? Colors.primary : (password ? Colors.primary : Colors.textMuted)} 
+            <View
+              style={[
+                styles.inputWrap,
+                isRTL && styles.inputWrapRtl,
+                focusedField === 'password' && styles.inputWrapFocused,
+                !!password && styles.inputWrapFilled,
+              ]}
+            >
+              <AppIcon
+                name="lock-outline"
+                size={20}
+                color={
+                  focusedField === 'password'
+                    ? Colors.primary
+                    : password
+                    ? Colors.primary
+                    : Colors.textMuted
+                }
               />
               <TextInput
                 style={[styles.input, isRTL && styles.rtl]}
@@ -199,13 +245,13 @@ export function LoginScreen({locale, onSetLocale}: Props) {
                 onFocus={() => setFocusedField('password')}
                 onBlur={() => setFocusedField(null)}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
-                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <AppIcon 
-                  name={showPassword ? 'eye-outline' : 'eye-off-outline'} 
-                  size={20} 
+                <AppIcon
+                  name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                  size={20}
                   color={Colors.textMuted}
                 />
               </TouchableOpacity>
@@ -213,8 +259,12 @@ export function LoginScreen({locale, onSetLocale}: Props) {
           </View>
 
           {/* Forgot Password */}
-          <TouchableOpacity style={styles.forgotBtn} activeOpacity={0.6} onPress={() => setResetVisible(true)}>
-            <Text style={[styles.forgotText, isRTL && {textAlign: 'right'}]}>
+          <TouchableOpacity
+            style={styles.forgotBtn}
+            activeOpacity={0.6}
+            onPress={() => setResetVisible(true)}
+          >
+            <Text style={[styles.forgotText, isRTL && { textAlign: 'right' }]}>
               {i18n.forgotPassword}
             </Text>
           </TouchableOpacity>
@@ -224,15 +274,20 @@ export function LoginScreen({locale, onSetLocale}: Props) {
             style={[styles.btn, loading && styles.btnDisabled]}
             onPress={handleLogin}
             disabled={loading}
-            activeOpacity={0.8}>
-            {loading
-              ? <ActivityIndicator color={Colors.white} size="small" />
-              : (
-                <View style={[styles.btnContent, isRTL && styles.btnContentRtl]}>
-                  <Text style={styles.btnText}>{i18n.signIn}</Text>
-                  <AppIcon name={isRTL ? 'arrow-left' : 'arrow-right'} size={18} color={Colors.white} />
-                </View>
-              )}
+            activeOpacity={0.8}
+          >
+            {loading ? (
+              <ActivityIndicator color={Colors.white} size="small" />
+            ) : (
+              <View style={[styles.btnContent, isRTL && styles.btnContentRtl]}>
+                <Text style={styles.btnText}>{i18n.signIn}</Text>
+                <AppIcon
+                  name={isRTL ? 'arrow-left' : 'arrow-right'}
+                  size={18}
+                  color={Colors.white}
+                />
+              </View>
+            )}
           </TouchableOpacity>
 
           {/* Divider */}
@@ -246,35 +301,42 @@ export function LoginScreen({locale, onSetLocale}: Props) {
 
         {/* Language Selector */}
         <View style={styles.langRow}>
-          {(['ar', 'en', 'hi', 'bn', 'ur'] as Locale[]).map(lang => {
-            const labels: Record<Locale, string> = {ar: 'العربية', en: 'EN', hi: 'हिन्दी', bn: 'বাংলা', ur: 'اردو'};
+          {(['ar', 'en', 'hi', 'bn', 'ur'] as Locale[]).map((lang) => {
+            const labels: Record<Locale, string> = {
+              ar: 'العربية',
+              en: 'EN',
+              hi: 'हिन्दी',
+              bn: 'বাংলা',
+              ur: 'اردو',
+            };
             const active = locale === lang;
             return (
               <TouchableOpacity
                 key={lang}
                 style={[styles.langChip, active && styles.langChipActive]}
                 onPress={() => onSetLocale(lang)}
-                activeOpacity={0.7}>
-                <Text style={[styles.langChipText, active && styles.langChipTextActive]}>
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.langChipText,
+                    active && styles.langChipTextActive,
+                  ]}
+                >
                   {labels[lang]}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
-
-        <View style={styles.bottomSection}>
-          <Text style={[styles.bottomHeadline, isRTL && styles.rtl]}>
-            {i18n.managingFleets}
-          </Text>
-          <Text style={[styles.bottomHeadline, isRTL && styles.rtl]}>
-            {i18n.dayToDay}
-          </Text>
-        </View>
-
       </ScrollView>
 
-      <Modal visible={resetVisible} transparent animationType="fade" onRequestClose={() => setResetVisible(false)}>
+      <Modal
+        visible={resetVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setResetVisible(false)}
+      >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={[styles.modalTitle, !isRTL && styles.rtl]}>
@@ -303,7 +365,9 @@ export function LoginScreen({locale, onSetLocale}: Props) {
               textAlign={isRTL ? 'right' : 'left'}
             />
 
-            <View style={[styles.modalInputWrap, isRTL && styles.modalInputWrapRtl]}>
+            <View
+              style={[styles.modalInputWrap, isRTL && styles.modalInputWrapRtl]}
+            >
               <TextInput
                 style={[styles.modalInputField, isRTL && styles.rtl]}
                 placeholder={i18n.resetNewPassword}
@@ -315,7 +379,7 @@ export function LoginScreen({locale, onSetLocale}: Props) {
               />
               <TouchableOpacity
                 onPress={() => setShowResetPassword(!showResetPassword)}
-                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <AppIcon
                   name={showResetPassword ? 'eye-outline' : 'eye-off-outline'}
@@ -325,7 +389,9 @@ export function LoginScreen({locale, onSetLocale}: Props) {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.modalInputWrap, isRTL && styles.modalInputWrapRtl]}>
+            <View
+              style={[styles.modalInputWrap, isRTL && styles.modalInputWrapRtl]}
+            >
               <TextInput
                 style={[styles.modalInputField, isRTL && styles.rtl]}
                 placeholder={i18n.resetConfirmPassword}
@@ -336,11 +402,15 @@ export function LoginScreen({locale, onSetLocale}: Props) {
                 textAlign={isRTL ? 'right' : 'left'}
               />
               <TouchableOpacity
-                onPress={() => setShowResetConfirmPassword(!showResetConfirmPassword)}
-                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+                onPress={() =>
+                  setShowResetConfirmPassword(!showResetConfirmPassword)
+                }
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <AppIcon
-                  name={showResetConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
+                  name={
+                    showResetConfirmPassword ? 'eye-outline' : 'eye-off-outline'
+                  }
                   size={20}
                   color={Colors.textMuted}
                 />
@@ -348,13 +418,28 @@ export function LoginScreen({locale, onSetLocale}: Props) {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setResetVisible(false)} disabled={resetLoading}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setResetVisible(false)}
+                disabled={resetLoading}
+              >
                 <Text style={styles.modalCancelText}>{i18n.cancel}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalConfirmBtn, resetLoading && styles.btnDisabled]} onPress={handleResetPassword} disabled={resetLoading}>
-                {resetLoading
-                  ? <ActivityIndicator color={Colors.white} size="small" />
-                  : <Text style={styles.modalConfirmText}>{i18n.resetConfirmBtn}</Text>}
+              <TouchableOpacity
+                style={[
+                  styles.modalConfirmBtn,
+                  resetLoading && styles.btnDisabled,
+                ]}
+                onPress={handleResetPassword}
+                disabled={resetLoading}
+              >
+                {resetLoading ? (
+                  <ActivityIndicator color={Colors.white} size="small" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>
+                    {i18n.resetConfirmBtn}
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -365,9 +450,15 @@ export function LoginScreen({locale, onSetLocale}: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: {flex: 1, backgroundColor: '#eaf3f2'},
-  scrollView: {flex: 1, backgroundColor: '#eaf3f2'},
-  scroll: {flexGrow: 1, minHeight: '100%', justifyContent: 'space-between', paddingTop: Spacing.lg, paddingBottom: Spacing.lg},
+  root: { flex: 1, backgroundColor: '#eaf3f2' },
+  scrollView: { flex: 1, backgroundColor: '#eaf3f2' },
+  scroll: {
+    flexGrow: 1,
+    minHeight: '100%',
+    justifyContent: 'space-between',
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
+  },
 
   /* Hero Section */
   hero: {
@@ -411,10 +502,10 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 18,
     backgroundColor: Colors.primary,
-    
+
     justifyContent: 'center',
     alignItems: 'center',
-    
+
     elevation: 4,
   },
   logoImage: {
@@ -467,7 +558,7 @@ const styles = StyleSheet.create({
   },
 
   /* Form Fields */
-  fieldGroup: {gap: Spacing.sm},
+  fieldGroup: { gap: Spacing.sm },
   fieldLabel: {
     fontSize: 12,
     fontWeight: '600' as const,
@@ -502,7 +593,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     padding: 0,
   },
-  rtl: {textAlign: 'right' as const},
+  rtl: { textAlign: 'right' as const },
 
   /* Forgot Password */
   forgotBtn: {
@@ -525,7 +616,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: Spacing.md,
     shadowColor: '#4ea6a0',
-    shadowOffset: {width: 0, height: 10},
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.28,
     shadowRadius: 16,
     elevation: 8,

@@ -50,21 +50,21 @@ export const Radius = {
 export const Shadow = {
   sm: {
     shadowColor: '#0f172a',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
   },
   md: {
     shadowColor: '#0f172a',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 4,
   },
   lg: {
     shadowColor: '#0f172a',
-    shadowOffset: {width: 0, height: 8},
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.1,
     shadowRadius: 24,
     elevation: 8,
@@ -81,14 +81,14 @@ export const Spacing = {
 } as const;
 
 export const Typography = {
-  h1: {fontSize: 28, fontWeight: '700' as const, letterSpacing: -0.5},
-  h2: {fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.3},
-  h3: {fontSize: 18, fontWeight: '600' as const},
-  body: {fontSize: 15, fontWeight: '400' as const},
-  bodyMd: {fontSize: 15, fontWeight: '500' as const},
-  bodySm: {fontSize: 13, fontWeight: '400' as const},
-  caption: {fontSize: 12, fontWeight: '400' as const},
-  label: {fontSize: 12, fontWeight: '600' as const, letterSpacing: 0.5},
-  btnLg: {fontSize: 16, fontWeight: '600' as const},
-  btnSm: {fontSize: 14, fontWeight: '600' as const},
+  h1: { fontSize: 28, fontWeight: '700' as const, letterSpacing: -0.5 },
+  h2: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.3 },
+  h3: { fontSize: 18, fontWeight: '600' as const },
+  body: { fontSize: 15, fontWeight: '400' as const },
+  bodyMd: { fontSize: 15, fontWeight: '500' as const },
+  bodySm: { fontSize: 13, fontWeight: '400' as const },
+  caption: { fontSize: 12, fontWeight: '400' as const },
+  label: { fontSize: 12, fontWeight: '600' as const, letterSpacing: 0.5 },
+  btnLg: { fontSize: 16, fontWeight: '600' as const },
+  btnSm: { fontSize: 14, fontWeight: '600' as const },
 } as const;

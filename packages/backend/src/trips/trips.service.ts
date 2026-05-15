@@ -100,20 +100,38 @@ export class TripsService {
   ): Promise<Trip[] | PaginatedResult<Trip>> {
     const orderDirection: Prisma.SortOrder = status === TripStatus.SCHEDULED ? 'asc' : 'desc';
     const orderBy: Prisma.TripOrderByWithRelationInput = { scheduledStart: orderDirection };
+    const normalizedSearch = search?.trim();
 
     const driverFilter = user.role === 'DRIVER'
       ? { driverId: await this.getDriverIdForUser(companyId, user.sub) }
       : {};
 
-    const where = {
+    const where: Prisma.TripWhereInput = {
       companyId,
       ...driverFilter,
       ...(status ? { status } : {}),
-      ...(search
+      ...(normalizedSearch
         ? {
             OR: [
-              { origin: { contains: search, mode: 'insensitive' as const } },
-              { destination: { contains: search, mode: 'insensitive' as const } },
+              { name: { contains: normalizedSearch, mode: 'insensitive' } },
+              { origin: { contains: normalizedSearch, mode: 'insensitive' } },
+              { destination: { contains: normalizedSearch, mode: 'insensitive' } },
+              { clientName: { contains: normalizedSearch, mode: 'insensitive' } },
+              { contractNumber: { contains: normalizedSearch, mode: 'insensitive' } },
+              {
+                vehicle: {
+                  is: {
+                    plateNumber: { contains: normalizedSearch, mode: 'insensitive' },
+                  },
+                },
+              },
+              {
+                driver: {
+                  is: {
+                    fullName: { contains: normalizedSearch, mode: 'insensitive' },
+                  },
+                },
+              },
             ],
           }
         : {}),

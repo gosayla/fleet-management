@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {API_URL} from './env';
+import { API_URL } from './env';
 
 const API_BASE = API_URL;
 
@@ -12,7 +12,9 @@ function normalizePath(path: string): string {
 }
 
 export function resolveApiAssetUrls(path: string): string[] {
-  if (/^https?:\/\//i.test(path)) return [path];
+  if (/^https?:\/\//i.test(path)) {
+    return [path];
+  }
 
   const normalizedPath = normalizePath(path);
   const apiBase = trimTrailingSlash(API_BASE);
@@ -23,17 +25,25 @@ export function resolveApiAssetUrls(path: string): string[] {
     ? `/documents/files/${normalizedPath.slice('/documents/'.length)}`
     : normalizedPath;
 
-  return Array.from(new Set([
-    `${apiBase}${publicDocumentPath}`,
-    `${apiBase}${normalizedPath}`,
-    `${apiOrigin}${normalizedPath}`,
-  ]));
+  return Array.from(
+    new Set([
+      `${apiBase}${publicDocumentPath}`,
+      `${apiBase}${normalizedPath}`,
+      `${apiOrigin}${normalizedPath}`,
+    ])
+  );
 }
 
 /** Resolve a photo URL (served at backend root, not under /api/v1) */
-export function resolvePhotoUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  if (/^https?:\/\//i.test(path)) return path;
+export function resolvePhotoUrl(
+  path: string | null | undefined
+): string | null {
+  if (!path) {
+    return null;
+  }
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
   const apiOrigin = trimTrailingSlash(API_BASE.replace(/\/api\/v1\/?$/, ''));
   return `${apiOrigin}${normalizePath(path)}`;
 }
@@ -49,13 +59,15 @@ async function getToken(): Promise<string | null> {
 async function request<T>(
   method: string,
   path: string,
-  body?: unknown,
+  body?: unknown
 ): Promise<T> {
   const token = await getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   const response = await fetch(`${API_BASE}${path}`, {
     method,
@@ -81,7 +93,9 @@ export const api = {
   async upload<T>(path: string, formData: FormData): Promise<T> {
     const token = await AsyncStorage.getItem('accessToken');
     const headers: Record<string, string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
     const response = await fetch(`${API_BASE}${path}`, {
       method: 'POST',

@@ -14,15 +14,12 @@
  *     () => api.get<VehicleCardData[]>('/vehicles'),
  *   );
  */
-import {useCallback, useEffect, useRef, useState} from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PREFIX = '@fc:';
 
-export function useCachedFetch<T>(
-  cacheKey: string,
-  fetcher: () => Promise<T>,
-) {
+export function useCachedFetch<T>(cacheKey: string, fetcher: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   /** true only on the very first load when there is no cached data yet */
   const [loading, setLoading] = useState(true);
@@ -36,7 +33,9 @@ export function useCachedFetch<T>(
 
   const fetchFresh = useCallback(
     async (manual: boolean) => {
-      if (manual) setRefreshing(true);
+      if (manual) {
+        setRefreshing(true);
+      }
       try {
         const fresh = await fetcherRef.current();
         setData(fresh);
@@ -47,18 +46,22 @@ export function useCachedFetch<T>(
         console.error(`[useCachedFetch] ${storageKey} failed:`, err);
         setLoading(false);
       } finally {
-        if (manual) setRefreshing(false);
+        if (manual) {
+          setRefreshing(false);
+        }
       }
     },
-    [storageKey],
+    [storageKey]
   );
 
   useEffect(() => {
     let cancelled = false;
 
     AsyncStorage.getItem(storageKey)
-      .then(cached => {
-        if (cancelled) return;
+      .then((cached) => {
+        if (cancelled) {
+          return;
+        }
         if (cached) {
           try {
             setData(JSON.parse(cached));
@@ -70,7 +73,9 @@ export function useCachedFetch<T>(
         fetchFresh(false);
       })
       .catch(() => {
-        if (!cancelled) fetchFresh(false);
+        if (!cancelled) {
+          fetchFresh(false);
+        }
       });
 
     return () => {
@@ -81,5 +86,5 @@ export function useCachedFetch<T>(
 
   const refresh = useCallback(() => fetchFresh(true), [fetchFresh]);
 
-  return {data, loading, refreshing, refresh};
+  return { data, loading, refreshing, refresh };
 }

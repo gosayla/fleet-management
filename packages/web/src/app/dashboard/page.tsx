@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { FleetStats } from '@fleet/shared';
+import { FleetStats, MaintenanceLog } from '@fleet/shared';
 import {
   Truck,
   Users,
@@ -21,6 +21,11 @@ import { useRouter } from 'next/navigation';
 async function fetchStats(): Promise<FleetStats> {
   const res = await api.get('/dashboard/stats');
   return res.data as FleetStats;
+}
+
+async function fetchMaintenance(): Promise<MaintenanceLog[]> {
+  const res = await api.get('/maintenance');
+  return Array.isArray(res.data) ? (res.data as MaintenanceLog[]) : [];
 }
 
 type ExpiringSummary = {
@@ -46,6 +51,11 @@ export default function DashboardPage() {
     queryKey: ['documents-expiring'],
     queryFn: fetchExpiring,
     refetchInterval: 60_000,
+  });
+  const { data: maintenance = [] } = useQuery({
+    queryKey: ['maintenance'],
+    queryFn: fetchMaintenance,
+    refetchInterval: 30_000,
   });
 
   if (isLoading) {
@@ -80,7 +90,7 @@ export default function DashboardPage() {
     },
     {
       label: t.dashboard.inMaintenance,
-      value: formatNumber(stats?.vehiclesInMaintenance ?? 0, locale),
+      value: formatNumber(maintenance.length, locale),
       sub: t.dashboard.vehiclesSuffix,
       icon: Wrench,
       color: 'text-orange-600 bg-orange-50',
