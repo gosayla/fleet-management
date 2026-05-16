@@ -10,13 +10,6 @@ import { useLocale } from '@/providers/locale-provider';
 import type { CreateTripDto, Driver, Vehicle } from '@fleet/shared';
 import { DatePicker } from '@/components/ui/date-picker';
 
-type TripType = NonNullable<CreateTripDto['tripType']>;
-
-const TRIP_TYPE_LABELS: Record<TripType, { en: string; ar: string }> = {
-  ONE_TIME: { en: 'One-Time', ar: 'رحلة واحدة' },
-  DAILY: { en: 'Daily Contract', ar: 'عقد يومي' },
-  CAR_RENT: { en: 'Car Rental', ar: 'إيجار سيارة' },
-};
 
 function Field({
   label,
@@ -53,11 +46,8 @@ export default function NewTripPage() {
   const tc = t.common;
   const ArrowBack = isRTL ? ArrowRight : ArrowLeft;
 
-  const [tripType, setTripType] = useState<TripType>('ONE_TIME' as TripType);
   const [scheduledStartDate, setScheduledStartDate] = useState<string | undefined>(undefined);
   const [scheduledEndDate, setScheduledEndDate] = useState<string | undefined>(undefined);
-  const [contractStartDate, setContractStartDate] = useState<string | undefined>(undefined);
-  const [contractEndDate, setContractEndDate] = useState<string | undefined>(undefined);
   const [vehicleQuery, setVehicleQuery] = useState('');
   const [driverQuery, setDriverQuery] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | undefined>(undefined);
@@ -164,22 +154,17 @@ export default function NewTripPage() {
     const payload: CreateTripDto = {
       vehicleId: selectedVehicleId,
       driverId: selectedDriverId,
-      tripType,
+      tripType: 'ONE_TIME',
       origin: get('origin'),
       destination: get('destination'),
       scheduledStart,
       scheduledEnd,
       notes: get('notes') || undefined,
-      clientName: get('clientName') || undefined,
-      contractNumber: get('contractNumber') || undefined,
-      contractStart: contractStartDate ? new Date(contractStartDate) : undefined,
-      contractEnd: contractEndDate ? new Date(contractEndDate) : undefined,
     };
 
     createMutation.mutate(payload);
   }
 
-  const isContractType = false; // DAILY trips managed via /contracts, CAR_RENT via /rentals
   const canSubmit =
     vehicles.length > 0 &&
     drivers.length > 0 &&
@@ -206,29 +191,7 @@ export default function NewTripPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Trip type selector */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">{tt.type}</p>
-          <div className="flex gap-3 flex-wrap">
-            {(Object.keys(TRIP_TYPE_LABELS) as TripType[]).map(tp => (
-              <button
-                key={tp}
-                type="button"
-                onClick={() => setTripType(tp)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                  tripType === tp
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
-                }`}
-              >
-                {TRIP_TYPE_LABELS[tp][locale === 'ar' ? 'ar' : 'en']}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Core trip fields — ONE_TIME only */}
-        {(tripType as string) === 'ONE_TIME' && (<>
+        {/* Core trip fields */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
           <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
             {locale === 'ar' ? 'تفاصيل الرحلة' : 'Trip Details'}
@@ -437,46 +400,6 @@ export default function NewTripPage() {
           </div>
         </div>
 
-        {/* Redirect banner for DAILY — use Contracts section */}
-        {(tripType as string) === 'DAILY' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-            <p className="text-sm font-semibold text-amber-800 mb-1">
-              {locale === 'ar' ? 'العقود اليومية تُدار عبر قسم العقود' : 'Daily trips are managed via Contracts'}
-            </p>
-            <p className="text-xs text-amber-700 mb-3">
-              {locale === 'ar'
-                ? 'أنشئ عقداً يومياً لتوليد رحلات متعددة بشكل تلقائي بناءً على جدول أسبوعي.'
-                : 'Create a daily contract to automatically generate trips based on a weekly schedule.'}
-            </p>
-            <Link
-              href={`/${locale}/dashboard/contracts/new`}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
-            >
-              {locale === 'ar' ? 'إضافة عقد يومي' : 'Create Daily Contract'}
-            </Link>
-          </div>
-        )}
-
-        {/* Redirect banner for CAR_RENT — use Rentals section */}
-        {(tripType as string) === 'CAR_RENT' && (
-          <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
-            <p className="text-sm font-semibold text-purple-800 mb-1">
-              {locale === 'ar' ? 'تأجير السيارات يُدار عبر قسم الإيجار' : 'Car rentals are managed via Rentals'}
-            </p>
-            <p className="text-xs text-purple-700 mb-3">
-              {locale === 'ar'
-                ? 'أنشئ سجل إيجار لتتبع استلام وإعادة المركبة مع بيانات العميل والأجرة.'
-                : 'Create a rental record to track vehicle pickup, return, client info, and daily rate.'}
-            </p>
-            <Link
-              href={`/${locale}/dashboard/rentals/new`}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              {locale === 'ar' ? 'إضافة إيجار سيارة' : 'Create Car Rental'}
-            </Link>
-          </div>
-        )}
-
         {createMutation.isError && (
           <p className="text-sm text-red-600">
             {(createMutation.error as any)?.response?.data?.message ?? 'An error occurred'}
@@ -500,7 +423,6 @@ export default function NewTripPage() {
             {tc.confirmNo}
           </Link>
         </div>
-        </>)}
       </form>
     </div>
   );
