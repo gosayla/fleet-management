@@ -73,7 +73,7 @@ export default function DriversPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {[t.drivers.name, t.drivers.nationalId, t.drivers.licenseExpiry, t.drivers.status, t.drivers.assignedVehicle, tc.actions].map(h => (
+                {[t.drivers.name, t.drivers.nationalId, t.drivers.licenseExpiry, t.drivers.licenseType, t.drivers.status, t.drivers.assignedVehicle, tc.actions].map(h => (
                   <th key={h} className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide ${isRTL ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr>
@@ -84,6 +84,7 @@ export default function DriversPage() {
                   <td className="px-4 py-3 font-medium text-gray-900">{d.fullName}</td>
                   <td className="px-4 py-3 text-gray-500 font-mono text-xs">{d.nationalId}</td>
                   <td className="px-4 py-3 text-gray-500">{formatDate(d.licenseExpiry, locale)}</td>
+                  <td className="px-4 py-3 text-gray-500">{d.licenseType ? formatEnumLabel('driverLicenseType', d.licenseType, locale) : t.common.empty}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${statusColors[d.status]}`}>
                       {formatEnumLabel('driverStatus', d.status, locale)}
