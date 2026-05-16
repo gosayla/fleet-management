@@ -17,6 +17,7 @@ import {
   FlatList,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { ensureMediaPermission } from '../lib/permissions';
 import { api } from '../lib/api';
 import { Colors, Spacing } from '../lib/theme';
 import { AppIcon } from '../components/ui/AppIcon';
@@ -403,7 +404,9 @@ export function RentalFormScreen({
               ]}
               activeOpacity={0.8}
               disabled={uploading}
-              onPress={() => {
+              onPress={async () => {
+                const granted = await ensureMediaPermission();
+                if (!granted) return;
                 launchImageLibrary(
                   { mediaType: 'mixed', quality: 0.9, selectionLimit: 1 },
                   async (result) => {

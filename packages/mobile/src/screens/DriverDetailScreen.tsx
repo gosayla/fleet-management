@@ -13,6 +13,7 @@ import {
   Animated,
 } from 'react-native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
+import { ensureCameraPermission, ensureMediaPermission } from '../lib/permissions';
 import { api, resolvePhotoUrl } from '../lib/api';
 import { formatDateSmart } from '../lib/dates';
 import { Colors, Spacing } from '../lib/theme';
@@ -186,43 +187,37 @@ export function DriverDetailScreen({
     Alert.alert(i18n.changePhoto, '', [
       {
         text: i18n.camera,
-        onPress: () =>
+        onPress: async () => {
+          const granted = await ensureCameraPermission();
+          if (!granted) return;
           launchCamera(
             { mediaType: 'photo', quality: 0.8, saveToPhotos: false },
             (res) => {
-              if (res.didCancel || res.errorCode) {
-                return;
-              }
+              if (res.didCancel || res.errorCode) return;
               const asset = res.assets?.[0];
               if (asset?.uri) {
-                uploadPhoto(
-                  asset.uri,
-                  asset.fileName ?? 'photo.jpg',
-                  asset.type ?? 'image/jpeg'
-                );
+                uploadPhoto(asset.uri, asset.fileName ?? 'photo.jpg', asset.type ?? 'image/jpeg');
               }
             }
-          ),
+          );
+        },
       },
       {
         text: i18n.gallery,
-        onPress: () =>
+        onPress: async () => {
+          const granted = await ensureMediaPermission();
+          if (!granted) return;
           launchImageLibrary(
             { mediaType: 'photo', quality: 0.8, selectionLimit: 1 },
             (res) => {
-              if (res.didCancel || res.errorCode) {
-                return;
-              }
+              if (res.didCancel || res.errorCode) return;
               const asset = res.assets?.[0];
               if (asset?.uri) {
-                uploadPhoto(
-                  asset.uri,
-                  asset.fileName ?? 'photo.jpg',
-                  asset.type ?? 'image/jpeg'
-                );
+                uploadPhoto(asset.uri, asset.fileName ?? 'photo.jpg', asset.type ?? 'image/jpeg');
               }
             }
-          ),
+          );
+        },
       },
       { text: i18n.cancel, style: 'cancel' },
     ]);

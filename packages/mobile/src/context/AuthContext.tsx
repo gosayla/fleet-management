@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../lib/api';
 import { AuthTokenPayload } from '@fleet/shared';
 import { initNotifications } from '../lib/notifications';
+import { requestAppPermissions } from '../lib/permissions';
 
 interface AuthContextType {
   user: AuthTokenPayload | null;
@@ -84,6 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem('accessToken', res.accessToken);
     await AsyncStorage.setItem('user', JSON.stringify(res.user));
     setUser(res.user);
+    // Request all runtime permissions (location, camera, media) — best-effort, upfront after login
+    requestAppPermissions().catch(() => {});
     // Register FCM token with backend (best-effort, silently skip if Firebase not configured)
     initNotifications()
       .then((fcmToken) => {
