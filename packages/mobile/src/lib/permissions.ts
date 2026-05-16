@@ -15,6 +15,8 @@ export async function requestAppPermissions(): Promise<void> {
   // Android 13+ uses READ_MEDIA_IMAGES instead of READ_EXTERNAL_STORAGE
   if (Platform.Version >= 33) {
     permissions.push(PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES);
+    // Android 13+ requires explicit runtime permission for notifications
+    permissions.push('android.permission.POST_NOTIFICATIONS');
   } else {
     permissions.push(PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE);
   }
