@@ -97,6 +97,7 @@ export default function EditVehiclePage() {
         insuranceExpiryDate: values.insuranceExpiryDate,
         status: values.status ?? VehicleStatus.ACTIVE,
         assignedDriverId: values.assignedDriverId,
+        usageType: values.usageType,
       };
 
       updateMutation.mutate(payload);

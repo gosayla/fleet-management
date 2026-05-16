@@ -236,6 +236,7 @@ export interface CreateVehicleDto {
   operationCardFileUrl?: string;
   licenseExpiryDate?: string;
   insuranceExpiryDate?: string;
+  usageType?: VehicleUsageType;
 }
 
 export interface UpdateVehicleDto extends Partial<CreateVehicleDto> {

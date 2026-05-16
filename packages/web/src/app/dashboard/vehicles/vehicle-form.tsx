@@ -1,6 +1,7 @@
 'use client';
 
-import { VehicleStatus, VehicleType, VehicleUsageType } from '@fleet/shared';
+import { VehicleStatus, VehicleType } from '@fleet/shared';
+import type { VehicleUsageType } from '@fleet/shared';
 import { formatEnumLabel } from '@/lib/i18n';
 import { useLocale } from '@/providers/locale-provider';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -162,7 +163,7 @@ export function VehicleForm({
           insuranceExpiryDate,
           status: showStatus ? (String(fd.get('status') ?? VehicleStatus.ACTIVE) as VehicleStatus) : undefined,
           assignedDriverId: showDriver ? assignedDriverId : undefined,
-          usageType: String(fd.get('usageType') ?? VehicleUsageType.FLEET) as VehicleUsageType,
+          usageType: String(fd.get('usageType') ?? 'FLEET') as VehicleUsageType,
         }, opCardFile);
       }}
       className="space-y-6"
@@ -200,11 +201,11 @@ export function VehicleForm({
             </label>
             <select
               name="usageType"
-              defaultValue={initialValues.usageType ?? VehicleUsageType.FLEET}
+              defaultValue={initialValues.usageType ?? 'FLEET'}
               className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'text-right' : 'text-left'}`}
             >
-              <option value={VehicleUsageType.FLEET}>{isRTL ? 'أسطول (رحلات)' : 'Fleet (Trips)'}</option>
-              <option value={VehicleUsageType.STAFF}>{isRTL ? 'موظف (مخصصة لموظف)' : 'Staff (Assigned to employee)'}</option>
+              <option value="FLEET">{isRTL ? 'أسطول (رحلات)' : 'Fleet (Trips)'}</option>
+              <option value="STAFF">{isRTL ? 'موظف (مخصصة لموظف)' : 'Staff (Assigned to employee)'}</option>
             </select>
           </div>
 
