@@ -7,7 +7,15 @@ import {
   Image,
   Animated,
 } from 'react-native';
-import { Locale, isRTL } from '../../../lib/i18n';
+import { Locale, isRTL, t } from '../../../lib/i18n';
+
+const STAFF_LABEL: Record<Locale, string> = {
+  en: 'Staff',
+  ar: 'موظف',
+  hi: 'स्टाफ',
+  bn: 'স্টাফ',
+  ur: 'عملہ',
+};
 import { Colors, Spacing } from '../../../lib/theme';
 import { AppIcon } from '../AppIcon';
 import { resolvePhotoUrl } from '../../../lib/api';
@@ -162,7 +170,7 @@ export function VehicleCard({ vehicle, locale, onPress }: Props) {
           )}
           {vehicle.usageType === 'STAFF' && (
             <View style={styles.staffPill}>
-              <Text style={styles.staffPillText}>Staff</Text>
+              <Text style={styles.staffPillText}>{STAFF_LABEL[locale]}</Text>
             </View>
           )}
         </View>

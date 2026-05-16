@@ -84,6 +84,7 @@ interface VehicleDetail {
   pilotHeading?: number | null;
   pilotIsOnline?: boolean | null;
   usageType?: string | null;
+  staffAssignments?: StaffAssignment[];
 }
 
 interface StaffAssignment {
@@ -174,7 +175,6 @@ export function VehicleDetailScreen({
   const scrollY = useRef(new Animated.Value(0)).current;
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
   const [photos, setPhotos] = useState<VehiclePhoto[]>([]);
-  const [staffAssignments, setStaffAssignments] = useState<StaffAssignment[]>([]);
   const [activePhoto, setActivePhoto] = useState<VehiclePhoto | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -194,11 +194,6 @@ export function VehicleDetailScreen({
       .then(([v, p]) => {
         setVehicle(v);
         setPhotos(Array.isArray(p) ? p : []);
-        if (v.usageType === 'STAFF') {
-          api.get<StaffAssignment[]>(`/staff-assignments?vehicleId=${vehicleId}`)
-            .then((assignments) => setStaffAssignments(Array.isArray(assignments) ? assignments : []))
-            .catch(() => {});
-        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -328,8 +323,11 @@ export function VehicleDetailScreen({
 
   const statusLabel = STATUS_LABELS[vehicle.status]?.[locale] ?? vehicle.status;
   const drivers = vehicle.drivers ?? [];
+  const activeStaffAssignment = vehicle.staffAssignments?.[0] ?? null;
   const driverName =
-    drivers.length > 0
+    vehicle.usageType === 'STAFF'
+      ? activeStaffAssignment?.assigneeName ?? i18n.unassigned
+      : drivers.length > 0
       ? drivers.length === 1
         ? drivers[0].fullName
         : `${drivers[0].fullName} +${drivers.length - 1}`
@@ -556,7 +554,10 @@ export function VehicleDetailScreen({
       >
         {/* 3-column info strip */}
         <View style={[styles.infoStrip, rowDirectionStyle]}>
-          <InfoCol label={i18n.driverNameLabel} value={driverName} />
+          <InfoCol
+            label={vehicle.usageType === 'STAFF' ? ((i18n as any).activeAssignment ?? 'Assignee') : i18n.driverNameLabel}
+            value={driverName}
+          />
           <View style={styles.stripDiv} />
           <InfoCol
             label={i18n.vehicleStatusLabel}
@@ -787,7 +788,7 @@ export function VehicleDetailScreen({
               </TouchableOpacity>
             </View>
             {(() => {
-              const active = staffAssignments.find((a) => !a.returnedAt);
+              const active = activeStaffAssignment;
               if (!active) {
                 return (
                   <View style={styles.mapEmptyState}>
