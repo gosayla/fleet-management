@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Vehicle } from '@fleet/shared';
-import { Truck, Plus, Search, Upload, ChevronUp, ChevronDown, AlertCircle, CheckCircle, Satellite } from 'lucide-react';
+import { Truck, Plus, Search, Upload, ChevronUp, ChevronDown, AlertCircle, CheckCircle, Satellite, Briefcase } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useLocale } from '@/providers/locale-provider';
@@ -170,13 +170,14 @@ export default function VehiclesPage() {
   const [sortBy,    setSortBy]    = useState<SortBy>(saved?.sortBy    ?? null);
   const [sortOrder, setSortOrder] = useState<SortOrder>(saved?.sortOrder ?? 'asc');
   const [gpsFilter, setGpsFilter] = useState<'all' | 'has' | 'none'>(saved?.gpsFilter ?? 'all');
+  const [usageFilter, setUsageFilter] = useState<'all' | 'FLEET' | 'STAFF'>(saved?.usageFilter ?? 'all');
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
   const queryClient = useQueryClient();
 
   // Keep sessionStorage in sync whenever state changes
   useEffect(() => {
-    sessionStorage.setItem(SS_KEY, JSON.stringify({ search, page, pageSize, sortBy, sortOrder, gpsFilter }));
-  }, [search, page, pageSize, sortBy, sortOrder, gpsFilter]);
+    sessionStorage.setItem(SS_KEY, JSON.stringify({ search, page, pageSize, sortBy, sortOrder, gpsFilter, usageFilter }));
+  }, [search, page, pageSize, sortBy, sortOrder, gpsFilter, usageFilter]);
 
   const sortFieldMap: Record<NonNullable<SortBy>, string> = {
     insuranceExpiry: 'insuranceExpiryDate',
@@ -186,7 +187,7 @@ export default function VehiclesPage() {
   };
 
   const { data: response, isLoading } = useQuery({
-    queryKey: ['vehicles', search, page, pageSize, sortBy, sortOrder, gpsFilter],
+    queryKey: ['vehicles', search, page, pageSize, sortBy, sortOrder, gpsFilter, usageFilter],
     queryFn: async () => {
       const res = await api.get('/vehicles', {
         params: {
@@ -196,6 +197,7 @@ export default function VehiclesPage() {
           sortBy: sortBy ? sortFieldMap[sortBy] : undefined,
           sortOrder: sortBy ? sortOrder : undefined,
           gpsFilter: gpsFilter !== 'all' ? gpsFilter : undefined,
+          usageType: usageFilter !== 'all' ? usageFilter : undefined,
         },
       });
       return res.data as { data: Vehicle[]; total: number; page: number; limit: number; totalPages: number };
@@ -306,6 +308,37 @@ export default function VehiclesPage() {
         })}
       </div>
 
+      {/* Usage type filter chips */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Briefcase className="w-4 h-4 text-gray-400 shrink-0" />
+        <span className="text-sm text-gray-500 shrink-0">{isRTL ? 'نوع الاستخدام' : 'Usage'}:</span>
+        {(['all', 'FLEET', 'STAFF'] as const).map((opt) => {
+          const labels = {
+            all: isRTL ? 'الكل' : 'All',
+            FLEET: isRTL ? 'أسطول' : 'Fleet',
+            STAFF: isRTL ? 'موظف' : 'Staff',
+          };
+          const active = usageFilter === opt;
+          return (
+            <button
+              key={opt}
+              onClick={() => { setUsageFilter(opt); setPage(1); }}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                active
+                  ? opt === 'STAFF'
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : opt === 'FLEET'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-gray-700 text-white border-gray-700'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              {labels[opt]}
+            </button>
+          );
+        })}
+      </div>
+
       {isLoading ? (
         <div className="flex justify-center py-16">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -344,6 +377,12 @@ export default function VehiclesPage() {
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200" title={(v as any).pilotImei}>
                           <Satellite className="w-2.5 h-2.5" />
                           {t.vehicles.gpsTrackerBadge}
+                        </span>
+                      )}
+                      {(v as any).usageType === 'STAFF' && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-semibold border border-purple-200">
+                          <Briefcase className="w-2.5 h-2.5" />
+                          {isRTL ? 'موظف' : 'Staff'}
                         </span>
                       )}
                     </div>

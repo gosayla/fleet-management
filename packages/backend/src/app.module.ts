@@ -20,6 +20,7 @@ import { SettingsModule } from './settings/settings.module';
 import { ContractsModule } from './contracts/contracts.module';
 import { RentalsModule } from './rentals/rentals.module';
 import { AuditModule } from './audit/audit.module';
+import { StaffAssignmentsModule } from './staff-assignments/staff-assignments.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { AuditModule } from './audit/audit.module';
     ContractsModule,
     RentalsModule,
     AuditModule,
+    StaffAssignmentsModule,
   ],
 })
 export class AppModule {}

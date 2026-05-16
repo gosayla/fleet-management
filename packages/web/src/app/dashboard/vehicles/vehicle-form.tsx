@@ -1,6 +1,6 @@
 'use client';
 
-import { VehicleStatus, VehicleType } from '@fleet/shared';
+import { VehicleStatus, VehicleType, VehicleUsageType } from '@fleet/shared';
 import { formatEnumLabel } from '@/lib/i18n';
 import { useLocale } from '@/providers/locale-provider';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -34,6 +34,7 @@ export type VehicleFormValues = {
   insuranceExpiryDate?: string;
   status?: VehicleStatus;
   assignedDriverId?: string;
+  usageType?: VehicleUsageType;
 };
 
 type DriverOption = {
@@ -161,6 +162,7 @@ export function VehicleForm({
           insuranceExpiryDate,
           status: showStatus ? (String(fd.get('status') ?? VehicleStatus.ACTIVE) as VehicleStatus) : undefined,
           assignedDriverId: showDriver ? assignedDriverId : undefined,
+          usageType: String(fd.get('usageType') ?? VehicleUsageType.FLEET) as VehicleUsageType,
         }, opCardFile);
       }}
       className="space-y-6"
@@ -191,6 +193,20 @@ export function VehicleForm({
           <Field label={tv.odometer} name="odometer" type="number" min={0} step="0.1" defaultValue={String(initialValues.odometer)} required />
           <Field label={tv.fuelCapacity} name="fuelCapacity" type="number" min={1} step="0.1" defaultValue={String(initialValues.fuelCapacity)} required />
           <Field label={tv.restrictionStatus} name="restrictionStatus" defaultValue={initialValues.restrictionStatus ?? ''} />
+
+          <div>
+            <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+              {isRTL ? 'نوع الاستخدام' : 'Usage Type'}
+            </label>
+            <select
+              name="usageType"
+              defaultValue={initialValues.usageType ?? VehicleUsageType.FLEET}
+              className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'text-right' : 'text-left'}`}
+            >
+              <option value={VehicleUsageType.FLEET}>{isRTL ? 'أسطول (رحلات)' : 'Fleet (Trips)'}</option>
+              <option value={VehicleUsageType.STAFF}>{isRTL ? 'موظف (مخصصة لموظف)' : 'Staff (Assigned to employee)'}</option>
+            </select>
+          </div>
 
           <div className="md:col-span-2 border-t border-gray-100 pt-4 mt-2">
             <h3 className={`text-sm font-semibold text-gray-900 mb-3 ${isRTL ? 'text-right' : 'text-left'}`}>{tv.operationCardSection}</h3>

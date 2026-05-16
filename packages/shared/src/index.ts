@@ -7,6 +7,11 @@ export enum VehicleStatus {
   RETIRED = 'RETIRED',
 }
 
+export enum VehicleUsageType {
+  FLEET = 'FLEET',
+  STAFF = 'STAFF',
+}
+
 export enum VehicleType {
   SEDAN = 'SEDAN',
   SUV = 'SUV',
@@ -201,6 +206,8 @@ export interface Vehicle {
   operationCardFileUrl?: string;
   lastLocation?: GeoPoint;
   lastLocationAt?: Date;
+  usageType?: VehicleUsageType;
+  staffAssignments?: StaffVehicleAssignment[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -234,6 +241,26 @@ export interface CreateVehicleDto {
 export interface UpdateVehicleDto extends Partial<CreateVehicleDto> {
   status?: VehicleStatus;
   assignedDriverId?: string;
+}
+
+// ─── Staff Vehicle Assignment ─────────────────────────────────────────────────
+
+export interface StaffVehicleAssignment {
+  id: string;
+  companyId: string;
+  vehicleId: string;
+  assigneeName: string;
+  assigneeTitle?: string;
+  assigneePhone?: string;
+  assigneeNationalId?: string;
+  assignedAt: Date;
+  returnedAt?: Date | null;
+  odometerOut?: number | null;
+  odometerIn?: number | null;
+  notes?: string | null;
+  vehicle?: { id: string; plateNumber: string; make: string; model: string; color: string };
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // ─── Driver ───────────────────────────────────────────────────────────────────

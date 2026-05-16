@@ -57,6 +57,7 @@ export class VehiclesService {
       sortOrder = 'desc',
       operationCard = 'all',
       gpsFilter = 'all',
+      usageType,
     } = query;
     const shouldPaginate = page != null || limit != null;
     const normalizedPage = Math.max(page ?? 1, 1);
@@ -101,6 +102,10 @@ export class VehiclesService {
       conditions.push({ pilotImei: { not: null } });
     } else if (gpsFilter === 'none') {
       conditions.push({ pilotImei: null });
+    }
+
+    if (usageType) {
+      conditions.push({ usageType });
     }
 
     const where = conditions.length === 1 ? conditions[0] : { AND: conditions };
@@ -154,6 +159,11 @@ export class VehiclesService {
         },
         violations: true,
         photos: { orderBy: { createdAt: 'asc' } },
+        staffAssignments: {
+          where: { returnedAt: null },
+          orderBy: { assignedAt: 'desc' },
+          take: 1,
+        },
       },
     });
     if (!vehicle) throw new NotFoundException(`المركبة ${id} غير موجودة`);

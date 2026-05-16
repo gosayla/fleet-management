@@ -9,7 +9,7 @@ import { subscribeToVehicleLocation } from '@/lib/socket';
 import { useLocale } from '@/providers/locale-provider';
 import { formatDate, formatEnumLabel, formatCurrencySar, formatNumber } from '@/lib/i18n';
 import { DocumentType, Vehicle } from '@fleet/shared';
-import { ArrowLeft, ArrowRight, Camera, Droplet, ExternalLink, FileText, Fuel, Gauge, Pencil, Plus, ShieldAlert, Star, Trash2, Truck, UserCheck, Wrench, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Briefcase, Camera, Droplet, ExternalLink, FileText, Fuel, Gauge, Pencil, Plus, ShieldAlert, Star, Trash2, Truck, UserCheck, Wrench, X } from 'lucide-react';
 
 type DriverBrief = { id: string; fullName: string; phone: string; status: string; photoUrl?: string | null };
 
@@ -67,6 +67,18 @@ type VehicleDetails = Vehicle & {
   pilotSpeed?: number | null;
   pilotHeading?: number | null;
   pilotIsOnline?: boolean | null;
+  staffAssignments?: Array<{
+    id: string;
+    assigneeName: string;
+    assigneeTitle?: string | null;
+    assigneePhone?: string | null;
+    assigneeNationalId?: string | null;
+    assignedAt: string;
+    returnedAt?: string | null;
+    odometerOut?: number | null;
+    odometerIn?: number | null;
+    notes?: string | null;
+  }>;
 };
 
 type VehiclePhoto = {
@@ -274,6 +286,8 @@ export default function VehicleDashboardPage() {
   const hasOperationCard = !!(vehicle.operationCardNumber || vehicle.operationCardIssueDate || vehicle.operationCardExpiryDate || vehicle.operationCardRenewDate);
   const hasTammData = !!(vehicle.ownershipDate || vehicle.licenseIssuanceDate || vehicle.licenseExpiryDate || vehicle.inspectionExpiryDate || vehicle.mvpiStatus || vehicle.insuranceStatus || vehicle.insuranceExpiryDate || vehicle.restrictionStatus);
   const hasGpsTelemetry = vehicle.pilotImei != null || vehicle.pilotMotorHours != null || vehicle.pilotLastStop != null || vehicle.pilotLastMove != null || vehicle.pilotBatteryVoltage != null || vehicle.pilotIgnitionOn != null || vehicle.pilotLoadWeight != null || vehicle.pilotProviderMileage != null || vehicle.pilotSpeed != null || vehicle.pilotHeading != null || vehicle.pilotIsOnline != null;
+  const isStaffVehicle = (vehicle as any).usageType === 'STAFF';
+  const activeAssignment = vehicle.staffAssignments?.[0] ?? null;
 
   return (
     <div className="space-y-6">
@@ -329,6 +343,41 @@ export default function VehicleDashboardPage() {
           <InfoRow label={tv.sequenceNumber} value={vehicle.sequenceNumber} />
           <InfoRow label={tv.bodyType} value={vehicle.bodyType} />
         </InfoCard>
+
+        {isStaffVehicle && (
+        <InfoCard title={isRTL ? 'الموظف المخصصة له' : 'Staff Assignee'}>
+          {activeAssignment ? (
+            <>
+              <InfoRow label={isRTL ? 'الاسم' : 'Name'} value={activeAssignment.assigneeName} />
+              <InfoRow label={isRTL ? 'المسمى الوظيفي' : 'Title'} value={activeAssignment.assigneeTitle} />
+              <InfoRow label={isRTL ? 'الهاتف' : 'Phone'} value={activeAssignment.assigneePhone} />
+              <InfoRow label={isRTL ? 'رقم الهوية' : 'National ID'} value={activeAssignment.assigneeNationalId} />
+              <InfoRow label={isRTL ? 'تاريخ التخصيص' : 'Assigned'} value={formatDate(activeAssignment.assignedAt, locale)} />
+              {activeAssignment.odometerOut != null && (
+                <InfoRow label={isRTL ? 'عداد الكم (خروج)' : 'Odometer Out'} value={`${formatNumber(activeAssignment.odometerOut, locale)} ${tc.kilometers}`} />
+              )}
+              <Link
+                href={`/${locale}/dashboard/vehicles/${vehicle.id}/staff`}
+                className="inline-flex items-center gap-2 mt-2 rounded-lg border border-purple-200 px-3 py-2 text-sm text-purple-700 hover:bg-purple-50"
+              >
+                <Briefcase className="w-4 h-4" />
+                {isRTL ? 'إدارة التخصيص' : 'Manage Assignment'}
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-400 mb-3">{isRTL ? 'لا يوجد موظف مخصص حالياً' : 'No staff member currently assigned'}</p>
+              <Link
+                href={`/${locale}/dashboard/vehicles/${vehicle.id}/staff`}
+                className="inline-flex items-center gap-2 rounded-lg border border-purple-200 px-3 py-2 text-sm text-purple-700 hover:bg-purple-50"
+              >
+                <Briefcase className="w-4 h-4" />
+                {isRTL ? 'تخصيص موظف' : 'Assign Staff'}
+              </Link>
+            </>
+          )}
+        </InfoCard>
+        )}
 
         {hasTammData && (
         <InfoCard title="Tamm">

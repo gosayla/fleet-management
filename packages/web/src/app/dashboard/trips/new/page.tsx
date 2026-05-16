@@ -58,8 +58,8 @@ export default function NewTripPage() {
   const driverComboRef = useRef<HTMLDivElement>(null);
 
   const { data: vehiclesResponse, isLoading: vehiclesLoading, isError: vehiclesError } = useQuery<{ data: Vehicle[] } | Vehicle[]>({
-    queryKey: ['vehicles'],
-    queryFn: () => api.get('/vehicles').then(r => r.data),
+    queryKey: ['vehicles', 'fleet-only'],
+    queryFn: () => api.get('/vehicles', { params: { usageType: 'FLEET' } }).then(r => r.data),
   });
   const vehicles = Array.isArray(vehiclesResponse) ? vehiclesResponse : (vehiclesResponse?.data ?? []);
 

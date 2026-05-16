@@ -138,6 +138,7 @@ export default function EditVehiclePage() {
     insuranceExpiryDate: vehicle.insuranceExpiryDate ?? undefined,
     status: vehicle.status,
     assignedDriverId: vehicle.assignedDriverId ?? undefined,
+    usageType: (vehicle as any).usageType ?? undefined,
   };
 
   return (

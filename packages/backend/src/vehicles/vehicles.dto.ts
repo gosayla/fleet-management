@@ -11,6 +11,7 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { VehicleType, VehicleStatus } from '@fleet/shared';
+import { VehicleUsageType } from '@prisma/client';
 
 export class CreateVehicleDto {
   @ApiProperty({ example: 'ABC 1234' })
@@ -126,6 +127,11 @@ export class CreateVehicleDto {
   @IsString()
   @IsOptional()
   operationCardFileUrl?: string;
+
+  @ApiPropertyOptional({ enum: VehicleUsageType, default: VehicleUsageType.FLEET })
+  @IsEnum(VehicleUsageType)
+  @IsOptional()
+  usageType?: VehicleUsageType;
 }
 
 export class UpdateVehicleDto extends PartialType(CreateVehicleDto) {
@@ -190,4 +196,9 @@ export class VehiclesQueryDto {
   @IsOptional()
   @IsEnum(['all', 'has', 'none'])
   gpsFilter?: 'all' | 'has' | 'none';
+
+  @ApiPropertyOptional({ enum: VehicleUsageType, description: 'Filter by usage type: FLEET or STAFF' })
+  @IsOptional()
+  @IsEnum(VehicleUsageType)
+  usageType?: VehicleUsageType;
 }

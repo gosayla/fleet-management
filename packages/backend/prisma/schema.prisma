@@ -145,6 +145,11 @@ enum AuditAction {
   LOGOUT
 }
 
+enum VehicleUsageType {
+  FLEET
+  STAFF
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model Company {
@@ -156,14 +161,15 @@ model Company {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  users     User[]
-  vehicles  Vehicle[]
-  drivers   Driver[]
-  trips     Trip[]
-  documents FleetDocument[]
-  permits   NaqlPermit[]
-  contracts TripContract[]
-  rentals   VehicleRental[]
+  users            User[]
+  vehicles         Vehicle[]
+  drivers          Driver[]
+  trips            Trip[]
+  documents        FleetDocument[]
+  permits          NaqlPermit[]
+  contracts        TripContract[]
+  rentals          VehicleRental[]
+  staffAssignments StaffVehicleAssignment[]
 
   @@map("companies")
 }
@@ -256,6 +262,7 @@ model Vehicle {
   pilotSpeed           Float?    // Last reported speed (km/h)
   pilotHeading         Float?    // Last reported heading (0–360°)
   pilotIsOnline        Boolean?  // Whether the GPS device is currently online
+  usageType        VehicleUsageType  @default(FLEET)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
@@ -264,6 +271,7 @@ model Vehicle {
   trips            Trip[]
   maintenanceLogs  MaintenanceLog[]
   fuelLogs         FuelLog[]
+  staffAssignments StaffVehicleAssignment[]
   documents        FleetDocument[]
   violations       TammViolation[]
   photos           VehiclePhoto[]
@@ -523,6 +531,32 @@ model VehicleRental {
   @@index([companyId])
   @@index([vehicleId])
   @@map("vehicle_rentals")
+}
+
+// ─── Staff Vehicle Assignments ───────────────────────────────────────────────
+
+model StaffVehicleAssignment {
+  id               String    @id @default(uuid())
+  companyId        String
+  vehicleId        String
+  assigneeName     String
+  assigneeTitle    String?
+  assigneePhone    String?
+  assigneeNationalId String?
+  assignedAt       DateTime  @default(now())
+  returnedAt       DateTime?
+  odometerOut      Float?
+  odometerIn       Float?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@index([companyId])
+  @@index([vehicleId])
+  @@map("staff_vehicle_assignments")
 }
 
 // ─── Tamm Integration ─────────────────────────────────────────────────────────
