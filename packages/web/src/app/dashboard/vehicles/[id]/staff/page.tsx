@@ -27,6 +27,7 @@ type Vehicle = {
   plateNumber: string;
   make: string;
   model: string;
+  year?: number | null;
 };
 
 const emptyForm = {
