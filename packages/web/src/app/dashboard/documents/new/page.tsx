@@ -23,6 +23,7 @@ export default function NewDocumentPage() {
 
   const emptyForm: DocumentFormValues = {
     type: DocumentType.VEHICLE_REGISTRATION,
+    licenseType: '',
     fileUrl: '',
     issueDate: '',
     expiryDate: '',
@@ -57,6 +58,7 @@ export default function NewDocumentPage() {
       }
       return api.post('/documents', {
         type: values.type,
+        licenseType: values.licenseType || undefined,
         fileUrl,
         issueDate: values.issueDate,
         expiryDate: values.expiryDate,

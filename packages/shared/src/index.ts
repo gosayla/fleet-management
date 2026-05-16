@@ -25,6 +25,16 @@ export enum DriverStatus {
   TERMINATED = 'TERMINATED',
 }
 
+export enum DriverLicenseType {
+  PRIVATE = 'PRIVATE',
+  PUBLIC = 'PUBLIC',
+  MOTORCYCLE = 'MOTORCYCLE',
+  LIGHT_TRUCK = 'LIGHT_TRUCK',
+  HEAVY_TRUCK = 'HEAVY_TRUCK',
+  BUS = 'BUS',
+  HEAVY_MACHINERY = 'HEAVY_MACHINERY',
+}
+
 export enum TripStatus {
   SCHEDULED = 'SCHEDULED',
   IN_PROGRESS = 'IN_PROGRESS',
@@ -238,6 +248,7 @@ export interface Driver {
   nationalId: string;
   licenseNumber: string;
   licenseExpiry: Date;
+  licenseType?: DriverLicenseType;
   bloodType?: BloodType;
   status: DriverStatus;
   assignedVehicleId?: string;
@@ -250,6 +261,7 @@ export interface CreateDriverDto {
   phone: string;
   nationalId: string;
   licenseExpiry: Date;
+  licenseType?: DriverLicenseType;
   bloodType?: BloodType;
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, X } from 'lucide-react';
-import { DocumentType } from '@fleet/shared';
+import { DocumentType, DriverLicenseType } from '@fleet/shared';
 import { useLocale } from '@/providers/locale-provider';
 import { formatEnumLabel } from '@/lib/i18n';
 import { resolveDocumentFileUrl } from '@/lib/api';
@@ -10,6 +10,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 
 export type DocumentFormValues = {
   type: DocumentType;
+  licenseType: DriverLicenseType | '';
   fileUrl: string;
   issueDate: string;
   expiryDate: string;
@@ -272,7 +273,7 @@ export function DocumentForm({
           <label className={`mb-1 block text-sm font-medium text-gray-700 ${isRTL ? 'text-right' : 'text-left'}`}>{td.type}</label>
           <select
             value={form.type}
-            onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value as DocumentType }))}
+            onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value as DocumentType, licenseType: '' }))}
             className={`w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'text-right' : 'text-left'}`}
           >
             {visibleTypeOptions.map((item) => (
@@ -280,6 +281,25 @@ export function DocumentForm({
             ))}
           </select>
         </div>
+
+        {/* License Type — only when DRIVER_LICENSE */}
+        {form.type === DocumentType.DRIVER_LICENSE && (
+          <div>
+            <label className={`mb-1 block text-sm font-medium text-gray-700 ${isRTL ? 'text-right' : 'text-left'}`}>
+              {isRTL ? 'فئة الرخصة' : 'License Category'}
+            </label>
+            <select
+              value={form.licenseType}
+              onChange={(e) => setForm((prev) => ({ ...prev, licenseType: e.target.value as DriverLicenseType | '' }))}
+              className={`w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'text-right' : 'text-left'}`}
+            >
+              <option value="">{isRTL ? '— اختر الفئة —' : '— Select Category —'}</option>
+              {Object.values(DriverLicenseType).map((lt) => (
+                <option key={lt} value={lt}>{formatEnumLabel('driverLicenseType', lt, locale)}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* File upload */}
         <div>

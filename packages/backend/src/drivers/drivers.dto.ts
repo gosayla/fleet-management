@@ -7,7 +7,7 @@ import {
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { DriverStatus } from '@fleet/shared';
 import { IsEnum } from 'class-validator';
-import { BloodType } from '@prisma/client';
+import { BloodType, DriverLicenseType } from '@prisma/client';
 
 export class CreateDriverDto {
   @ApiProperty({ example: 'Mohammed Al-Qahtani' })
@@ -28,6 +28,11 @@ export class CreateDriverDto {
   @ApiProperty({ example: '2027-06-15' })
   @IsDateString()
   licenseExpiry: string;
+
+  @ApiPropertyOptional({ enum: DriverLicenseType })
+  @IsEnum(DriverLicenseType)
+  @IsOptional()
+  licenseType?: DriverLicenseType;
 
   @ApiPropertyOptional({ enum: BloodType, example: 'A_POS' })
   @IsEnum(BloodType)

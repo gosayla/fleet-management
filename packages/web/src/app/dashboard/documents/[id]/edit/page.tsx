@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, FileText } from 'lucide-react';
-import { DocumentType } from '@fleet/shared';
+import { DocumentType, DriverLicenseType } from '@fleet/shared';
 import { api } from '@/lib/api';
 import { useLocale } from '@/providers/locale-provider';
 import { DocumentForm, DocumentFormValues, DriverOption, VehicleOption } from '../../document-form';
@@ -14,6 +14,7 @@ type VehiclesResponse = { data: VehicleOption[] } | VehicleOption[];
 type DocumentDetail = {
   id: string;
   type: DocumentType;
+  licenseType?: DriverLicenseType | null;
   fileUrl: string;
   issueDate: string;
   expiryDate: string;
@@ -70,6 +71,7 @@ export default function EditDocumentPage() {
       }
       return api.patch(`/documents/${docId}`, {
         type: values.type,
+        licenseType: values.licenseType || null,
         fileUrl,
         issueDate: values.issueDate,
         expiryDate: values.expiryDate,
@@ -104,6 +106,7 @@ export default function EditDocumentPage() {
 
   const initialValues: DocumentFormValues = {
     type: doc.type,
+    licenseType: doc.licenseType ?? '',
     fileUrl: doc.fileUrl,
     issueDate: toDateInput(doc.issueDate),
     expiryDate: toDateInput(doc.expiryDate),

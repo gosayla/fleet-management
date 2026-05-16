@@ -4,7 +4,7 @@ export const messages = {
   ar: {
     common: {
       appName: 'إدارة الأسطول',
-      brandName: 'FleetSA',
+      brandName: 'الأسطول',
       logout: 'تسجيل الخروج',
       loading: 'جارٍ التحميل…',
       empty: '—',
@@ -197,6 +197,7 @@ export const messages = {
       nationalId: 'الهوية الوطنية',
       licenseNumber: 'رقم الرخصة',
       licenseExpiry: 'انتهاء الرخصة',
+      licenseType: 'نوع الرخصة',
       bloodType: 'فصيلة الدم',
       status: 'الحالة',
       assignedVehicle: 'المركبة المخصصة',
@@ -464,7 +465,7 @@ export const messages = {
   en: {
     common: {
       appName: 'Fleet Management',
-      brandName: 'FleetSA',
+      brandName: 'EFleet',
       logout: 'Logout',
       loading: 'Loading…',
       empty: '—',
@@ -657,6 +658,7 @@ export const messages = {
       nationalId: 'National ID',
       licenseNumber: 'License No.',
       licenseExpiry: 'License Expiry',
+      licenseType: 'License Type',
       bloodType: 'Blood Type',
       status: 'Status',
       assignedVehicle: 'Assigned Vehicle',
@@ -927,6 +929,7 @@ type EnumGroup =
   | 'vehicleStatus'
   | 'vehicleType'
   | 'driverStatus'
+  | 'driverLicenseType'
   | 'tripStatus'
   | 'maintenanceStatus'
   | 'maintenanceType'
@@ -955,6 +958,15 @@ const enumLabels: Record<EnumGroup, Record<string, Record<Locale, string>>> = {
     ON_LEAVE: { ar: 'في إجازة', en: 'On Leave' },
     SUSPENDED: { ar: 'موقوف', en: 'Suspended' },
     TERMINATED: { ar: 'منتهي الخدمة', en: 'Terminated' },
+  },
+  driverLicenseType: {
+    PRIVATE:        { ar: 'خاصة',               en: 'Private' },
+    PUBLIC:         { ar: 'عامة',                en: 'Public' },
+    MOTORCYCLE:     { ar: 'دراجة نارية',          en: 'Motorcycle' },
+    LIGHT_TRUCK:    { ar: 'شاحنة خفيفة',         en: 'Light Truck' },
+    HEAVY_TRUCK:    { ar: 'شاحنة ثقيلة',         en: 'Heavy Truck' },
+    BUS:            { ar: 'حافلة',                en: 'Bus' },
+    HEAVY_MACHINERY:{ ar: 'آليات ثقيلة',        en: 'Heavy Machinery' },
   },
   tripStatus: {
     SCHEDULED: { ar: 'مجدولة', en: 'Scheduled' },

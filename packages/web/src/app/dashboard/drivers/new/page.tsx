@@ -7,8 +7,9 @@ import { ArrowLeft, ArrowRight, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import api from '@/lib/api';
 import { useLocale } from '@/providers/locale-provider';
-import { BloodType, CreateDriverDto } from '@fleet/shared';
+import { BloodType, CreateDriverDto, DriverLicenseType } from '@fleet/shared';
 import { DatePicker } from '@/components/ui/date-picker';
+import { formatEnumLabel } from '@/lib/i18n';
 
 const BLOOD_TYPE_LABELS: Record<BloodType, string> = {
   A_POS: 'A+',
@@ -67,6 +68,7 @@ export default function NewDriverPage() {
   const ArrowBack = isRTL ? ArrowRight : ArrowLeft;
   const [licenseExpiry, setLicenseExpiry] = useState<string | undefined>(undefined);
   const [bloodType, setBloodType] = useState<BloodType | ''>('');
+  const [licenseType, setLicenseType] = useState<DriverLicenseType | ''>('');
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateDriverDto) => api.post('/drivers', payload).then((r) => r.data),
@@ -84,6 +86,7 @@ export default function NewDriverPage() {
       phone: String(fd.get('phone') ?? '').trim(),
       nationalId: String(fd.get('nationalId') ?? '').trim(),
       licenseExpiry: new Date(licenseExpiry ?? ''),
+      licenseType: licenseType || undefined,
       bloodType: bloodType || undefined,
     };
 
@@ -128,6 +131,19 @@ export default function NewDriverPage() {
               isRTL={isRTL}
               outputCalendar="gregorian"
             />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{td.licenseType}</label>
+              <select
+                value={licenseType}
+                onChange={(e) => setLicenseType(e.target.value as DriverLicenseType | '')}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">—</option>
+                {Object.values(DriverLicenseType).map((lt) => (
+                  <option key={lt} value={lt}>{formatEnumLabel('driverLicenseType', lt, locale)}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{td.bloodType}</label>
               <select

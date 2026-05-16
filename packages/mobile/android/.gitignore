@@ -4,3 +4,5 @@ build/
 local.properties
 *.apk
 *.aab
+# Release keystore - NEVER commit this
+app/fleet-release.keystore

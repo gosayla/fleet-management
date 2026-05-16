@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Pencil } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '@/lib/api';
-import { BloodType, Driver, DriverStatus, UpdateDriverDto, Vehicle } from '@fleet/shared';
+import { BloodType, Driver, DriverLicenseType, DriverStatus, UpdateDriverDto, Vehicle } from '@fleet/shared';
 import { useLocale } from '@/providers/locale-provider';
 import { formatEnumLabel } from '@/lib/i18n';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -68,6 +68,7 @@ export default function EditDriverPage() {
   const ArrowBack = isRTL ? ArrowRight : ArrowLeft;
   const [licenseExpiry, setLicenseExpiry] = useState<string | undefined>(undefined);
   const [bloodType, setBloodType] = useState<BloodType | ''>('');
+  const [licenseType, setLicenseType] = useState<DriverLicenseType | ''>('');
   const [assignedVehicleId, setAssignedVehicleId] = useState<string | undefined>(undefined);
 
   const { data: driver, isLoading: driverLoading } = useQuery<DriverDetails>({
@@ -137,6 +138,7 @@ export default function EditDriverPage() {
 
     setLicenseExpiry(new Date(driver.licenseExpiry).toISOString().split('T')[0]);
     setBloodType((driver as any).bloodType ?? '');
+    setLicenseType((driver as any).licenseType ?? '');
   }, [driver?.licenseExpiry]);
 
   useEffect(() => {
@@ -163,6 +165,7 @@ export default function EditDriverPage() {
       nationalId: String(fd.get('nationalId') ?? '').trim(),
       licenseExpiry: parsedLicenseExpiry,
       status: String(fd.get('status') ?? DriverStatus.ACTIVE) as DriverStatus,
+      licenseType: licenseType || undefined,
       bloodType: bloodType || undefined,
       assignedVehicleId,
     };
@@ -208,6 +211,21 @@ export default function EditDriverPage() {
               isRTL={isRTL}
               outputCalendar="gregorian"
             />
+
+            {/* License Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{td.licenseType}</label>
+              <select
+                value={licenseType}
+                onChange={(e) => setLicenseType(e.target.value as DriverLicenseType | '')}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">—</option>
+                {Object.values(DriverLicenseType).map((lt) => (
+                  <option key={lt} value={lt}>{formatEnumLabel('driverLicenseType', lt, locale)}</option>
+                ))}
+              </select>
+            </div>
 
             {/* Blood Type */}
             <div>

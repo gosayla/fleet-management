@@ -22,7 +22,7 @@ import { api } from '../lib/api';
 import { Colors, Radius, Shadow, Spacing } from '../lib/theme';
 import { AppIcon } from '../components/ui/AppIcon';
 import { Locale, t, isRTL as isRTLFn } from '../lib/i18n';
-import { DocumentType } from '@fleet/shared';
+import { DocumentType, DriverLicenseType } from '@fleet/shared';
 import { DateWheelModal } from '../components/ui/DateWheelModal';
 import { Alert } from '../lib/alert';
 
@@ -52,6 +52,7 @@ interface DriverOption {
 
 interface FormState {
   type: DocumentType;
+  licenseType: DriverLicenseType | '';
   issueDate: string;
   expiryDate: string;
   fileUrl: string;
@@ -64,6 +65,7 @@ interface FormState {
 
 const EMPTY: FormState = {
   type: DocumentType.VEHICLE_REGISTRATION,
+  licenseType: '',
   issueDate: '',
   expiryDate: '',
   fileUrl: '',
@@ -381,6 +383,7 @@ export function DocumentFormScreen({
         const loadedType = doc.type ?? DocumentType.VEHICLE_REGISTRATION;
         setForm({
           type: loadedType,
+          licenseType: (doc.licenseType as DriverLicenseType | null) ?? '',
           issueDate: doc.issueDate ? doc.issueDate.slice(0, 10) : '',
           expiryDate: doc.expiryDate ? doc.expiryDate.slice(0, 10) : '',
           fileUrl: doc.fileUrl ?? '',
@@ -432,6 +435,9 @@ export function DocumentFormScreen({
 
     const payload: Record<string, unknown> = {
       type: form.type,
+      ...(form.type === DocumentType.DRIVER_LICENSE && form.licenseType
+        ? { licenseType: form.licenseType }
+        : { licenseType: null }),
       issueDate: form.issueDate.trim(),
       expiryDate: form.expiryDate.trim(),
       fileUrl: form.fileUrl.trim(),
@@ -609,6 +615,44 @@ export function DocumentFormScreen({
               </TouchableOpacity>
             ))}
           </ScrollView>
+
+          {/* ── License Category (only for DRIVER_LICENSE) ── */}
+          {form.type === DocumentType.DRIVER_LICENSE && (
+            <>
+              <SectionTitle title={i18n.licenseCategoryLabel} />
+              <View style={styles.card}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.typePillRow}
+                >
+                  {Object.values(DriverLicenseType).map((lt) => {
+                    const labelMap: Record<string, string> = {
+                      PRIVATE: i18n.licenseTypePrivate,
+                      PUBLIC: i18n.licenseTypePublic,
+                      MOTORCYCLE: i18n.licenseTypeMotorcycle,
+                      LIGHT_TRUCK: i18n.licenseTypeLightTruck,
+                      HEAVY_TRUCK: i18n.licenseTypeHeavyTruck,
+                      BUS: i18n.licenseTypeBus,
+                      HEAVY_MACHINERY: i18n.licenseTypeHeavyMachinery,
+                    };
+                    return (
+                      <TouchableOpacity
+                        key={lt}
+                        style={[styles.typePill, form.licenseType === lt && styles.typePillActive]}
+                        onPress={() => set('licenseType', form.licenseType === lt ? '' : lt)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.typePillText, form.licenseType === lt && styles.typePillTextActive]}>
+                          {labelMap[lt] ?? lt}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            </>
+          )}
 
           {/* ── File Upload ── */}
           <SectionTitle title={i18n.fileUrlLabel} />

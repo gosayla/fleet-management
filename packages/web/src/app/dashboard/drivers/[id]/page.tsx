@@ -185,6 +185,12 @@ export default function DriverDetailPage() {
           {driver.email && <InfoRow label={td.email} value={driver.email} />}
           <InfoRow label={td.nationalId} value={driver.nationalId} mono />
           <InfoRow label={td.licenseExpiry} value={formatDate(driver.licenseExpiry, locale)} />
+          {(driver as any).licenseType && (
+            <InfoRow
+              label={td.licenseType}
+              value={formatEnumLabel('driverLicenseType', (driver as any).licenseType, locale)}
+            />
+          )}
           {(driver as any).bloodType && (
             <InfoRow
               label={td.bloodType}

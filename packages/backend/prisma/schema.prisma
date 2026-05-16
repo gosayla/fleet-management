@@ -47,6 +47,16 @@ enum DriverStatus {
   TERMINATED
 }
 
+enum DriverLicenseType {
+  PRIVATE
+  PUBLIC
+  MOTORCYCLE
+  LIGHT_TRUCK
+  HEAVY_TRUCK
+  BUS
+  HEAVY_MACHINERY
+}
+
 enum TripStatus {
   SCHEDULED
   IN_PROGRESS
@@ -275,6 +285,7 @@ model Driver {
   nationalId       String
   licenseNumber    String
   licenseExpiry    DateTime
+  licenseType      DriverLicenseType?
   bloodType        BloodType?
   status           DriverStatus @default(ACTIVE)
   photoUrl         String?
@@ -385,17 +396,18 @@ model FuelLog {
 }
 
 model FleetDocument {
-  id               String       @id @default(uuid())
+  id               String             @id @default(uuid())
   companyId        String
   type             DocumentType
+  licenseType      DriverLicenseType? // only relevant when type = DRIVER_LICENSE
   fileUrl          String
   issueDate        DateTime
   expiryDate       DateTime
   issuingAuthority String?
   referenceNumber  String?
   notes            String?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   company  Company   @relation(fields: [companyId], references: [id])
   vehicles Vehicle[]

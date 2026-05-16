@@ -11,12 +11,17 @@ import {
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { DocumentType } from '@fleet/shared';
+import { DocumentType, DriverLicenseType } from '@fleet/shared';
 
 export class CreateDocumentDto {
   @ApiProperty({ enum: DocumentType })
   @IsEnum(DocumentType)
   type: DocumentType;
+
+  @ApiPropertyOptional({ enum: DriverLicenseType, description: 'Only for DRIVER_LICENSE documents' })
+  @IsOptional()
+  @IsEnum(DriverLicenseType)
+  licenseType?: DriverLicenseType;
 
   @ApiProperty({ example: 'https://files.example.com/doc.pdf' })
   @IsString()

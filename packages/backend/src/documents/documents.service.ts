@@ -93,6 +93,7 @@ export class DocumentsService {
       data: {
         companyId,
         type: dto.type,
+        licenseType: dto.licenseType ?? null,
         fileUrl: dto.fileUrl,
         issueDate: new Date(dto.issueDate),
         expiryDate: new Date(dto.expiryDate),
@@ -140,6 +141,7 @@ export class DocumentsService {
       where: { id },
       data: {
         ...(dto.type ? { type: dto.type } : {}),
+        ...(dto.licenseType !== undefined ? { licenseType: dto.licenseType ?? null } : {}),
         ...(dto.fileUrl ? { fileUrl: dto.fileUrl } : {}),
         ...(dto.issueDate ? { issueDate: new Date(dto.issueDate) } : {}),
         ...(dto.expiryDate ? { expiryDate: new Date(dto.expiryDate) } : {}),
@@ -232,7 +234,7 @@ export class DocumentsService {
         drivers: { some: { id: driverId } },
       },
       orderBy: [{ expiryDate: 'desc' }, { updatedAt: 'desc' }],
-      select: { expiryDate: true, referenceNumber: true },
+      select: { expiryDate: true, referenceNumber: true, licenseType: true },
     });
 
     if (!licenseDoc) return;
@@ -242,6 +244,7 @@ export class DocumentsService {
       data: {
         licenseExpiry: licenseDoc.expiryDate,
         ...(licenseDoc.referenceNumber ? { licenseNumber: licenseDoc.referenceNumber } : {}),
+        ...(licenseDoc.licenseType ? { licenseType: licenseDoc.licenseType } : {}),
       },
     });
   }
