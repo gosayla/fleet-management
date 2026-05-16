@@ -123,6 +123,7 @@ interface FormState {
   // Edit only
   status: VehicleStatus;
   assignedDriverId: string;
+  usageType: 'FLEET' | 'STAFF';
 }
 
 const EMPTY: FormState = {
@@ -150,6 +151,7 @@ const EMPTY: FormState = {
   restrictionStatus: '',
   status: VehicleStatus.ACTIVE,
   assignedDriverId: '',
+  usageType: 'FLEET',
 };
 
 const EXTRA_LABELS = {
@@ -303,6 +305,7 @@ export function VehicleFormScreen({
           restrictionStatus: v.restrictionStatus ?? '',
           status: v.status ?? VehicleStatus.ACTIVE,
           assignedDriverId: resolvedAssignedDriverId,
+          usageType: v.usageType ?? 'FLEET',
         });
       })
       .catch(() => setError(failedToLoadVehicleMessage))
@@ -345,6 +348,7 @@ export function VehicleFormScreen({
       type: form.type,
       odometer: Number(form.odometer),
       fuelCapacity: Number(form.fuelCapacity),
+      usageType: form.usageType,
       ...(form.operationCardNumber && {
         operationCardNumber: form.operationCardNumber,
       }),
@@ -579,6 +583,38 @@ export function VehicleFormScreen({
               </TouchableOpacity>
             ))}
           </ScrollView>
+
+          {/* ── Section: Usage Type ── */}
+          <SectionTitle title={(i18n as any).usageTypeSection ?? 'Usage Type'} />
+          <View style={[styles.typePillRow, { flexWrap: 'nowrap', gap: 10 }]}>
+            {(['FLEET', 'STAFF'] as const).map((u) => {
+              const labels: Record<string, string> = {
+                FLEET: (i18n as any).usageTypeFleet ?? 'Fleet',
+                STAFF: (i18n as any).usageTypeStaff ?? 'Staff',
+              };
+              const isActive = form.usageType === u;
+              return (
+                <TouchableOpacity
+                  key={u}
+                  style={[
+                    styles.typePill,
+                    isActive && (u === 'STAFF' ? styles.usagePillStaff : styles.typePillActive),
+                  ]}
+                  onPress={() => setForm((prev) => ({ ...prev, usageType: u }))}
+                  activeOpacity={0.75}
+                >
+                  <Text
+                    style={[
+                      styles.typePillText,
+                      isActive && styles.typePillTextActive,
+                    ]}
+                  >
+                    {labels[u]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
           {/* ── Section: Measurements ── */}
           <SectionTitle title={i18n.measurementsSection} />
@@ -1144,6 +1180,10 @@ const styles = StyleSheet.create({
   typePillActive: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
+  },
+  usagePillStaff: {
+    backgroundColor: '#6d28d9',
+    borderColor: '#6d28d9',
   },
   typePillText: {
     fontSize: 13,

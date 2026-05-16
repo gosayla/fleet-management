@@ -30,6 +30,8 @@ export interface VehicleCardData {
   pilotIsOnline?: boolean | null;
   /** GPS device IMEI — present when vehicle has a GPS tracker */
   pilotImei?: string | null;
+  /** FLEET or STAFF */
+  usageType?: string | null;
 }
 
 interface Props {
@@ -158,6 +160,11 @@ export function VehicleCard({ vehicle, locale, onPress }: Props) {
               <Text style={styles.gpsPillText}>GPS</Text>
             </View>
           )}
+          {vehicle.usageType === 'STAFF' && (
+            <View style={styles.staffPill}>
+              <Text style={styles.staffPillText}>Staff</Text>
+            </View>
+          )}
         </View>
         <Text style={[styles.subtitle, subtitleAlignStyle]} numberOfLines={1}>
           {subtitle}
@@ -231,6 +238,20 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700' as const,
     color: '#047857',
+    letterSpacing: 0.3,
+  },
+  staffPill: {
+    backgroundColor: '#ede9fe',
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderWidth: 1,
+    borderColor: '#c4b5fd',
+  },
+  staffPillText: {
+    fontSize: 9,
+    fontWeight: '700' as const,
+    color: '#6d28d9',
     letterSpacing: 0.3,
   },
   plateAbbr: {

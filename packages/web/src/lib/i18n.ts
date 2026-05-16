@@ -28,6 +28,7 @@ export const messages = {
       prev: 'السابق',
       next: 'التالي',
       optional: 'اختياري',
+      cancel: 'إلغاء',
     },
     login: {
       title: 'إدارة الأسطول',
@@ -489,6 +490,7 @@ export const messages = {
       prev: 'Previous',
       next: 'Next',
       optional: 'optional',
+      cancel: 'Cancel',
     },
     login: {
       title: 'Fleet Management',

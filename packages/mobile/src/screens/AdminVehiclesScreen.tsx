@@ -24,10 +24,12 @@ interface Props {
 }
 
 type GpsFilter = 'all' | 'has' | 'none';
+type UsageFilter = 'all' | 'FLEET' | 'STAFF';
 
 export function AdminVehiclesScreen({ locale }: Props) {
   const i18n = t(locale);
   const [gpsFilter, setGpsFilter] = useState<GpsFilter>('all');
+  const [usageFilter, setUsageFilter] = useState<UsageFilter>('all');
 
   const {
     data: raw,
@@ -75,10 +77,19 @@ export function AdminVehiclesScreen({ locale }: Props) {
       ? all.filter((v) => v.pilotImei == null)
       : all;
 
+  const filteredVehicles = usageFilter === 'all'
+    ? vehicles
+    : vehicles.filter((v) => (v as any).usageType === usageFilter);
+
   const chips: { key: GpsFilter; label: string }[] = [
     { key: 'all', label: (i18n as any).gpsAll ?? 'All' },
     { key: 'has', label: (i18n as any).gpsHas ?? 'With GPS' },
     { key: 'none', label: (i18n as any).gpsNone ?? 'No GPS' },
+  ];
+  const usageChips: { key: UsageFilter; label: string }[] = [
+    { key: 'all', label: (i18n as any).gpsAll ?? 'All' },
+    { key: 'FLEET', label: (i18n as any).usageTypeFleet ?? 'Fleet' },
+    { key: 'STAFF', label: (i18n as any).usageTypeStaff ?? 'Staff' },
   ];
 
   return (
@@ -90,7 +101,7 @@ export function AdminVehiclesScreen({ locale }: Props) {
         subtitle={`${vehicles.length} / ${total} ${i18n.vehiclesUnit}`}
       />
 
-      {/* GPS filter chips */}
+      {/* GPS + Usage filter chips */}
       <View style={styles.filterWrap}>
         <ScrollView
           horizontal
@@ -126,11 +137,41 @@ export function AdminVehiclesScreen({ locale }: Props) {
               </TouchableOpacity>
             );
           })}
+          <View style={styles.chipDivider} />
+          {usageChips.map((chip) => {
+            const active = usageFilter === chip.key;
+            const chipColor =
+              chip.key === 'STAFF'
+                ? '#6d28d9'
+                : chip.key === 'FLEET'
+                ? '#1d4ed8'
+                : Colors.primary;
+            return (
+              <TouchableOpacity
+                key={chip.key}
+                onPress={() => setUsageFilter(chip.key)}
+                style={[
+                  styles.chip,
+                  active && {
+                    backgroundColor: chipColor,
+                    borderColor: chipColor,
+                  },
+                ]}
+                activeOpacity={0.75}
+              >
+                <Text
+                  style={[styles.chipText, active && styles.chipTextActive]}
+                >
+                  {chip.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
       <FlatList
-        data={vehicles}
+        data={filteredVehicles}
         keyExtractor={(v) => v.id}
         style={styles.flatList}
         contentContainerStyle={styles.list}
@@ -164,7 +205,8 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 4,
   },
-  filterScroll: { gap: 8, flexDirection: 'row' },
+  filterScroll: { gap: 8, flexDirection: 'row', alignItems: 'center' },
+  chipDivider: { width: 1, height: 20, backgroundColor: '#e5e7eb', marginHorizontal: 2 },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 6,

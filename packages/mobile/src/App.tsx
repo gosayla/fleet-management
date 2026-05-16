@@ -20,6 +20,7 @@ import { AdminFleetScreen } from './screens/AdminFleetScreen';
 import { AdminTripsScreen } from './screens/AdminTripsScreen';
 import { VehicleDetailScreen } from './screens/VehicleDetailScreen';
 import { VehicleFormScreen } from './screens/VehicleFormScreen';
+import { StaffAssignmentFormScreen } from './screens/StaffAssignmentFormScreen';
 import { DriverDetailScreen } from './screens/DriverDetailScreen';
 import { DriverFormScreen } from './screens/DriverFormScreen';
 import { TripDetailScreen } from './screens/TripDetailScreen';
@@ -225,6 +226,11 @@ function Navigator() {
   );
   const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
   const [vehicleFormId, setVehicleFormId] = useState<string | null>(null);
+  // Staff assignment form
+  const [staffAssignFormOpen, setStaffAssignFormOpen] = useState(false);
+  const [staffAssignVehicleId, setStaffAssignVehicleId] = useState<string | null>(null);
+  const [staffAssignMode, setStaffAssignMode] = useState<'assign' | 'return'>('assign');
+  const [staffAssignAssignmentId, setStaffAssignAssignmentId] = useState<string | null>(null);
   const [driverFormOpen, setDriverFormOpen] = useState(false);
   const [driverFormId, setDriverFormId] = useState<string | null>(null);
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
@@ -364,6 +370,11 @@ function Navigator() {
 
       if (vehicleFormOpen) {
         setVehicleFormOpen(false);
+        return true;
+      }
+
+      if (staffAssignFormOpen) {
+        setStaffAssignFormOpen(false);
         return true;
       }
 
@@ -514,6 +525,7 @@ function Navigator() {
     notificationsOpen,
     auditLogOpen,
     vehicleFormOpen,
+    staffAssignFormOpen,
     driverFormOpen,
     tripFormOpen,
     selectedTripId,
@@ -1111,7 +1123,38 @@ function Navigator() {
               setVehicleFormId(selectedVehicleId);
               setVehicleFormOpen(true);
             }}
+            onAssignStaff={() => {
+              setStaffAssignVehicleId(selectedVehicleId);
+              setStaffAssignMode('assign');
+              setStaffAssignAssignmentId(null);
+              setStaffAssignFormOpen(true);
+            }}
+            onReturnStaff={(assignmentId) => {
+              setStaffAssignVehicleId(selectedVehicleId);
+              setStaffAssignMode('return');
+              setStaffAssignAssignmentId(assignmentId);
+              setStaffAssignFormOpen(true);
+            }}
           />
+          {staffAssignFormOpen && staffAssignVehicleId && (
+            <View style={StyleSheet.absoluteFill}>
+              <StaffAssignmentFormScreen
+                mode={staffAssignMode}
+                vehicleId={staffAssignVehicleId}
+                assignmentId={staffAssignAssignmentId ?? undefined}
+                locale={locale}
+                onBack={() => setStaffAssignFormOpen(false)}
+                onSuccess={() => {
+                  setStaffAssignFormOpen(false);
+                  // VehicleDetailScreen will re-fetch on its own when re-opened;
+                  // force a refresh by briefly clearing and resetting selectedVehicleId
+                  const vid = selectedVehicleId;
+                  setSelectedVehicleId(null);
+                  setTimeout(() => setSelectedVehicleId(vid), 50);
+                }}
+              />
+            </View>
+          )}
         </View>
       )}
       {selectedDriverId && (

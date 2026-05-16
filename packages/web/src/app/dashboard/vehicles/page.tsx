@@ -281,10 +281,9 @@ export default function VehiclesPage() {
         />
       </div>
 
-      {/* GPS filter chips */}
+      {/* Filters — single row */}
       <div className="flex items-center gap-2 flex-wrap">
         <Satellite className="w-4 h-4 text-gray-400 shrink-0" />
-        <span className="text-sm text-gray-500 shrink-0">{t.vehicles.gpsTrackerFilter}:</span>
         {(['all', 'has', 'none'] as const).map((opt) => {
           const labels = { all: t.vehicles.allVehiclesGps, has: t.vehicles.withGps, none: t.vehicles.withoutGps };
           const active = gpsFilter === opt;
@@ -298,7 +297,7 @@ export default function VehiclesPage() {
                     ? 'bg-emerald-600 text-white border-emerald-600'
                     : opt === 'none'
                     ? 'bg-gray-500 text-white border-gray-500'
-                    : 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-gray-900 text-white border-gray-900'
                   : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
               }`}
             >
@@ -306,18 +305,12 @@ export default function VehiclesPage() {
             </button>
           );
         })}
-      </div>
 
-      {/* Usage type filter chips */}
-      <div className="flex items-center gap-2 flex-wrap">
+        <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
+
         <Briefcase className="w-4 h-4 text-gray-400 shrink-0" />
-        <span className="text-sm text-gray-500 shrink-0">{isRTL ? 'نوع الاستخدام' : 'Usage'}:</span>
         {(['all', 'FLEET', 'STAFF'] as const).map((opt) => {
-          const labels = {
-            all: isRTL ? 'الكل' : 'All',
-            FLEET: isRTL ? 'أسطول' : 'Fleet',
-            STAFF: isRTL ? 'موظف' : 'Staff',
-          };
+          const labels = { all: isRTL ? 'الكل' : 'All', FLEET: isRTL ? 'أسطول' : 'Fleet', STAFF: isRTL ? 'موظف' : 'Staff' };
           const active = usageFilter === opt;
           return (
             <button
@@ -329,7 +322,7 @@ export default function VehiclesPage() {
                     ? 'bg-purple-600 text-white border-purple-600'
                     : opt === 'FLEET'
                     ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-gray-700 text-white border-gray-700'
+                    : 'bg-gray-900 text-white border-gray-900'
                   : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
               }`}
             >

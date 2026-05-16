@@ -83,6 +83,20 @@ interface VehicleDetail {
   pilotSpeed?: number | null;
   pilotHeading?: number | null;
   pilotIsOnline?: boolean | null;
+  usageType?: string | null;
+}
+
+interface StaffAssignment {
+  id: string;
+  assigneeName: string;
+  assigneeTitle?: string | null;
+  assigneePhone?: string | null;
+  assigneeNationalId?: string | null;
+  assignedAt: string;
+  returnedAt?: string | null;
+  odometerOut?: number | null;
+  odometerIn?: number | null;
+  notes?: string | null;
 }
 
 interface VehiclePhoto {
@@ -143,6 +157,8 @@ interface Props {
   locale: Locale;
   onBack: () => void;
   onEdit?: () => void;
+  onAssignStaff?: () => void;
+  onReturnStaff?: (assignmentId: string) => void;
 }
 
 export function VehicleDetailScreen({
@@ -150,12 +166,15 @@ export function VehicleDetailScreen({
   locale,
   onBack,
   onEdit,
+  onAssignStaff,
+  onReturnStaff,
 }: Props) {
   const i18n = t(locale);
   const rtl = isRTL(locale);
   const scrollY = useRef(new Animated.Value(0)).current;
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
   const [photos, setPhotos] = useState<VehiclePhoto[]>([]);
+  const [staffAssignments, setStaffAssignments] = useState<StaffAssignment[]>([]);
   const [activePhoto, setActivePhoto] = useState<VehiclePhoto | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -175,6 +194,11 @@ export function VehicleDetailScreen({
       .then(([v, p]) => {
         setVehicle(v);
         setPhotos(Array.isArray(p) ? p : []);
+        if (v.usageType === 'STAFF') {
+          api.get<StaffAssignment[]>(`/staff-assignments?vehicleId=${vehicleId}`)
+            .then((assignments) => setStaffAssignments(Array.isArray(assignments) ? assignments : []))
+            .catch(() => {});
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -741,6 +765,80 @@ export function VehicleDetailScreen({
                 />
               )}
             </View>
+          </>
+        )}
+
+        {/* ── Staff Assignment (STAFF vehicles only) ── */}
+        {vehicle.usageType === 'STAFF' && (
+          <>
+            <View style={[styles.sectionHeaderRow, rowDirectionStyle]}>
+              <Text style={[styles.sectionTitle, styles.sectionTitleMarginSm]}>
+                {(i18n as any).staffAssignmentSection ?? 'Staff Assignment'}
+              </Text>
+              <TouchableOpacity
+                style={styles.mapLinkBtn}
+                onPress={onAssignStaff}
+                activeOpacity={0.8}
+              >
+                <AppIcon name="account-plus-outline" size={14} color={Colors.primary} />
+                <Text style={styles.mapLinkText}>
+                  {(i18n as any).assignStaff ?? 'Assign Staff'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {(() => {
+              const active = staffAssignments.find((a) => !a.returnedAt);
+              if (!active) {
+                return (
+                  <View style={styles.mapEmptyState}>
+                    <AppIcon name="account-off-outline" size={22} color={Colors.textMuted} />
+                    <Text style={styles.mapEmptyText}>
+                      {(i18n as any).noActiveAssignment ?? 'No active assignment'}
+                    </Text>
+                  </View>
+                );
+              }
+              return (
+                <View style={styles.staffCard}>
+                  <View style={[styles.staffCardHeader, rowDirectionStyle]}>
+                    <View style={styles.staffAvatar}>
+                      <Text style={styles.staffAvatarText}>
+                        {active.assigneeName.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.flexOne}>
+                      <Text style={styles.staffName}>{active.assigneeName}</Text>
+                      {!!active.assigneeTitle && (
+                        <Text style={styles.staffTitle}>{active.assigneeTitle}</Text>
+                      )}
+                      {!!active.assigneePhone && (
+                        <Text style={styles.staffPhone}>{active.assigneePhone}</Text>
+                      )}
+                    </View>
+                  </View>
+                  <View style={styles.staffMeta}>
+                    <Text style={styles.staffMetaText}>
+                      {(i18n as any).staffAssignedAt ?? 'Assigned'}: {new Date(active.assignedAt).toLocaleDateString()}
+                    </Text>
+                    {active.odometerOut != null && (
+                      <Text style={styles.staffMetaText}>
+                        {(i18n as any).staffOdometerOut ?? 'Odometer Out'}: {active.odometerOut.toLocaleString()} km
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.returnBtn}
+                    onPress={() => onReturnStaff?.(active.id)}
+                    activeOpacity={0.8}
+                  >
+                    <AppIcon name="car-arrow-left" size={16} color="#dc2626" />
+                    <Text style={styles.returnBtnText}>
+                      {(i18n as any).returnStaffVehicle ?? 'Return Vehicle'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })()}
           </>
         )}
 
@@ -1369,6 +1467,75 @@ const styles = StyleSheet.create({
   textRight: { textAlign: 'right' },
   flexOne: { flex: 1 },
   bottomSpacer: { height: 32 },
+  // staff assignment
+  staffCard: {
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e9d5ff',
+  },
+  staffCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+  staffAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ede9fe',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  staffAvatarText: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#6d28d9',
+  },
+  staffName: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#1f2937',
+  },
+  staffTitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 1,
+  },
+  staffPhone: {
+    fontSize: 12,
+    color: Colors.primary,
+    marginTop: 1,
+  },
+  staffMeta: {
+    gap: 3,
+    marginBottom: 12,
+  },
+  staffMetaText: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  returnBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    backgroundColor: '#fee2e2',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+  },
+  returnBtnText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#dc2626',
+  },
   sectionTitleMarginXs: { marginTop: 4 },
   sectionTitleMarginSm: { marginTop: 8 },
   sectionTitleMarginLg: { marginTop: 16 },

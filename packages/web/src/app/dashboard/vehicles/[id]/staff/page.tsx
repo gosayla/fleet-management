@@ -39,8 +39,8 @@ const emptyForm = {
 };
 
 export default function StaffAssignmentsPage() {
-  const { id: vehicleId, locale } = useParams<{ id: string; locale: string }>();
-  const { isRTL, t } = useLocale();
+  const { id: vehicleId } = useParams<{ id: string }>();
+  const { locale, isRTL, t } = useLocale();
   const tc = t.common;
   const queryClient = useQueryClient();
 
