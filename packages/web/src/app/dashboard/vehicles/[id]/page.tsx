@@ -271,6 +271,10 @@ export default function VehicleDashboardPage() {
     },
   ];
 
+  const hasOperationCard = !!(vehicle.operationCardNumber || vehicle.operationCardIssueDate || vehicle.operationCardExpiryDate || vehicle.operationCardRenewDate);
+  const hasTammData = !!(vehicle.ownershipDate || vehicle.licenseIssuanceDate || vehicle.licenseExpiryDate || vehicle.inspectionExpiryDate || vehicle.mvpiStatus || vehicle.insuranceStatus || vehicle.insuranceExpiryDate || vehicle.restrictionStatus);
+  const hasGpsTelemetry = vehicle.pilotImei != null || vehicle.pilotMotorHours != null || vehicle.pilotLastStop != null || vehicle.pilotLastMove != null || vehicle.pilotBatteryVoltage != null || vehicle.pilotIgnitionOn != null || vehicle.pilotLoadWeight != null || vehicle.pilotProviderMileage != null || vehicle.pilotSpeed != null || vehicle.pilotHeading != null || vehicle.pilotIsOnline != null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -326,6 +330,7 @@ export default function VehicleDashboardPage() {
           <InfoRow label={tv.bodyType} value={vehicle.bodyType} />
         </InfoCard>
 
+        {hasTammData && (
         <InfoCard title="Tamm">
           <InfoRow label={tv.ownershipDate} value={vehicle.ownershipDate} />
           <InfoRow label={tv.licenseIssuanceDate} value={vehicle.licenseIssuanceDate} />
@@ -336,31 +341,35 @@ export default function VehicleDashboardPage() {
           <InfoRow label={tv.insuranceExpiryDate} value={vehicle.insuranceExpiryDate} />
           <InfoRow label={tv.restrictionStatus} value={vehicle.restrictionStatus} />
         </InfoCard>
+        )}
 
+        {hasOperationCard && (
         <InfoCard title={tv.operationCardSection}>
           <InfoRow label={tv.operationCardNumber} value={vehicle.operationCardNumber} />
           <InfoRow label={tv.operationCardIssueDate} value={vehicle.operationCardIssueDate} />
           <InfoRow label={tv.operationCardExpiryDate} value={vehicle.operationCardExpiryDate} />
           <InfoRow label={tv.operationCardRenewDate} value={vehicle.operationCardRenewDate} />
         </InfoCard>
+        )}
 
+        {liveLocation && (
         <InfoCard title={isRTL ? 'الموقع الحي' : 'Live Location'}>
-          <InfoRow label={isRTL ? 'خط العرض' : 'Latitude'} value={liveLocation ? String(liveLocation.lat.toFixed(6)) : '—'} />
-          <InfoRow label={isRTL ? 'خط الطول' : 'Longitude'} value={liveLocation ? String(liveLocation.lng.toFixed(6)) : '—'} />
-          <InfoRow label={isRTL ? 'آخر تحديث' : 'Last Update'} value={liveLocation?.timestamp ? formatDate(liveLocation.timestamp, locale) : '—'} />
-          {liveLocation && (
-            <a
-              href={`https://www.openstreetmap.org/?mlat=${liveLocation.lat}&mlon=${liveLocation.lng}#map=14/${liveLocation.lat}/${liveLocation.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50"
-            >
-              <ExternalLink className="w-4 h-4" />
-              {isRTL ? 'فتح الخريطة' : 'Open Map'}
-            </a>
-          )}
+          <InfoRow label={isRTL ? 'خط العرض' : 'Latitude'} value={String(liveLocation.lat.toFixed(6))} />
+          <InfoRow label={isRTL ? 'خط الطول' : 'Longitude'} value={String(liveLocation.lng.toFixed(6))} />
+          <InfoRow label={isRTL ? 'آخر تحديث' : 'Last Update'} value={liveLocation.timestamp ? formatDate(liveLocation.timestamp, locale) : '—'} />
+          <a
+            href={`https://www.openstreetmap.org/?mlat=${liveLocation.lat}&mlon=${liveLocation.lng}#map=14/${liveLocation.lat}/${liveLocation.lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50"
+          >
+            <ExternalLink className="w-4 h-4" />
+            {isRTL ? 'فتح الخريطة' : 'Open Map'}
+          </a>
         </InfoCard>
+        )}
 
+        {hasGpsTelemetry && (
         <InfoCard title={isRTL ? 'بيانات جهاز التتبع' : 'GPS Telemetry'}>
           <InfoRow
             label={isRTL ? 'ساعات التشغيل' : 'Engine Hours'}
@@ -404,24 +413,23 @@ export default function VehicleDashboardPage() {
           />
           <InfoRow label={isRTL ? 'رقم الجهاز (IMEI)' : 'Device IMEI'} value={vehicle.pilotImei} mono />
         </InfoCard>
+        )}
       </div>
 
+      {mapSrc && (
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
         <div className="flex items-center gap-2 mb-4">
           <Truck className="w-4 h-4 text-blue-600" />
           <h2 className="text-sm font-semibold text-gray-900">{isRTL ? 'موقع المركبة' : 'Vehicle Location'}</h2>
         </div>
-        {!mapSrc ? (
-          <Empty>{isRTL ? 'لا يوجد موقع حي لهذه المركبة حالياً' : 'No live location available for this vehicle yet'}</Empty>
-        ) : (
-          <iframe
-            title="vehicle-location-map"
-            src={mapSrc}
-            className="h-[320px] w-full rounded-xl border border-gray-100"
-            loading="lazy"
-          />
-        )}
+        <iframe
+          title="vehicle-location-map"
+          src={mapSrc}
+          className="h-[320px] w-full rounded-xl border border-gray-100"
+          loading="lazy"
+        />
       </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <ListCard title={tv.recentMaintenance} icon={Wrench}>
