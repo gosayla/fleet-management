@@ -1,3 +1,10 @@
+﻿import type { Metadata } from 'next';
+import { generateLocalizedMetadata } from '@/lib/metadata';
+
+export async function generateMetadata(): Promise<Metadata> {
+  return generateLocalizedMetadata({ ar: 'العقود', en: 'Contracts' });
+}
+
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

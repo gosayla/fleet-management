@@ -1,3 +1,10 @@
+﻿import type { Metadata } from 'next';
+import { generateLocalizedMetadata } from '@/lib/metadata';
+
+export async function generateMetadata(): Promise<Metadata> {
+  return generateLocalizedMetadata({ ar: 'المستخدمون', en: 'Users' });
+}
+
 'use client';
 
 import { useState } from 'react';

@@ -1,4 +1,11 @@
-﻿'use client';
+﻿import type { Metadata } from 'next';
+import { generateLocalizedMetadata } from '@/lib/metadata';
+
+export async function generateMetadata(): Promise<Metadata> {
+  return generateLocalizedMetadata({ ar: 'سجل الأحداث', en: 'Audit Logs' });
+}
+
+'use client';
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
