@@ -357,15 +357,26 @@ export default function VehicleDashboardPage() {
           <InfoRow label={isRTL ? 'خط العرض' : 'Latitude'} value={String(liveLocation.lat.toFixed(6))} />
           <InfoRow label={isRTL ? 'خط الطول' : 'Longitude'} value={String(liveLocation.lng.toFixed(6))} />
           <InfoRow label={isRTL ? 'آخر تحديث' : 'Last Update'} value={liveLocation.timestamp ? formatDate(liveLocation.timestamp, locale) : '—'} />
-          <a
-            href={`https://www.openstreetmap.org/?mlat=${liveLocation.lat}&mlon=${liveLocation.lng}#map=14/${liveLocation.lat}/${liveLocation.lng}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50"
-          >
-            <ExternalLink className="w-4 h-4" />
-            {isRTL ? 'فتح الخريطة' : 'Open Map'}
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={`https://www.openstreetmap.org/?mlat=${liveLocation.lat}&mlon=${liveLocation.lng}#map=14/${liveLocation.lat}/${liveLocation.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50"
+            >
+              <ExternalLink className="w-4 h-4" />
+              {isRTL ? 'فتح الخريطة' : 'Open Map'}
+            </a>
+            <a
+              href={`https://www.google.com/maps?q=${liveLocation.lat},${liveLocation.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-green-700 hover:bg-green-50"
+            >
+              <ExternalLink className="w-4 h-4" />
+              {isRTL ? 'فتح في خرائط جوجل' : 'Open in Google Maps'}
+            </a>
+          </div>
         </InfoCard>
         )}
 
