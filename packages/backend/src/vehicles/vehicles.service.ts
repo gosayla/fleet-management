@@ -180,9 +180,17 @@ export class VehiclesService {
 
   async update(companyId: string, id: string, dto: UpdateVehicleDto) {
     await this.findOne(companyId, id);
+    const { assignedDriverId, ...vehicleData } = dto;
     const vehicle = await this.prisma.vehicle.update({
       where: { id },
-      data: dto,
+      data: {
+        ...vehicleData,
+        ...(assignedDriverId !== undefined && {
+          drivers: assignedDriverId
+            ? { set: [{ id: assignedDriverId }] }
+            : { set: [] },
+        }),
+      },
     });
     await this.syncOpCardDocument(companyId, id, dto);
     return vehicle;
