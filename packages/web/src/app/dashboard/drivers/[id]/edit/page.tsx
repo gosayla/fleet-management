@@ -6,7 +6,10 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Pencil } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '@/lib/api';
-import { BloodType, Driver, DriverLicenseType, DriverStatus, UpdateDriverDto, Vehicle } from '@fleet/shared';
+import { BloodType, Driver, DriverStatus, UpdateDriverDto, Vehicle } from '@fleet/shared';
+import type { DriverLicenseType } from '@fleet/shared';
+
+const DRIVER_LICENSE_TYPES = ['PRIVATE', 'PUBLIC', 'MOTORCYCLE', 'LIGHT_TRUCK', 'HEAVY_TRUCK', 'BUS', 'HEAVY_MACHINERY'] as const;
 import { useLocale } from '@/providers/locale-provider';
 import { formatEnumLabel } from '@/lib/i18n';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -221,7 +224,7 @@ export default function EditDriverPage() {
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">—</option>
-                {Object.values(DriverLicenseType).map((lt) => (
+                {DRIVER_LICENSE_TYPES.map((lt) => (
                   <option key={lt} value={lt}>{formatEnumLabel('driverLicenseType', lt, locale)}</option>
                 ))}
               </select>

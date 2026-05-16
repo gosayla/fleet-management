@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, X } from 'lucide-react';
-import { DocumentType, DriverLicenseType } from '@fleet/shared';
+import { DocumentType } from '@fleet/shared';
+import type { DriverLicenseType } from '@fleet/shared';
+
+const DRIVER_LICENSE_TYPES = ['PRIVATE', 'PUBLIC', 'MOTORCYCLE', 'LIGHT_TRUCK', 'HEAVY_TRUCK', 'BUS', 'HEAVY_MACHINERY'] as const;
 import { useLocale } from '@/providers/locale-provider';
 import { formatEnumLabel } from '@/lib/i18n';
 import { resolveDocumentFileUrl } from '@/lib/api';
@@ -294,7 +297,7 @@ export function DocumentForm({
               className={`w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'text-right' : 'text-left'}`}
             >
               <option value="">{isRTL ? '— اختر الفئة —' : '— Select Category —'}</option>
-              {Object.values(DriverLicenseType).map((lt) => (
+              {DRIVER_LICENSE_TYPES.map((lt) => (
                 <option key={lt} value={lt}>{formatEnumLabel('driverLicenseType', lt, locale)}</option>
               ))}
             </select>
