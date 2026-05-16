@@ -1,11 +1,4 @@
-﻿import type { Metadata } from 'next';
-import { generateLocalizedMetadata } from '@/lib/metadata';
-
-export async function generateMetadata(): Promise<Metadata> {
-  return generateLocalizedMetadata({ ar: 'مركبة جديدة', en: 'New Vehicle' });
-}
-
-'use client';
+﻿'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
