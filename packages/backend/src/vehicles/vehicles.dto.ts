@@ -55,7 +55,7 @@ export class CreateVehicleDto {
 
   @ApiProperty({ example: 70 })
   @IsNumber()
-  @Min(1)
+  @Min(0)
   fuelCapacity: number;
 
   @ApiPropertyOptional({ example: 'Private Transport' })

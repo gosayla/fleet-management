@@ -531,7 +531,8 @@ export default function VehicleDashboardPage() {
         </ListCard>
       </div>
 
-      {/* Assigned Drivers section */}
+      {/* Assigned Drivers section – hidden for STAFF vehicles */}
+      {!isStaffVehicle && (
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -574,6 +575,7 @@ export default function VehicleDashboardPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* Documents section */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
