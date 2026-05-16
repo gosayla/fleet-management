@@ -154,7 +154,7 @@ export default function NewTripPage() {
     const payload: CreateTripDto = {
       vehicleId: selectedVehicleId,
       driverId: selectedDriverId,
-      tripType: 'ONE_TIME',
+      tripType: 'ONE_TIME' as NonNullable<CreateTripDto['tripType']>,
       origin: get('origin'),
       destination: get('destination'),
       scheduledStart,
