@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/api';
+import api, { resolveDocumentFileUrl } from '@/lib/api';
 import Link from 'next/link';
 import { useLocale } from '@/providers/locale-provider';
 import { ArrowLeft, ArrowRight, Key, Trash2 } from 'lucide-react';
@@ -190,7 +190,7 @@ export default function RentalDetailPage() {
             <div>
               <dt className="text-xs font-medium text-gray-500 mb-0.5">{tr.contractFile}</dt>
               <dd>
-                <a href={rental.contractFileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
+                <a href={resolveDocumentFileUrl(rental.contractFileUrl!)} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
                   {locale === 'ar' ? 'فتح الملف' : 'Open file'}
                 </a>
               </dd>
