@@ -391,7 +391,7 @@ export function RentalDetailScreen({
           </>
         )}
 
-        {/* Return Vehicle Button */}}
+        {/* Return Vehicle Button */}
         {canReturn && (
           <TouchableOpacity
             style={[
