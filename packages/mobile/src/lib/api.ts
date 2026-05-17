@@ -80,6 +80,11 @@ async function request<T>(
     throw new Error(`API ${response.status}: ${errorText}`);
   }
 
+  // 204 No Content — no body to parse
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    return undefined as unknown as T;
+  }
+
   return response.json() as Promise<T>;
 }
 
