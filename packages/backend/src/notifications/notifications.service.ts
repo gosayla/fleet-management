@@ -448,7 +448,7 @@ export class NotificationsService implements OnModuleInit {
       where: { expiryDate: { gte: lowerBound, lte: upperBound } },
       include: {
         drivers: { select: { id: true } },
-        vehicles: { select: { plateNumber: true } },
+        vehicles: { select: { id: true, plateNumber: true } },
       },
     });
 
@@ -468,6 +468,12 @@ export class NotificationsService implements OnModuleInit {
       const isMilestone = MILESTONES.includes(daysLeft);
 
       if (!isExpired && !isMilestone) continue;
+
+      // Skip if all linked vehicles/drivers already have a newer valid document of the same type
+      if (await this.isDocumentSuperseded(doc, today)) {
+        this.logger.debug(`Doc ${doc.id} (${doc.type}) skipped — superseded by a valid replacement`);
+        continue;
+      }
 
       const plateNumbers = doc.vehicles.map((v) => v.plateNumber);
       const opsUsers = await this.getCompanyOpsUsers(doc.companyId);
@@ -496,6 +502,51 @@ export class NotificationsService implements OnModuleInit {
     this.logger.log(
       `Checked ${docs.length} documents — sent ${notified} milestone notification(s)`,
     );
+  }
+
+  /**
+   * Returns true when every vehicle (or driver) linked to the expiring doc already
+   * has at least one other document of the same type whose expiryDate is in the future.
+   */
+  private async isDocumentSuperseded(
+    doc: { id: string; type: string; vehicles: { id: string }[]; drivers: { id: string }[] },
+    today: Date,
+  ): Promise<boolean> {
+    const vehicleIds = doc.vehicles.map((v) => v.id);
+    const driverIds = doc.drivers.map((d) => d.id);
+
+    // If the doc has no linked entities, we cannot determine supersession
+    if (vehicleIds.length === 0 && driverIds.length === 0) return false;
+
+    // Check vehicles: every linked vehicle must have a replacement
+    for (const vehicleId of vehicleIds) {
+      const replacement = await this.prisma.fleetDocument.findFirst({
+        where: {
+          id: { not: doc.id },
+          type: doc.type as any,
+          expiryDate: { gt: today },
+          vehicles: { some: { id: vehicleId } },
+        },
+        select: { id: true },
+      });
+      if (!replacement) return false;
+    }
+
+    // Check drivers: every linked driver must have a replacement
+    for (const driverId of driverIds) {
+      const replacement = await this.prisma.fleetDocument.findFirst({
+        where: {
+          id: { not: doc.id },
+          type: doc.type as any,
+          expiryDate: { gt: today },
+          drivers: { some: { id: driverId } },
+        },
+        select: { id: true },
+      });
+      if (!replacement) return false;
+    }
+
+    return true;
   }
 
   @Cron(DAILY_NOTIFICATIONS_CRON, { timeZone: RIYADH_TIMEZONE })
