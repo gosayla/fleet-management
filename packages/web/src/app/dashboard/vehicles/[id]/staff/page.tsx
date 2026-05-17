@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -47,7 +47,7 @@ const emptyForm = {
   notes: '',
 };
 
-// ── Signature Canvas ──────────────────────────────────────────────────────────
+// â”€â”€ Signature Canvas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SignatureCanvas({
   onSave,
   isRTL,
@@ -125,10 +125,10 @@ function SignatureCanvas({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-600">{isRTL ? 'التوقيع' : 'Signature'}</span>
+        <span className="text-xs font-medium text-gray-600">{isRTL ? 'ط§ظ„طھظˆظ‚ظٹط¹' : 'Signature'}</span>
         {!isEmpty && (
           <button type="button" onClick={clear} className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1">
-            <X className="w-3 h-3" /> {isRTL ? 'مسح' : 'Clear'}
+            <X className="w-3 h-3" /> {isRTL ? 'ظ…ط³ط­' : 'Clear'}
           </button>
         )}
       </div>
@@ -145,20 +145,20 @@ function SignatureCanvas({
         onTouchMove={draw}
         onTouchEnd={stopDraw}
       />
-      <p className="text-xs text-gray-400">{isRTL ? 'ارسم توقيعك أعلاه ثم اضغط حفظ' : 'Draw signature above then press Save'}</p>
+      <p className="text-xs text-gray-400">{isRTL ? 'ط§ط±ط³ظ… طھظˆظ‚ظٹط¹ظƒ ط£ط¹ظ„ط§ظ‡ ط«ظ… ط§ط¶ط؛ط· ط­ظپط¸' : 'Draw signature above then press Save'}</p>
       <button
         type="button"
         disabled={isEmpty || saving}
         onClick={save}
         className="px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-medium hover:bg-purple-700 disabled:opacity-40 transition-colors"
       >
-        {saving ? '...' : isRTL ? 'حفظ التوقيع' : 'Save Signature'}
+        {saving ? '...' : isRTL ? 'ط­ظپط¸ ط§ظ„طھظˆظ‚ظٹط¹' : 'Save Signature'}
       </button>
     </div>
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function StaffAssignmentsPage() {
   const { id: vehicleId } = useParams<{ id: string }>();
   const { locale, isRTL, t } = useLocale();
@@ -274,10 +274,10 @@ export default function StaffAssignmentsPage() {
   };
   const conditionLabels = (rating: string) =>
     rating === 'GOOD'
-      ? isRTL ? 'جيدة' : 'Good'
+      ? isRTL ? 'ط¬ظٹط¯ط©' : 'Good'
       : rating === 'FAIR'
-      ? isRTL ? 'مقبولة' : 'Fair'
-      : isRTL ? 'ضعيفة' : 'Poor';
+      ? isRTL ? 'ظ…ظ‚ط¨ظˆظ„ط©' : 'Fair'
+      : isRTL ? 'ط¶ط¹ظٹظپط©' : 'Poor';
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -287,17 +287,17 @@ export default function StaffAssignmentsPage() {
           className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
         >
           <ArrowBack className="w-4 h-4" />
-          {isRTL ? 'العودة للمركبة' : 'Back to Vehicle'}
+          {isRTL ? 'ط§ظ„ط¹ظˆط¯ط© ظ„ظ„ظ…ط±ظƒط¨ط©' : 'Back to Vehicle'}
         </Link>
         <div className="flex items-center gap-2">
           <Briefcase className="w-5 h-5 text-purple-600" />
           <h1 className="text-xl font-bold text-gray-900">
-            {isRTL ? 'تخصيص المركبة للموظفين' : 'Staff Vehicle Assignments'}
+            {isRTL ? 'طھط®طµظٹطµ ط§ظ„ظ…ط±ظƒط¨ط© ظ„ظ„ظ…ظˆط¸ظپظٹظ†' : 'Staff Vehicle Assignments'}
           </h1>
         </div>
         {vehicle && (
           <p className="text-sm text-gray-500">
-            {vehicle.plateNumber} — {vehicle.year ?? ''} {vehicle.make} {vehicle.model}
+            {vehicle.plateNumber} â€” {vehicle.year ?? ''} {vehicle.make} {vehicle.model}
           </p>
         )}
       </div>
@@ -308,14 +308,14 @@ export default function StaffAssignmentsPage() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <p className="text-xs text-purple-500 font-medium mb-0.5">
-                {isRTL ? 'مخصصة حالياً لـ' : 'Currently assigned to'}
+                {isRTL ? 'ظ…ط®طµطµط© ط­ط§ظ„ظٹط§ظ‹ ظ„ظ€' : 'Currently assigned to'}
               </p>
               <p className="font-semibold text-purple-900">{active[0].assigneeName}</p>
               {active[0].assigneeTitle && (
                 <p className="text-sm text-purple-700">{active[0].assigneeTitle}</p>
               )}
               <p className="text-xs text-purple-500 mt-1">
-                {isRTL ? 'منذ' : 'Since'} {formatDate(active[0].assignedAt, locale as 'ar' | 'en')}
+                {isRTL ? 'ظ…ظ†ط°' : 'Since'} {formatDate(active[0].assignedAt, locale as 'ar' | 'en')}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -324,14 +324,14 @@ export default function StaffAssignmentsPage() {
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-purple-300 text-purple-700 text-sm font-medium hover:bg-purple-50 transition-colors"
               >
                 <FileText className="w-4 h-4" />
-                {isRTL ? 'وثيقة التسليم' : 'Handover Doc'}
+                {isRTL ? 'ظˆط«ظٹظ‚ط© ط§ظ„طھط³ظ„ظٹظ…' : 'Handover Doc'}
               </Link>
               <button
                 onClick={() => setReturnTarget(active[0])}
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-purple-300 text-purple-700 text-sm font-medium hover:bg-purple-50 transition-colors"
               >
                 <RotateCcw className="w-4 h-4" />
-                {isRTL ? 'تسجيل الإرجاع' : 'Return Vehicle'}
+                {isRTL ? 'طھط³ط¬ظٹظ„ ط§ظ„ط¥ط±ط¬ط§ط¹' : 'Return Vehicle'}
               </button>
             </div>
           </div>
@@ -345,19 +345,19 @@ export default function StaffAssignmentsPage() {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors"
         >
           <Plus className="w-4 h-4" />
-          {isRTL ? 'تخصيص للموظف' : 'Assign to Staff'}
+          {isRTL ? 'طھط®طµظٹطµ ظ„ظ„ظ…ظˆط¸ظپ' : 'Assign to Staff'}
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl p-5 space-y-5">
           <h2 className="font-semibold text-gray-800">
-            {isRTL ? 'تخصيص مركبة لموظف' : 'Assign Vehicle to Staff'}
+            {isRTL ? 'طھط®طµظٹطµ ظ…ط±ظƒط¨ط© ظ„ظ…ظˆط¸ظپ' : 'Assign Vehicle to Staff'}
           </h2>
 
           {/* Basic info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'اسم الموظف *' : 'Employee Name *'}
+                {isRTL ? 'ط§ط³ظ… ط§ظ„ظ…ظˆط¸ظپ *' : 'Employee Name *'}
               </label>
               <input
                 required
@@ -368,7 +368,7 @@ export default function StaffAssignmentsPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'المسمى الوظيفي' : 'Job Title'}
+                {isRTL ? 'ط§ظ„ظ…ط³ظ…ظ‰ ط§ظ„ظˆط¸ظٹظپظٹ' : 'Job Title'}
               </label>
               <input
                 value={form.assigneeTitle}
@@ -378,7 +378,7 @@ export default function StaffAssignmentsPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'رقم الهاتف' : 'Phone'}
+                {isRTL ? 'ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ' : 'Phone'}
               </label>
               <input
                 value={form.assigneePhone}
@@ -388,7 +388,7 @@ export default function StaffAssignmentsPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'رقم الهوية' : 'National ID'}
+                {isRTL ? 'ط±ظ‚ظ… ط§ظ„ظ‡ظˆظٹط©' : 'National ID'}
               </label>
               <input
                 value={form.assigneeNationalId}
@@ -401,12 +401,12 @@ export default function StaffAssignmentsPage() {
           {/* Vehicle state */}
           <div className="border-t border-gray-100 pt-4 space-y-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              {isRTL ? 'حالة المركبة عند التسليم' : 'Vehicle State at Handover'}
+              {isRTL ? 'ط­ط§ظ„ط© ط§ظ„ظ…ط±ظƒط¨ط© ط¹ظ†ط¯ ط§ظ„طھط³ظ„ظٹظ…' : 'Vehicle State at Handover'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  {isRTL ? 'عداد الكيلومترات (خروج)' : 'Odometer Out (km)'}
+                  {isRTL ? 'ط¹ط¯ط§ط¯ ط§ظ„ظƒظٹظ„ظˆظ…طھط±ط§طھ (ط®ط±ظˆط¬)' : 'Odometer Out (km)'}
                 </label>
                 <input
                   type="number"
@@ -418,7 +418,7 @@ export default function StaffAssignmentsPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  {isRTL ? `مستوى الوقود: ${form.fuelLevel}%` : `Fuel Level: ${form.fuelLevel}%`}
+                  {isRTL ? `ظ…ط³طھظˆظ‰ ط§ظ„ظˆظ‚ظˆط¯: ${form.fuelLevel}%` : `Fuel Level: ${form.fuelLevel}%`}
                 </label>
                 <input
                   type="range"
@@ -438,7 +438,7 @@ export default function StaffAssignmentsPage() {
             {/* Condition rating */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-2">
-                {isRTL ? 'حالة المركبة' : 'Vehicle Condition'}
+                {isRTL ? 'ط­ط§ظ„ط© ط§ظ„ظ…ط±ظƒط¨ط©' : 'Vehicle Condition'}
               </label>
               <div className="flex gap-2">
                 {(['GOOD', 'FAIR', 'POOR'] as const).map((r) => (
@@ -461,7 +461,7 @@ export default function StaffAssignmentsPage() {
             {/* Notes */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'ملاحظات' : 'Notes'}
+                {isRTL ? 'ظ…ظ„ط§ط­ط¸ط§طھ' : 'Notes'}
               </label>
               <textarea
                 rows={2}
@@ -476,7 +476,7 @@ export default function StaffAssignmentsPage() {
           <div className="border-t border-gray-100 pt-4 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                {isRTL ? 'صور حالة المركبة' : 'Condition Photos'}
+                {isRTL ? 'طµظˆط± ط­ط§ظ„ط© ط§ظ„ظ…ط±ظƒط¨ط©' : 'Condition Photos'}
               </p>
               <button
                 type="button"
@@ -489,7 +489,7 @@ export default function StaffAssignmentsPage() {
                 ) : (
                   <Camera className="w-3.5 h-3.5" />
                 )}
-                {isRTL ? 'إضافة صورة' : 'Add Photo'}
+                {isRTL ? 'ط¥ط¶ط§ظپط© طµظˆط±ط©' : 'Add Photo'}
               </button>
               <input
                 ref={photoInputRef}
@@ -525,18 +525,18 @@ export default function StaffAssignmentsPage() {
           {/* Signature */}
           <div className="border-t border-gray-100 pt-4 space-y-3">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              {isRTL ? 'توقيع المستلم' : "Recipient's Signature"}
+              {isRTL ? 'طھظˆظ‚ظٹط¹ ط§ظ„ظ…ط³طھظ„ظ…' : "Recipient's Signature"}
             </p>
             {signatureSaved ? (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
-                <span>✓</span>
-                <span>{isRTL ? 'تم حفظ التوقيع' : 'Signature saved'}</span>
+                <span>âœ“</span>
+                <span>{isRTL ? 'طھظ… ط­ظپط¸ ط§ظ„طھظˆظ‚ظٹط¹' : 'Signature saved'}</span>
                 <button
                   type="button"
                   onClick={() => { setSignatureSaved(false); setForm((f) => ({ ...f, signatureUrl: '' })); }}
                   className="ms-auto text-xs text-green-600 underline"
                 >
-                  {isRTL ? 'إعادة' : 'Redo'}
+                  {isRTL ? 'ط¥ط¹ط§ط¯ط©' : 'Redo'}
                 </button>
               </div>
             ) : (
@@ -556,7 +556,7 @@ export default function StaffAssignmentsPage() {
               disabled={createMutation.isPending}
               className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors"
             >
-              {createMutation.isPending ? (isRTL ? 'جارٍ الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}
+              {createMutation.isPending ? (isRTL ? 'ط¬ط§ط±ظچ ط§ظ„ط­ظپط¸...' : 'Saving...') : (isRTL ? 'ط­ظپط¸' : 'Save')}
             </button>
             <button
               type="button"
@@ -574,14 +574,14 @@ export default function StaffAssignmentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
             <h2 className="font-semibold text-gray-800">
-              {isRTL ? 'تسجيل إرجاع المركبة' : 'Record Vehicle Return'}
+              {isRTL ? 'طھط³ط¬ظٹظ„ ط¥ط±ط¬ط§ط¹ ط§ظ„ظ…ط±ظƒط¨ط©' : 'Record Vehicle Return'}
             </h2>
             <p className="text-sm text-gray-600">
-              {isRTL ? `إرجاع من ${returnTarget.assigneeName}` : `Returning from ${returnTarget.assigneeName}`}
+              {isRTL ? `ط¥ط±ط¬ط§ط¹ ظ…ظ† ${returnTarget.assigneeName}` : `Returning from ${returnTarget.assigneeName}`}
             </p>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'عداد الكيلومترات (دخول)' : 'Odometer In (km)'}
+                {isRTL ? 'ط¹ط¯ط§ط¯ ط§ظ„ظƒظٹظ„ظˆظ…طھط±ط§طھ (ط¯ط®ظˆظ„)' : 'Odometer In (km)'}
               </label>
               <input
                 type="number"
@@ -600,7 +600,7 @@ export default function StaffAssignmentsPage() {
                 disabled={returnMutation.isPending}
                 className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
               >
-                {returnMutation.isPending ? '...' : (isRTL ? 'تأكيد الإرجاع' : 'Confirm Return')}
+                {returnMutation.isPending ? '...' : (isRTL ? 'طھط£ظƒظٹط¯ ط§ظ„ط¥ط±ط¬ط§ط¹' : 'Confirm Return')}
               </button>
               <button
                 onClick={() => { setReturnTarget(null); setReturnOdometer(''); }}
@@ -617,7 +617,7 @@ export default function StaffAssignmentsPage() {
       {history.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-gray-700">
-            {isRTL ? 'سجل التخصيصات' : 'Assignment History'}
+            {isRTL ? 'ط³ط¬ظ„ ط§ظ„طھط®طµظٹطµط§طھ' : 'Assignment History'}
           </h2>
           <div className="bg-white border border-gray-100 rounded-xl divide-y divide-gray-50">
             {history.map((a) => (
@@ -635,17 +635,17 @@ export default function StaffAssignmentsPage() {
                     <p className="text-xs text-gray-500">{a.assigneeTitle}</p>
                   )}
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {formatDate(a.assignedAt, locale as 'ar' | 'en')} → {a.returnedAt ? formatDate(a.returnedAt, locale as 'ar' | 'en') : '—'}
+                    {formatDate(a.assignedAt, locale as 'ar' | 'en')} â†’ {a.returnedAt ? formatDate(a.returnedAt, locale as 'ar' | 'en') : 'â€”'}
                   </p>
                   <div className="flex flex-wrap gap-3 text-xs text-gray-400 mt-0.5">
                     {a.odometerOut != null && (
-                      <span>{isRTL ? 'خروج' : 'Out'}: {formatNumber(a.odometerOut, locale as 'ar' | 'en')} km</span>
+                      <span>{isRTL ? 'ط®ط±ظˆط¬' : 'Out'}: {formatNumber(a.odometerOut, locale as 'ar' | 'en')} km</span>
                     )}
                     {a.odometerIn != null && (
-                      <span>{isRTL ? 'دخول' : 'In'}: {formatNumber(a.odometerIn, locale as 'ar' | 'en')} km</span>
+                      <span>{isRTL ? 'ط¯ط®ظˆظ„' : 'In'}: {formatNumber(a.odometerIn, locale as 'ar' | 'en')} km</span>
                     )}
                     {a.fuelLevel != null && (
-                      <span>{isRTL ? 'وقود' : 'Fuel'}: {a.fuelLevel}%</span>
+                      <span>{isRTL ? 'ظˆظ‚ظˆط¯' : 'Fuel'}: {a.fuelLevel}%</span>
                     )}
                   </div>
                 </div>
@@ -653,7 +653,7 @@ export default function StaffAssignmentsPage() {
                   <Link
                     href={`/${locale}/dashboard/vehicles/${vehicleId}/staff/${a.id}/report`}
                     className="p-1.5 rounded text-gray-300 hover:text-purple-600 hover:bg-purple-50 transition-colors"
-                    title={isRTL ? 'وثيقة التسليم' : 'Handover Document'}
+                    title={isRTL ? 'ظˆط«ظٹظ‚ط© ط§ظ„طھط³ظ„ظٹظ…' : 'Handover Document'}
                   >
                     <FileText className="w-4 h-4" />
                   </Link>
@@ -680,348 +680,3 @@ export default function StaffAssignmentsPage() {
   );
 }
 
-
-type StaffAssignment = {
-  id: string;
-  assigneeName: string;
-  assigneeTitle?: string | null;
-  assigneePhone?: string | null;
-  assigneeNationalId?: string | null;
-  assignedAt: string;
-  returnedAt?: string | null;
-  odometerOut?: number | null;
-  odometerIn?: number | null;
-  notes?: string | null;
-};
-
-type Vehicle = {
-  id: string;
-  plateNumber: string;
-  make: string;
-  model: string;
-  year?: number | null;
-};
-
-const emptyForm = {
-  assigneeName: '',
-  assigneeTitle: '',
-  assigneePhone: '',
-  assigneeNationalId: '',
-  odometerOut: '',
-  notes: '',
-};
-
-export default function StaffAssignmentsPage() {
-  const { id: vehicleId } = useParams<{ id: string }>();
-  const { locale, isRTL, t } = useLocale();
-  const tc = t.common;
-  const queryClient = useQueryClient();
-
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(emptyForm);
-  const [returnTarget, setReturnTarget] = useState<StaffAssignment | null>(null);
-  const [returnOdometer, setReturnOdometer] = useState('');
-
-  const { data: vehicle } = useQuery<Vehicle>({
-    queryKey: ['vehicle-brief', vehicleId],
-    queryFn: async () => {
-      const res = await api.get(`/vehicles/${vehicleId}`);
-      return res.data;
-    },
-  });
-
-  const { data: assignments = [], isLoading } = useQuery<StaffAssignment[]>({
-    queryKey: ['staff-assignments', vehicleId],
-    queryFn: async () => {
-      const res = await api.get('/staff-assignments', { params: { vehicleId } });
-      return res.data;
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) =>
-      api.post('/staff-assignments', { vehicleId, ...data }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['staff-assignments', vehicleId] });
-      queryClient.invalidateQueries({ queryKey: ['vehicle', vehicleId] });
-      setShowForm(false);
-      setForm(emptyForm);
-    },
-  });
-
-  const returnMutation = useMutation({
-    mutationFn: ({ id, odometerIn }: { id: string; odometerIn?: number }) =>
-      api.post(`/staff-assignments/${id}/return`, {
-        returnedAt: new Date().toISOString(),
-        odometerIn: odometerIn || undefined,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['staff-assignments', vehicleId] });
-      queryClient.invalidateQueries({ queryKey: ['vehicle', vehicleId] });
-      setReturnTarget(null);
-      setReturnOdometer('');
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/staff-assignments/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['staff-assignments', vehicleId] });
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate({
-      assigneeName: form.assigneeName,
-      assigneeTitle: form.assigneeTitle || undefined,
-      assigneePhone: form.assigneePhone || undefined,
-      assigneeNationalId: form.assigneeNationalId || undefined,
-      odometerOut: form.odometerOut ? Number(form.odometerOut) : undefined,
-      notes: form.notes || undefined,
-    });
-  };
-
-  const ArrowBack = isRTL ? ArrowRight : ArrowLeft;
-
-  const active = assignments.filter((a) => !a.returnedAt);
-  const history = assignments.filter((a) => a.returnedAt);
-
-  return (
-    <div className="space-y-6 max-w-2xl">
-      <div className="space-y-1">
-        <Link
-          href={`/${locale}/dashboard/vehicles/${vehicleId}`}
-          className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
-        >
-          <ArrowBack className="w-4 h-4" />
-          {isRTL ? 'العودة للمركبة' : 'Back to Vehicle'}
-        </Link>
-        <div className="flex items-center gap-2">
-          <Briefcase className="w-5 h-5 text-purple-600" />
-          <h1 className="text-xl font-bold text-gray-900">
-            {isRTL ? 'تخصيص المركبة للموظفين' : 'Staff Vehicle Assignments'}
-          </h1>
-        </div>
-        {vehicle && (
-          <p className="text-sm text-gray-500">
-            {vehicle.plateNumber} — {vehicle.year ?? ''} {vehicle.make} {vehicle.model}
-          </p>
-        )}
-      </div>
-
-      {/* Active assignment banner */}
-      {active.length > 0 && (
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <p className="text-xs text-purple-500 font-medium mb-0.5">
-                {isRTL ? 'مخصصة حالياً لـ' : 'Currently assigned to'}
-              </p>
-              <p className="font-semibold text-purple-900">{active[0].assigneeName}</p>
-              {active[0].assigneeTitle && (
-                <p className="text-sm text-purple-700">{active[0].assigneeTitle}</p>
-              )}
-              <p className="text-xs text-purple-500 mt-1">
-                {isRTL ? 'منذ' : 'Since'} {formatDate(active[0].assignedAt, locale as 'ar' | 'en')}
-              </p>
-            </div>
-            <button
-              onClick={() => setReturnTarget(active[0])}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-purple-300 text-purple-700 text-sm font-medium hover:bg-purple-50 transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              {isRTL ? 'تسجيل الإرجاع' : 'Return Vehicle'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Assign form toggle */}
-      {!showForm ? (
-        <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          {isRTL ? 'تخصيص للموظف' : 'Assign to Staff'}
-        </button>
-      ) : (
-        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-          <h2 className="font-semibold text-gray-800">
-            {isRTL ? 'تخصيص مركبة لموظف' : 'Assign Vehicle to Staff'}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'اسم الموظف *' : 'Employee Name *'}
-              </label>
-              <input
-                required
-                value={form.assigneeName}
-                onChange={(e) => setForm({ ...form, assigneeName: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'المسمى الوظيفي' : 'Job Title'}
-              </label>
-              <input
-                value={form.assigneeTitle}
-                onChange={(e) => setForm({ ...form, assigneeTitle: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'رقم الهاتف' : 'Phone'}
-              </label>
-              <input
-                value={form.assigneePhone}
-                onChange={(e) => setForm({ ...form, assigneePhone: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'رقم الهوية' : 'National ID'}
-              </label>
-              <input
-                value={form.assigneeNationalId}
-                onChange={(e) => setForm({ ...form, assigneeNationalId: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'عداد الكيلومترات (خروج)' : 'Odometer Out (km)'}
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={form.odometerOut}
-                onChange={(e) => setForm({ ...form, odometerOut: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'ملاحظات' : 'Notes'}
-              </label>
-              <input
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="submit"
-              disabled={createMutation.isPending}
-              className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors"
-            >
-              {createMutation.isPending ? (isRTL ? 'جارٍ الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowForm(false); setForm(emptyForm); }}
-              className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
-            >
-              {tc.cancel}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Return modal */}
-      {returnTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
-            <h2 className="font-semibold text-gray-800">
-              {isRTL ? 'تسجيل إرجاع المركبة' : 'Record Vehicle Return'}
-            </h2>
-            <p className="text-sm text-gray-600">
-              {isRTL ? `إرجاع من ${returnTarget.assigneeName}` : `Returning from ${returnTarget.assigneeName}`}
-            </p>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'عداد الكيلومترات (دخول)' : 'Odometer In (km)'}
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={returnOdometer}
-                onChange={(e) => setReturnOdometer(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => returnMutation.mutate({
-                  id: returnTarget.id,
-                  odometerIn: returnOdometer ? Number(returnOdometer) : undefined,
-                })}
-                disabled={returnMutation.isPending}
-                className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
-              >
-                {returnMutation.isPending ? '...' : (isRTL ? 'تأكيد الإرجاع' : 'Confirm Return')}
-              </button>
-              <button
-                onClick={() => { setReturnTarget(null); setReturnOdometer(''); }}
-                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50"
-              >
-                {tc.cancel}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* History */}
-      {history.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-gray-700">
-            {isRTL ? 'سجل التخصيصات' : 'Assignment History'}
-          </h2>
-          <div className="bg-white border border-gray-100 rounded-xl divide-y divide-gray-50">
-            {history.map((a) => (
-              <div key={a.id} className="px-4 py-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-gray-800 text-sm">{a.assigneeName}</p>
-                  {a.assigneeTitle && (
-                    <p className="text-xs text-gray-500">{a.assigneeTitle}</p>
-                  )}
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {formatDate(a.assignedAt, locale as 'ar' | 'en')} → {a.returnedAt ? formatDate(a.returnedAt, locale as 'ar' | 'en') : '—'}
-                  </p>
-                  {(a.odometerOut != null || a.odometerIn != null) && (
-                    <p className="text-xs text-gray-400">
-                      {a.odometerOut != null && `${isRTL ? 'خروج' : 'Out'}: ${formatNumber(a.odometerOut, locale as 'ar' | 'en')} km`}
-                      {a.odometerOut != null && a.odometerIn != null && ' · '}
-                      {a.odometerIn != null && `${isRTL ? 'دخول' : 'In'}: ${formatNumber(a.odometerIn, locale as 'ar' | 'en')} km`}
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => deleteMutation.mutate(a.id)}
-                  className="p-1.5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
-                  title={tc.delete}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {isLoading && (
-        <div className="flex justify-center py-10">
-          <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-purple-600" />
-        </div>
-      )}
-    </div>
-  );
-}
