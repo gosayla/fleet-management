@@ -14,8 +14,10 @@ import {
   Modal,
   TextInput,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { api } from '../lib/api';
+import { resolveApiAssetUrls } from '../lib/api';
 import { Colors, Spacing } from '../lib/theme';
 import { AppIcon } from '../components/ui/AppIcon';
 import { Locale, t, isRTL as isRTLFn } from '../lib/i18n';
@@ -375,7 +377,21 @@ export function RentalDetailScreen({
           </View>
         )}
 
-        {/* Return Vehicle Button */}
+        {/* Contract file */}
+        {rental.contractFileUrl && (
+          <>
+            <Text style={styles.sectionTitle}>{i18n.attachedDocs}</Text>
+            <ContractFileRow
+              fileUrl={rental.contractFileUrl}
+              label={locale === 'ar' ? 'عقد الإيجار' : locale === 'hi' ? 'किराया अनुबंध' : locale === 'bn' ? 'ভাড়া চুক্তি' : locale === 'ur' ? 'کرایہ معاہدہ' : 'Rental Contract'}
+              isRTL={isRTL}
+              cannotOpenFile={i18n.cannotOpenFile}
+              cannotOpenFileMsg={i18n.cannotOpenFileMsg}
+            />
+          </>
+        )}
+
+        {/* Return Vehicle Button */}}
         {canReturn && (
           <TouchableOpacity
             style={[
@@ -457,6 +473,65 @@ export function RentalDetailScreen({
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+function ContractFileRow({
+  fileUrl,
+  label,
+  isRTL,
+  cannotOpenFile,
+  cannotOpenFileMsg,
+}: {
+  fileUrl: string;
+  label: string;
+  isRTL: boolean;
+  cannotOpenFile: string;
+  cannotOpenFileMsg: string;
+}) {
+  async function handleOpen() {
+    const candidates = resolveApiAssetUrls(fileUrl).map((u) => encodeURI(u));
+    for (const candidate of candidates) {
+      try {
+        const res = await fetch(candidate, { method: 'HEAD' });
+        if (res.ok || res.status === 405) {
+          await Linking.openURL(candidate);
+          return;
+        }
+      } catch {
+        // try next
+      }
+    }
+    const first = candidates[0];
+    const isPdf = /\.pdf($|\?)/i.test(first);
+    if (isPdf) {
+      try {
+        await Linking.openURL(
+          `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(first)}`
+        );
+        return;
+      } catch {}
+    }
+    Alert.alert(cannotOpenFile, cannotOpenFileMsg);
+  }
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.fileRow,
+        { flexDirection: isRTL ? 'row' : 'row-reverse' },
+      ]}
+      onPress={handleOpen}
+      activeOpacity={0.75}
+    >
+      <View style={styles.fileIcon}>
+        <AppIcon name="file-document-outline" size={18} color={Colors.primary} />
+      </View>
+      <Text style={styles.fileLabel}>{label}</Text>
+      <View style={styles.downloadBtn}>
+        <AppIcon name="download" size={18} color={Colors.primary} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 function InfoRow({
   icon,
   label,
@@ -626,4 +701,50 @@ const styles = StyleSheet.create({
   },
   modalSaveBtnDisabled: { opacity: 0.5 },
   modalSaveBtnText: { color: '#fff', fontWeight: '700' as const, fontSize: 15 },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 4,
+    marginBottom: 2,
+    paddingHorizontal: 2,
+  },
+  fileRow: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  fileIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.primaryLight ?? '#e0f2f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fileLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: Colors.textPrimary,
+  },
+  downloadBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: Colors.primaryLight ?? '#e0f2f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
