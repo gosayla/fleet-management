@@ -547,6 +547,10 @@ model StaffVehicleAssignment {
   returnedAt       DateTime?
   odometerOut      Float?
   odometerIn       Float?
+  fuelLevel        Float?
+  conditionRating  String?
+  conditionPhotos  String[]
+  signatureUrl     String?
   notes            String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

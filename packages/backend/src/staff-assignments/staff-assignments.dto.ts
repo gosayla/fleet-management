@@ -1,9 +1,12 @@
 import {
+  IsArray,
   IsDateString,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
@@ -44,6 +47,29 @@ export class CreateStaffAssignmentDto {
   @Min(0)
   @IsOptional()
   odometerOut?: number;
+
+  @ApiPropertyOptional({ example: 75, description: 'Fuel level 0-100%' })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  fuelLevel?: number;
+
+  @ApiPropertyOptional({ enum: ['GOOD', 'FAIR', 'POOR'] })
+  @IsIn(['GOOD', 'FAIR', 'POOR'])
+  @IsOptional()
+  conditionRating?: string;
+
+  @ApiPropertyOptional({ type: [String], description: 'Array of uploaded photo URLs' })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  conditionPhotos?: string[];
+
+  @ApiPropertyOptional({ description: 'URL of saved signature image' })
+  @IsString()
+  @IsOptional()
+  signatureUrl?: string;
 
   @ApiPropertyOptional()
   @IsString()

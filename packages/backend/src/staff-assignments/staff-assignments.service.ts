@@ -79,6 +79,10 @@ export class StaffAssignmentsService {
         assigneeNationalId: dto.assigneeNationalId,
         assignedAt: dto.assignedAt ? new Date(dto.assignedAt) : new Date(),
         odometerOut: dto.odometerOut,
+        fuelLevel: dto.fuelLevel,
+        conditionRating: dto.conditionRating,
+        conditionPhotos: dto.conditionPhotos ?? [],
+        signatureUrl: dto.signatureUrl,
         notes: dto.notes,
       },
       include: {
@@ -119,6 +123,10 @@ export class StaffAssignmentsService {
         assigneePhone: dto.assigneePhone,
         assigneeNationalId: dto.assigneeNationalId,
         odometerOut: dto.odometerOut,
+        fuelLevel: dto.fuelLevel,
+        conditionRating: dto.conditionRating,
+        ...(dto.conditionPhotos !== undefined ? { conditionPhotos: dto.conditionPhotos } : {}),
+        ...(dto.signatureUrl !== undefined ? { signatureUrl: dto.signatureUrl } : {}),
         notes: dto.notes,
       },
     });
