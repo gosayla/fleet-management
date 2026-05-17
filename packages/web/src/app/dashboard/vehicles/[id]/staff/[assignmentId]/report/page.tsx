@@ -105,16 +105,16 @@ export default function AssignmentReportPage() {
       {/* Report */}
       <div
         dir={dir}
-        className="min-h-screen bg-white p-8 max-w-3xl mx-auto print:p-6 print:max-w-none"
+        className="bg-white p-6 max-w-3xl mx-auto print:p-3 print:max-w-none"
         style={{ fontFamily: isRTL ? "'Segoe UI', Tahoma, Arial, sans-serif" : "'Segoe UI', Arial, sans-serif" }}
       >
         {/* Header */}
-        <div className="flex items-start justify-between border-b-2 border-purple-700 pb-4 mb-6">
+        <div className="flex items-start justify-between border-b-2 border-purple-700 pb-2 mb-3">
           <div>
             {company?.name && (
               <p className="text-lg font-bold text-gray-900">{company.name}</p>
             )}
-            <h1 className="text-2xl font-black text-purple-700 mt-1">
+            <h1 className="text-xl font-black text-purple-700 mt-0.5">
               {isRTL ? 'وثيقة تسليم مركبة' : 'Vehicle Handover Document'}
             </h1>
             <p className="text-xs text-gray-400 mt-1">
@@ -132,7 +132,7 @@ export default function AssignmentReportPage() {
         </div>
 
         {/* Vehicle + Assignee info in two columns */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-2 gap-4 mb-3">
           {/* Vehicle */}
           <Section title={isRTL ? 'بيانات المركبة' : 'Vehicle Details'}>
             <Row label={isRTL ? 'رقم اللوحة' : 'Plate Number'} value={v?.plateNumber ?? '—'} mono />
@@ -150,53 +150,53 @@ export default function AssignmentReportPage() {
         </div>
 
         {/* Handover state */}
-        <Section title={isRTL ? 'حالة المركبة عند التسليم' : 'Vehicle State at Handover'} className="mb-6">
-          <div className="grid grid-cols-2 gap-x-8">
+        <Section title={isRTL ? 'حالة المركبة عند التسليم' : 'Vehicle State at Handover'} className="mb-3">
+          <div className="grid grid-cols-2 gap-x-6">
             <Row label={isRTL ? 'تاريخ التسليم' : 'Handover Date'} value={formatDate(assignment.assignedAt, locale as 'ar' | 'en')} />
             {assignment.returnedAt && <Row label={isRTL ? 'تاريخ الإرجاع' : 'Return Date'} value={formatDate(assignment.returnedAt, locale as 'ar' | 'en')} />}
             {assignment.odometerOut != null && <Row label={isRTL ? 'العداد (خروج)' : 'Odometer Out'} value={`${formatNumber(assignment.odometerOut, locale as 'ar' | 'en')} km`} />}
             {assignment.odometerIn != null && <Row label={isRTL ? 'العداد (دخول)' : 'Odometer In'} value={`${formatNumber(assignment.odometerIn, locale as 'ar' | 'en')} km`} />}
             {assignment.fuelLevel != null && (
-              <div className="py-2">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase">{isRTL ? 'مستوى الوقود' : 'Fuel Level'}</p>
-                <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 py-1">
+                <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{isRTL ? 'مستوى الوقود' : 'Fuel Level'}:</span>
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
                   <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full"
                       style={{ width: `${assignment.fuelLevel}%`, backgroundColor: assignment.fuelLevel > 50 ? '#16a34a' : assignment.fuelLevel > 20 ? '#d97706' : '#dc2626' }}
                     />
                   </div>
-                  <span className="text-sm font-semibold text-gray-700">{assignment.fuelLevel}%</span>
+                  <span className="text-sm font-semibold text-gray-700 shrink-0">{assignment.fuelLevel}%</span>
                 </div>
               </div>
             )}
             {assignment.conditionRating && (
-              <div className="py-2">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase">{isRTL ? 'حالة المركبة' : 'Condition'}</p>
-                <p className="text-sm font-bold mt-1" style={{ color: conditionColor(assignment.conditionRating) }}>
+              <div className="flex items-baseline gap-2 py-1">
+                <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{isRTL ? 'حالة المركبة' : 'Condition'}:</span>
+                <span className="text-sm font-bold" style={{ color: conditionColor(assignment.conditionRating) }}>
                   {conditionLabel(assignment.conditionRating)}
-                </p>
+                </span>
               </div>
             )}
           </div>
           {assignment.notes && (
-            <div className="mt-2 pt-2 border-t border-gray-100">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">{isRTL ? 'ملاحظات' : 'Notes'}</p>
-              <p className="text-sm text-gray-700">{assignment.notes}</p>
+            <div className="flex items-baseline gap-2 mt-2 pt-2 border-t border-gray-100">
+              <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{isRTL ? 'ملاحظات' : 'Notes'}:</span>
+              <span className="text-xs text-gray-700">{assignment.notes}</span>
             </div>
           )}
         </Section>
 
         {/* Condition Photos */}
         {assignment.conditionPhotos && assignment.conditionPhotos.length > 0 && (
-          <Section title={isRTL ? 'صور حالة المركبة' : 'Condition Photos'} className="mb-6">
-            <div className="flex flex-wrap gap-3 mt-2">
+          <Section title={isRTL ? 'صور حالة المركبة' : 'Condition Photos'} className="mb-3">
+            <div className="flex flex-wrap gap-2 mt-1">
               {assignment.conditionPhotos.map((url, i) => (
                 <img
                   key={i}
                   src={resolveDocumentFileUrl(url)}
                   alt={`Photo ${i + 1}`}
-                  className="w-28 h-20 object-cover rounded-lg border border-gray-200"
+                  className="w-20 h-14 object-cover rounded border border-gray-200"
                 />
               ))}
             </div>
@@ -204,14 +204,14 @@ export default function AssignmentReportPage() {
         )}
 
         {/* Checklist */}
-        <Section title={isRTL ? 'قائمة فحص التسليم' : 'Handover Checklist'} className="mb-6">
-          <div className="flex flex-wrap gap-2 mt-2">
+        <Section title={isRTL ? 'قائمة فحص التسليم' : 'Handover Checklist'} className="mb-3">
+          <div className="flex flex-wrap gap-1.5 mt-1">
             {REPORT_CHECKLIST_ITEMS.filter((item) =>
               (assignment.checklistItems ?? []).includes(item.id)
             ).map((item) => (
               <span
                 key={item.id}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-green-200 bg-green-50 text-green-700 text-[12px] font-medium"
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-green-200 bg-green-50 text-green-700 text-xs font-medium"
               >
                 <span className="text-green-500 font-bold">✓</span>
                 {isRTL ? item.ar : item.en}
@@ -224,43 +224,43 @@ export default function AssignmentReportPage() {
         </Section>
 
         {/* Signature */}
-        <div className="grid grid-cols-2 gap-6 mt-8">
-          <div className="border border-gray-200 rounded-lg p-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-3">
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="border border-gray-200 rounded-lg p-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">
               {isRTL ? 'توقيع المستلم' : "Recipient's Signature"}
             </p>
             {assignment.signatureUrl ? (
               <img
                 src={resolveDocumentFileUrl(assignment.signatureUrl)}
                 alt="Signature"
-                className="h-20 object-contain"
+                className="h-12 object-contain"
               />
             ) : (
-              <div className="h-20 border-b border-gray-300" />
+              <div className="h-12 border-b border-gray-300" />
             )}
-            <p className="text-xs text-gray-600 mt-2 font-medium">{assignment.assigneeName}</p>
-            <p className="text-[10px] text-gray-400">{formatDate(assignment.assignedAt, locale as 'ar' | 'en')}</p>
+            <p className="text-xs text-gray-600 mt-1.5 font-medium">{assignment.assigneeName}</p>
+            <p className="text-[11px] text-gray-400">{formatDate(assignment.assignedAt, locale as 'ar' | 'en')}</p>
           </div>
 
-          <div className="border border-gray-200 rounded-lg p-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-3">
+          <div className="border border-gray-200 rounded-lg p-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">
               {isRTL ? 'توقيع المسؤول' : "Manager's Signature"}
             </p>
             {assignment.managerSignatureUrl ? (
               <img
                 src={resolveDocumentFileUrl(assignment.managerSignatureUrl)}
                 alt="Manager Signature"
-                className="h-20 object-contain"
+                className="h-12 object-contain"
               />
             ) : (
-              <div className="h-20 border-b border-gray-300" />
+              <div className="h-12 border-b border-gray-300" />
             )}
-            <p className="text-[10px] text-gray-400 mt-2">{isRTL ? 'الاسم والتوقيع والختم' : 'Name, Signature & Stamp'}</p>
+            <p className="text-[11px] text-gray-400 mt-1.5">{isRTL ? 'الاسم والتوقيع والختم' : 'Name, Signature & Stamp'}</p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="mt-8 pt-4 border-t border-gray-200 text-center text-[10px] text-gray-400">
+        <div className="mt-3 pt-2 border-t border-gray-200 text-center text-[10px] text-gray-400">
           {isRTL
             ? `هذه الوثيقة صادرة آلياً من نظام إدارة الأسطول — ${new Date().toLocaleDateString('ar-SA')}`
             : `This document was auto-generated by the Fleet Management System — ${new Date().toLocaleDateString('en-GB')}`}
@@ -269,7 +269,9 @@ export default function AssignmentReportPage() {
 
       <style jsx global>{`
         @media print {
+          @page { size: A4 portrait; margin: 1cm; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print\\:hidden { display: none !important; }
         }
       `}</style>
     </>
@@ -278,8 +280,8 @@ export default function AssignmentReportPage() {
 
 function Section({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-gray-50 rounded-xl p-4 ${className ?? ''}`}>
-      <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest mb-3">{title}</p>
+    <div className={`bg-gray-50 rounded-lg p-3 ${className ?? ''}`}>
+      <p className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-2">{title}</p>
       {children}
     </div>
   );
@@ -287,9 +289,9 @@ function Section({ title, children, className }: { title: string; children: Reac
 
 function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="py-1.5">
-      <p className="text-[10px] font-semibold text-gray-400 uppercase">{label}</p>
-      <p className={`text-sm text-gray-800 mt-0.5 ${mono ? 'font-mono font-bold' : 'font-medium'}`}>{value}</p>
+    <div className="flex items-baseline gap-2 py-1">
+      <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{label}:</span>
+      <span className={`text-sm text-gray-800 ${mono ? 'font-mono font-bold' : 'font-medium'}`}>{value}</span>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 /**
  * SignaturePad — WebView-based handwritten signature capture.
- * Uses an HTML5 canvas injected into a WebView.
+ * Opens a full-screen modal so scroll conflicts are avoided on the drawing canvas.
  * Parent receives a server fileUrl via onSave after upload.
  */
 import React, { useRef, useState } from 'react';
@@ -10,11 +10,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  Modal,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import WebView from 'react-native-webview';
 import { api } from '../../lib/api';
 import { Colors } from '../../lib/theme';
 import { Locale, t } from '../../lib/i18n';
+import { AppIcon } from './AppIcon';
 
 interface Props {
   label: string;
@@ -22,6 +26,8 @@ interface Props {
   rtl?: boolean;
   onSave: (fileUrl: string) => void;
 }
+
+const SB_H = Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 44;
 
 // ── HTML canvas injected into WebView ─────────────────────────────────────────
 
@@ -32,14 +38,14 @@ const SIG_HTML = `<!DOCTYPE html>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:#f9fafb;}
-#c{display:block;width:100%;height:160px;background:#fff;touch-action:none;cursor:crosshair;border:1.5px solid #e5e7eb;border-radius:8px;}
+#c{display:block;width:100%;height:100vh;background:#fff;touch-action:none;cursor:crosshair;}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <script>
 var c=document.getElementById('c'),ctx=c.getContext('2d'),drawing=false,empty=true;
-c.width=1000;c.height=320;
+c.width=1000;c.height=Math.round(1000*(window.innerHeight/window.innerWidth));
 function getPos(e){
   var r=c.getBoundingClientRect(),s=e.touches?e.touches[0]:e;
   return{x:(s.clientX-r.left)*(c.width/r.width),y:(s.clientY-r.top)*(c.height/r.height)};
@@ -68,8 +74,9 @@ window.addEventListener('message',function(e){rnCmd(e.data);});
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function SignaturePad({ label: _label, locale, rtl, onSave }: Props) {
+export function SignaturePad({ label, locale, rtl, onSave }: Props) {
   const webRef = useRef<WebView>(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -80,9 +87,13 @@ export function SignaturePad({ label: _label, locale, rtl, onSave }: Props) {
   }
 
   function handleClear() {
-    setSaved(false);
     setErr('');
     sendCmd('CLEAR');
+  }
+
+  function handleCancel() {
+    setErr('');
+    setModalOpen(false);
   }
 
   async function handleMessage(event: { nativeEvent: { data: string } }) {
@@ -108,6 +119,7 @@ export function SignaturePad({ label: _label, locale, rtl, onSave }: Props) {
         const res: any = await api.upload('/documents/files', formData);
         onSave(res.fileUrl);
         setSaved(true);
+        setModalOpen(false);
       } catch {
         setErr(i18n.signatureUploadFailed ?? 'Upload failed, please retry');
       } finally {
@@ -116,108 +128,194 @@ export function SignaturePad({ label: _label, locale, rtl, onSave }: Props) {
     }
   }
 
+  // ── Saved state (shown inline in form) ───────────────────────────────────────
   if (saved) {
     return (
       <View style={styles.savedRow}>
         <Text style={styles.savedText}>
           ✓ {i18n.signatureSaved ?? 'Signature saved'}
         </Text>
-        <TouchableOpacity onPress={handleClear} style={styles.changeBtn}>
+        <TouchableOpacity
+          onPress={() => { setSaved(false); setModalOpen(true); }}
+          style={styles.changeBtn}
+        >
           <Text style={styles.changeBtnText}>{i18n.changeSig ?? 'Change'}</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  // ── Tap-to-sign area (shown inline in form) ───────────────────────────────────
   return (
-    <View>
-      <WebView
-        ref={webRef}
-        source={{ html: SIG_HTML }}
-        style={styles.webview}
-        onMessage={handleMessage}
-        scrollEnabled={false}
-        showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}
-        originWhitelist={['*']}
-        javaScriptEnabled
-      />
-      {!!err && <Text style={styles.errText}>{err}</Text>}
-      <View style={[styles.btnRow, rtl && styles.btnRowRtl]}>
-        <TouchableOpacity
-          onPress={handleClear}
-          style={styles.clearBtn}
-          disabled={saving}
-        >
-          <Text style={styles.clearBtnText}>
-            {i18n.clearSignature ?? 'Clear'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => sendCmd('SAVE')}
-          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.saveBtnText}>
-              {i18n.saveSignature ?? 'Save Signature'}
-            </Text>
+    <>
+      <TouchableOpacity
+        style={styles.tapArea}
+        onPress={() => setModalOpen(true)}
+        activeOpacity={0.7}
+      >
+        <AppIcon name="draw" size={22} color={Colors.textMuted} />
+        <Text style={styles.tapText}>
+          {rtl ? 'اضغط للتوقيع' : 'Tap to sign'}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Full-screen signature modal */}
+      <Modal
+        visible={modalOpen}
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={handleCancel}
+      >
+        <View style={styles.modalRoot}>
+          {/* Modal header */}
+          <View style={[styles.modalHeader, { flexDirection: rtl ? 'row' : 'row-reverse' }]}>
+            <TouchableOpacity style={styles.modalClose} onPress={handleCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <AppIcon name="close" size={22} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>{label}</Text>
+            <View style={{ width: 40 }} />
+          </View>
+
+          {/* Canvas */}
+          <View style={styles.canvasWrap}>
+            <WebView
+              ref={webRef}
+              source={{ html: SIG_HTML }}
+              style={styles.webview}
+              onMessage={handleMessage}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+              showsHorizontalScrollIndicator={false}
+              originWhitelist={['*']}
+              javaScriptEnabled
+            />
+          </View>
+
+          {/* Error */}
+          {!!err && (
+            <Text style={styles.errText}>{err}</Text>
           )}
-        </TouchableOpacity>
-      </View>
-    </View>
+
+          {/* Buttons */}
+          <View style={[styles.btnRow, rtl ? null : styles.btnRowRtl]}>
+            <TouchableOpacity onPress={handleClear} style={styles.clearBtn} disabled={saving}>
+              <Text style={styles.clearBtnText}>{i18n.clearSignature ?? 'مسح'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => sendCmd('SAVE')}
+              style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.saveBtnText}>{i18n.saveSignature ?? 'حفظ التوقيع'}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  webview: {
-    height: 172,
-    borderRadius: 8,
-    overflow: 'hidden',
+  // Tap-to-sign area shown in form
+  tapArea: {
+    height: 80,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#fafafa',
   },
-  errText: { fontSize: 12, color: Colors.danger, marginTop: 4 },
+  tapText: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    fontWeight: '500' as const,
+  },
+
+  // Full-screen modal
+  modalRoot: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalHeader: {
+    paddingTop: SB_H + 10,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalClose: { width: 40, alignItems: 'center' },
+  modalTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#fff',
+  },
+  canvasWrap: {
+    flex: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  webview: { flex: 1 },
+
+  errText: {
+    fontSize: 13,
+    color: Colors.danger,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
   btnRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 8,
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
   },
   btnRowRtl: { flexDirection: 'row-reverse' },
   clearBtn: {
     flex: 1,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 8,
-    paddingVertical: 9,
+    borderRadius: 10,
+    paddingVertical: 13,
     alignItems: 'center',
   },
   clearBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     color: Colors.textMuted,
     fontWeight: '600' as const,
   },
   saveBtn: {
     flex: 2,
     backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingVertical: 9,
+    borderRadius: 10,
+    paddingVertical: 13,
     alignItems: 'center',
   },
   saveBtnDisabled: { opacity: 0.6 },
-  saveBtnText: { fontSize: 14, color: '#fff', fontWeight: '600' as const },
+  saveBtnText: { fontSize: 15, color: '#fff', fontWeight: '600' as const },
+
+  // Saved confirmation (shown in form after signing)
   savedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: Colors.successLight,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#bbf7d0',
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   savedText: {
     fontSize: 14,

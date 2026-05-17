@@ -173,6 +173,7 @@ interface Props {
   onEdit?: () => void;
   onAssignStaff?: () => void;
   onReturnStaff?: (assignmentId: string) => void;
+  onViewHandover?: (assignmentId: string) => void;
 }
 
 export function VehicleDetailScreen({
@@ -182,6 +183,7 @@ export function VehicleDetailScreen({
   onEdit,
   onAssignStaff,
   onReturnStaff,
+  onViewHandover,
 }: Props) {
   const i18n = t(locale);
   const rtl = isRTL(locale);
@@ -858,16 +860,28 @@ export function VehicleDetailScreen({
                       />
                     )}
                   </View>
-                  <TouchableOpacity
-                    style={styles.returnBtn}
-                    onPress={() => onReturnStaff?.(active.id)}
-                    activeOpacity={0.8}
-                  >
-                    <AppIcon name="car-arrow-left" size={15} color="#dc2626" />
-                    <Text style={styles.returnBtnText}>
-                      {(i18n as any).returnStaffVehicle ?? 'Return Vehicle'}
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={[styles.returnBtn, { flexDirection: rtl ? 'row-reverse' : 'row', gap: 8 }]}>
+                    <TouchableOpacity
+                      style={[styles.returnBtnInner, { flex: 1, borderColor: '#dc2626' }]}
+                      onPress={() => onReturnStaff?.(active.id)}
+                      activeOpacity={0.8}
+                    >
+                      <AppIcon name="car-arrow-left" size={15} color="#dc2626" />
+                      <Text style={styles.returnBtnText}>
+                        {(i18n as any).returnStaffVehicle ?? 'Return Vehicle'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.returnBtnInner, { flex: 1, borderColor: '#7C3AED' }]}
+                      onPress={() => onViewHandover?.(active.id)}
+                      activeOpacity={0.8}
+                    >
+                      <AppIcon name="file-document-outline" size={15} color="#7C3AED" />
+                      <Text style={[styles.returnBtnText, { color: '#7C3AED' }]}>
+                        {(i18n as any).handoverReport ?? (rtl ? 'تقرير التسليم' : 'Handover Report')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               );
             })()}
@@ -1578,17 +1592,20 @@ const styles = StyleSheet.create({
   returnBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-end',
     marginTop: 6,
     marginBottom: 8,
     marginHorizontal: Spacing.md,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#fee2e2',
+  },
+  returnBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#fca5a5',
   },
   returnBtnText: {
     fontSize: 12,

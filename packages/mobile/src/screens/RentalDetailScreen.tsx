@@ -48,6 +48,7 @@ interface Props {
   locale: Locale;
   onBack: () => void;
   onEdit: () => void;
+  onViewHandover?: () => void;
 }
 
 function fmtDate(iso: string | undefined, locale: Locale) {
@@ -81,6 +82,7 @@ export function RentalDetailScreen({
   locale,
   onBack,
   onEdit,
+  onViewHandover,
 }: Props) {
   const i18n = t(locale);
   const isRTL = isRTLFn(locale);
@@ -405,6 +407,18 @@ export function RentalDetailScreen({
           </TouchableOpacity>
         )}
 
+        {/* Handover Report Button */}
+        <TouchableOpacity
+          style={[styles.handoverBtn, { flexDirection: isRTL ? 'row' : 'row-reverse' }]}
+          onPress={onViewHandover}
+          activeOpacity={0.8}
+        >
+          <AppIcon name="file-document-outline" size={18} color="#7C3AED" />
+          <Text style={styles.handoverBtnText}>
+            {isRTL ? 'وثيقة التسليم' : 'Handover Report'}
+          </Text>
+        </TouchableOpacity>
+
         <View style={{ height: 40 }} />
       </ScrollView>
 
@@ -644,6 +658,19 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   returnBtnText: { color: '#fff', fontWeight: '700' as const, fontSize: 15 },
+  handoverBtn: {
+    borderRadius: 14,
+    paddingVertical: 13,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#7C3AED',
+    backgroundColor: '#f5f3ff',
+  },
+  handoverBtnText: { color: '#7C3AED', fontWeight: '700' as const, fontSize: 15 },
   errorText: { color: Colors.danger, fontSize: 14, textAlign: 'center' },
   retryBtn: {
     backgroundColor: Colors.primary,

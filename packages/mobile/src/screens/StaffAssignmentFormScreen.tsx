@@ -17,8 +17,9 @@ import {
   KeyboardAvoidingView,
   Image,
 } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
-import { ensureMediaPermission } from '../lib/permissions';
+import { Alert } from '../lib/alert';
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
+import { ensureCameraPermission, ensureMediaPermission } from '../lib/permissions';
 import { api } from '../lib/api';
 import { Colors, Spacing } from '../lib/theme';
 import { AppIcon } from '../components/ui/AppIcon';
@@ -136,28 +137,50 @@ export function StaffAssignmentFormScreen({
 
   // ── Photo upload ─────────────────────────────────────────────────────────
 
-  const handleAddConditionPhoto = async () => {
-    const granted = await ensureMediaPermission();
-    if (!granted) return;
-    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, async (result) => {
-      const asset = result.assets?.[0];
-      if (!asset?.uri) return;
-      setPhotoUploading(true);
-      try {
-        const fd = new FormData();
-        fd.append('file', {
-          uri: asset.uri,
-          name: asset.fileName ?? 'photo.jpg',
-          type: asset.type ?? 'image/jpeg',
-        } as any);
-        const res = await api.upload<{ fileUrl: string }>('/documents/files', fd);
-        setConditionPhotos((prev) => [...prev, { localUri: asset.uri!, serverUrl: res.fileUrl }]);
-      } catch {
-        // silently ignore
-      } finally {
-        setPhotoUploading(false);
-      }
-    });
+  async function uploadConditionPhotoAsset(asset: { uri: string; fileName?: string | null; type?: string | null }) {
+    setPhotoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', {
+        uri: asset.uri,
+        name: asset.fileName ?? 'photo.jpg',
+        type: asset.type ?? 'image/jpeg',
+      } as any);
+      const res = await api.upload<{ fileUrl: string }>('/documents/files', fd);
+      setConditionPhotos((prev) => [...prev, { localUri: asset.uri, serverUrl: res.fileUrl }]);
+    } catch {
+      // silently ignore
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
+  const handleAddConditionPhoto = () => {
+    Alert.alert((i18n as any).addConditionPhoto ?? 'Add Photo', '', [
+      {
+        text: (i18n as any).camera ?? 'Camera',
+        onPress: async () => {
+          const granted = await ensureCameraPermission();
+          if (!granted) return;
+          launchCamera({ mediaType: 'photo', quality: 0.8, saveToPhotos: false }, (result) => {
+            const asset = result.assets?.[0];
+            if (asset?.uri) uploadConditionPhotoAsset(asset);
+          });
+        },
+      },
+      {
+        text: (i18n as any).gallery ?? 'Gallery',
+        onPress: async () => {
+          const granted = await ensureMediaPermission();
+          if (!granted) return;
+          launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, (result) => {
+            const asset = result.assets?.[0];
+            if (asset?.uri) uploadConditionPhotoAsset(asset);
+          });
+        },
+      },
+      { text: (i18n as any).cancel ?? 'Cancel', style: 'cancel' },
+    ]);
   };
 
   // ── Submit ───────────────────────────────────────────────────────────────

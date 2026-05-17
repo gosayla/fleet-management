@@ -17,14 +17,14 @@ import {
   FlatList,
   Image,
 } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
-import { ensureMediaPermission } from '../lib/permissions';
+import { Alert } from '../lib/alert';
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
+import { ensureCameraPermission, ensureMediaPermission } from '../lib/permissions';
 import { api } from '../lib/api';
 import { Colors, Spacing } from '../lib/theme';
 import { AppIcon } from '../components/ui/AppIcon';
 import { Locale, t, isRTL as isRTLFn } from '../lib/i18n';
 import { DateWheelModal } from '../components/ui/DateWheelModal';
-import { Alert } from '../lib/alert';
 import { SignaturePad } from '../components/ui/SignaturePad';
 
 const SB_H = Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 44;
@@ -136,28 +136,50 @@ export function RentalFormScreen({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function handleAddConditionPhoto() {
-    const granted = await ensureMediaPermission();
-    if (!granted) return;
-    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, async (result) => {
-      const asset = result.assets?.[0];
-      if (!asset?.uri) return;
-      setPhotoUploading(true);
-      try {
-        const fd = new FormData();
-        fd.append('file', {
-          uri: asset.uri,
-          name: asset.fileName ?? 'photo.jpg',
-          type: asset.type ?? 'image/jpeg',
-        } as any);
-        const res = await api.upload<{ fileUrl: string }>('/documents/files', fd);
-        setConditionPhotos((prev) => [...prev, { localUri: asset.uri!, serverUrl: res.fileUrl }]);
-      } catch {
-        // silently ignore
-      } finally {
-        setPhotoUploading(false);
-      }
-    });
+  async function uploadConditionPhotoAsset(asset: { uri: string; fileName?: string | null; type?: string | null }) {
+    setPhotoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', {
+        uri: asset.uri,
+        name: asset.fileName ?? 'photo.jpg',
+        type: asset.type ?? 'image/jpeg',
+      } as any);
+      const res = await api.upload<{ fileUrl: string }>('/documents/files', fd);
+      setConditionPhotos((prev) => [...prev, { localUri: asset.uri, serverUrl: res.fileUrl }]);
+    } catch {
+      // silently ignore
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
+  function handleAddConditionPhoto() {
+    Alert.alert(i18n.addConditionPhoto ?? 'Add Photo', '', [
+      {
+        text: i18n.camera ?? 'Camera',
+        onPress: async () => {
+          const granted = await ensureCameraPermission();
+          if (!granted) return;
+          launchCamera({ mediaType: 'photo', quality: 0.8, saveToPhotos: false }, (result) => {
+            const asset = result.assets?.[0];
+            if (asset?.uri) uploadConditionPhotoAsset(asset);
+          });
+        },
+      },
+      {
+        text: i18n.gallery ?? 'Gallery',
+        onPress: async () => {
+          const granted = await ensureMediaPermission();
+          if (!granted) return;
+          launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, (result) => {
+            const asset = result.assets?.[0];
+            if (asset?.uri) uploadConditionPhotoAsset(asset);
+          });
+        },
+      },
+      { text: i18n.cancel ?? 'Cancel', style: 'cancel' },
+    ]);
   }
 
   useEffect(() => {

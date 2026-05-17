@@ -41,6 +41,7 @@ import { AdminFuelScreen } from './screens/AdminFuelScreen';
 import { FuelFormScreen } from './screens/FuelFormScreen';
 import { DriverDocumentsScreen } from './screens/DriverDocumentsScreen';
 import { AuditLogScreen } from './screens/AuditLogScreen';
+import { HandoverReportScreen } from './screens/HandoverReportScreen';
 import { Trip } from '@fleet/shared';
 import { Locale } from './lib/i18n';
 import { Colors } from './lib/theme';
@@ -231,6 +232,8 @@ function Navigator() {
   const [staffAssignVehicleId, setStaffAssignVehicleId] = useState<string | null>(null);
   const [staffAssignMode, setStaffAssignMode] = useState<'assign' | 'return'>('assign');
   const [staffAssignAssignmentId, setStaffAssignAssignmentId] = useState<string | null>(null);
+  const [staffHandoverOpen, setStaffHandoverOpen] = useState(false);
+  const [staffHandoverAssignmentId, setStaffHandoverAssignmentId] = useState<string | null>(null);
   const [driverFormOpen, setDriverFormOpen] = useState(false);
   const [driverFormId, setDriverFormId] = useState<string | null>(null);
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
@@ -253,6 +256,7 @@ function Navigator() {
   const [contractFormId, setContractFormId] = useState<string | null>(null);
   // Rentals (trips tab sub-nav)
   const [selectedRentalId, setSelectedRentalId] = useState<string | null>(null);
+  const [rentalHandoverOpen, setRentalHandoverOpen] = useState(false);
   const [rentalFormOpen, setRentalFormOpen] = useState(false);
   const [rentalFormId, setRentalFormId] = useState<string | null>(null);
   // Trips hub persisted segment (so back from contract/rental form returns to correct tab)
@@ -373,6 +377,11 @@ function Navigator() {
         return true;
       }
 
+      if (staffHandoverOpen) {
+        setStaffHandoverOpen(false);
+        return true;
+      }
+
       if (staffAssignFormOpen) {
         setStaffAssignFormOpen(false);
         return true;
@@ -405,6 +414,11 @@ function Navigator() {
 
       if (rentalFormOpen) {
         setRentalFormOpen(false);
+        return true;
+      }
+
+      if (rentalHandoverOpen) {
+        setRentalHandoverOpen(false);
         return true;
       }
 
@@ -526,12 +540,14 @@ function Navigator() {
     auditLogOpen,
     vehicleFormOpen,
     staffAssignFormOpen,
+    staffHandoverOpen,
     driverFormOpen,
     tripFormOpen,
     selectedTripId,
     contractFormOpen,
     selectedContractId,
     rentalFormOpen,
+    rentalHandoverOpen,
     selectedRentalId,
     maintenanceFormOpen,
     fuelFormOpen,
@@ -754,6 +770,18 @@ function Navigator() {
     );
   }
 
+  // Full-screen rental handover report
+  if (rentalHandoverOpen && selectedRentalId) {
+    return renderWithActiveTripOverlay(
+      <HandoverReportScreen
+        assignmentId={selectedRentalId}
+        type="rental"
+        locale={locale}
+        onBack={() => setRentalHandoverOpen(false)}
+      />
+    );
+  }
+
   // Full-screen rental detail
   if (selectedRentalId) {
     return renderWithActiveTripOverlay(
@@ -765,6 +793,7 @@ function Navigator() {
           setRentalFormId(selectedRentalId);
           setRentalFormOpen(true);
         }}
+        onViewHandover={() => setRentalHandoverOpen(true)}
       />
     );
   }
@@ -1135,6 +1164,10 @@ function Navigator() {
               setStaffAssignAssignmentId(assignmentId);
               setStaffAssignFormOpen(true);
             }}
+            onViewHandover={(assignmentId) => {
+              setStaffHandoverAssignmentId(assignmentId);
+              setStaffHandoverOpen(true);
+            }}
           />
           {staffAssignFormOpen && staffAssignVehicleId && (
             <View style={StyleSheet.absoluteFill}>
@@ -1152,6 +1185,15 @@ function Navigator() {
                   setSelectedVehicleId(null);
                   setTimeout(() => setSelectedVehicleId(vid), 50);
                 }}
+              />
+            </View>
+          )}
+          {staffHandoverOpen && staffHandoverAssignmentId && (
+            <View style={StyleSheet.absoluteFill}>
+              <HandoverReportScreen
+                assignmentId={staffHandoverAssignmentId}
+                locale={locale}
+                onBack={() => setStaffHandoverOpen(false)}
               />
             </View>
           )}
