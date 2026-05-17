@@ -396,6 +396,18 @@ export class DocumentsService {
       }),
     ]);
 
-    return { expired, critical, warning };
+    const enrich = (docs: typeof expired) =>
+      Promise.all(docs.map(async (doc) => ({
+        ...doc,
+        hasReplacement: await this.computeHasReplacement(doc, now),
+      })));
+
+    const [enrichedExpired, enrichedCritical, enrichedWarning] = await Promise.all([
+      enrich(expired),
+      enrich(critical),
+      enrich(warning),
+    ]);
+
+    return { expired: enrichedExpired, critical: enrichedCritical, warning: enrichedWarning };
   }
 }

@@ -70,6 +70,7 @@ interface ExpiryDoc {
   id: string;
   type: string;
   expiryDate: string;
+  hasReplacement?: boolean;
   vehicles?: { plateNumber: string }[];
   drivers?: { fullName: string }[];
 }
@@ -595,6 +596,17 @@ export function AdminDashboardScreen({
                       {' · '}
                       {expiryStr}
                     </Text>
+                    {!!doc.hasReplacement && (
+                      <Text
+                        style={[
+                          styles.deadlineDate,
+                          { color: Colors.success ?? '#2E7D32', fontWeight: '600' },
+                          textEndStyle,
+                        ]}
+                      >
+                        ✓ {i18n.docRenewed}
+                      </Text>
+                    )}
                   </View>
                 </View>
               );
