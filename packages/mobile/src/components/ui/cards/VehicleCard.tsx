@@ -13,8 +13,16 @@ const STAFF_LABEL: Record<Locale, string> = {
   en: 'Staff',
   ar: 'موظف',
   hi: 'स्टाफ',
-  bn: 'স্টাফ',
+  bn: 'স्टाफ',
   ur: 'عملہ',
+};
+
+const RENTAL_LABEL: Record<Locale, string> = {
+  en: 'Rented',
+  ar: 'مؤجرة',
+  hi: 'किराए पर',
+  bn: 'ভাড়ায়',
+  ur: 'کرائے پر',
 };
 import { Colors, Spacing } from '../../../lib/theme';
 import { AppIcon } from '../AppIcon';
@@ -40,6 +48,8 @@ export interface VehicleCardData {
   pilotImei?: string | null;
   /** FLEET or STAFF */
   usageType?: string | null;
+  /** Active rental entries (ACTIVE or OVERDUE) — non-empty means vehicle is rented */
+  rentals?: { id: string; status: string; clientName: string }[];
 }
 
 interface Props {
@@ -173,6 +183,11 @@ export function VehicleCard({ vehicle, locale, onPress }: Props) {
               <Text style={styles.staffPillText}>{STAFF_LABEL[locale]}</Text>
             </View>
           )}
+          {vehicle.rentals && vehicle.rentals.length > 0 && (
+            <View style={styles.rentalPill}>
+              <Text style={styles.rentalPillText}>{RENTAL_LABEL[locale]}</Text>
+            </View>
+          )}
         </View>
         <Text style={[styles.subtitle, subtitleAlignStyle]} numberOfLines={1}>
           {subtitle}
@@ -260,6 +275,20 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700' as const,
     color: '#6d28d9',
+    letterSpacing: 0.3,
+  },
+  rentalPill: {
+    backgroundColor: '#fffbeb',
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+  },
+  rentalPillText: {
+    fontSize: 9,
+    fontWeight: '700' as const,
+    color: '#b45309',
     letterSpacing: 0.3,
   },
   plateAbbr: {

@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Vehicle } from '@fleet/shared';
-import { Truck, Plus, Search, Upload, ChevronUp, ChevronDown, AlertCircle, CheckCircle, Satellite, Briefcase } from 'lucide-react';
+import { Truck, Plus, Search, Upload, ChevronUp, ChevronDown, AlertCircle, CheckCircle, Satellite, Briefcase, Key } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useLocale } from '@/providers/locale-provider';
@@ -376,6 +376,12 @@ export default function VehiclesPage() {
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-semibold border border-purple-200">
                           <Briefcase className="w-2.5 h-2.5" />
                           {isRTL ? 'موظف' : 'Staff'}
+                        </span>
+                      )}
+                      {(v as any).rentals?.length > 0 && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-[10px] font-semibold border border-amber-200">
+                          <Key className="w-2.5 h-2.5" />
+                          {isRTL ? 'مؤجرة' : 'Rented'}
                         </span>
                       )}
                     </div>

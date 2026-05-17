@@ -116,6 +116,7 @@ export class VehiclesService {
         include: {
           drivers: { select: { id: true, fullName: true, phone: true, status: true, photoUrl: true } },
           photos: { where: { isProfile: true }, take: 1 },
+          rentals: { where: { status: { in: ['ACTIVE', 'OVERDUE'] } }, select: { id: true, status: true, clientName: true }, take: 1 },
         },
         orderBy: { [sortBy]: sortOrder },
       });
@@ -127,6 +128,7 @@ export class VehiclesService {
         include: {
           drivers: { select: { id: true, fullName: true, phone: true, status: true, photoUrl: true } },
           photos: { where: { isProfile: true }, take: 1 },
+          rentals: { where: { status: { in: ['ACTIVE', 'OVERDUE'] } }, select: { id: true, status: true, clientName: true }, take: 1 },
         },
         orderBy: { [sortBy]: sortOrder },
         skip,
