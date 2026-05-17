@@ -83,6 +83,8 @@ export class StaffAssignmentsService {
         conditionRating: dto.conditionRating,
         conditionPhotos: dto.conditionPhotos ?? [],
         signatureUrl: dto.signatureUrl,
+        managerSignatureUrl: dto.managerSignatureUrl,
+        checklistItems: dto.checklistItems ?? [],
         notes: dto.notes,
       },
       include: {
@@ -127,6 +129,8 @@ export class StaffAssignmentsService {
         conditionRating: dto.conditionRating,
         ...(dto.conditionPhotos !== undefined ? { conditionPhotos: dto.conditionPhotos } : {}),
         ...(dto.signatureUrl !== undefined ? { signatureUrl: dto.signatureUrl } : {}),
+        ...(dto.managerSignatureUrl !== undefined ? { managerSignatureUrl: dto.managerSignatureUrl } : {}),
+        ...(dto.checklistItems !== undefined ? { checklistItems: dto.checklistItems } : {}),
         notes: dto.notes,
       },
     });

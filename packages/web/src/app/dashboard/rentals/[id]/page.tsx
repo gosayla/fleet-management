@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { resolveDocumentFileUrl } from '@/lib/api';
 import Link from 'next/link';
 import { useLocale } from '@/providers/locale-provider';
-import { ArrowLeft, ArrowRight, Key, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Key, Trash2, FileText, X } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface RentalDetail {
@@ -23,6 +23,7 @@ interface RentalDetail {
   contractFileUrl?: string;
   status: 'ACTIVE' | 'RETURNED' | 'OVERDUE' | 'CANCELLED';
   notes?: string;
+  conditionPhotos?: string[];
   vehicle: { id: string; plateNumber: string; make: string; model: string };
 }
 
@@ -50,6 +51,7 @@ export default function RentalDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
   const [odometerIn, setOdometerIn] = useState('');
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
 
   const { data: rental, isLoading, isError } = useQuery<RentalDetail>({
     queryKey: ['rentals', id],
@@ -110,6 +112,13 @@ export default function RentalDetailPage() {
           {tr.title}
         </Link>
         <div className="flex gap-2">
+          <Link
+            href={`/${locale}/dashboard/rentals/${id}/report`}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            {locale === 'ar' ? 'وثيقة التسليم' : 'Handover Doc'}
+          </Link>
           {canReturn && (
             <button
               onClick={() => setReturnOpen(true)}
@@ -174,6 +183,32 @@ export default function RentalDetailPage() {
         </div>
       )}
 
+      {/* Lightbox modal */}
+      {lightbox && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setLightbox(null)}>
+          <div className="relative max-w-3xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setLightbox(null)} className="absolute -top-10 end-0 text-white hover:text-gray-300 transition-colors">
+              <X className="w-7 h-7" />
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={resolveDocumentFileUrl(lightbox.photos[lightbox.index])} alt={`photo-${lightbox.index + 1}`} className="w-full max-h-[75vh] object-contain rounded-xl" />
+            <p className="text-center text-white/70 text-sm mt-2">{lightbox.index + 1} / {lightbox.photos.length}</p>
+            {lightbox.photos.length > 1 && (
+              <>
+                <button onClick={() => setLightbox((lb) => lb && { ...lb, index: (lb.index - 1 + lb.photos.length) % lb.photos.length })}
+                  className="absolute top-1/2 -translate-y-1/2 start-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors">
+                  {isRTL ? <ArrowRight className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
+                </button>
+                <button onClick={() => setLightbox((lb) => lb && { ...lb, index: (lb.index + 1) % lb.photos.length })}
+                  className="absolute top-1/2 -translate-y-1/2 end-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors">
+                  {isRTL ? <ArrowLeft className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Details card */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
         <dl className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -204,6 +239,22 @@ export default function RentalDetailPage() {
           )}
         </dl>
       </div>
+
+      {/* Condition Photos */}
+      {rental.conditionPhotos && rental.conditionPhotos.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <p className="text-xs font-medium text-gray-500 mb-3">{locale === 'ar' ? 'صور حالة المركبة' : 'Condition Photos'}</p>
+          <div className="flex flex-wrap gap-2">
+            {rental.conditionPhotos.map((url, i) => (
+              <button key={i} type="button" onClick={() => setLightbox({ photos: rental.conditionPhotos!, index: i })}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={resolveDocumentFileUrl(url)} alt={`photo-${i + 1}`}
+                  className="w-20 h-16 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity cursor-pointer" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

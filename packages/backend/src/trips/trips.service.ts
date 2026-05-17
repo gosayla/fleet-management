@@ -196,7 +196,12 @@ export class TripsService {
 
   async create(companyId: string, dto: CreateTripDto) {
     const trip = await this.prisma.trip.create({
-      data: { ...dto, companyId },
+      data: {
+        ...dto,
+        companyId,
+        conditionPhotos: dto.conditionPhotos ?? [],
+        checklistItems: dto.checklistItems ?? [],
+      },
       include: { vehicle: true, driver: true },
     });
     await this.notificationsService.notifyTripAssigned(companyId, trip.id);
@@ -207,6 +212,8 @@ export class TripsService {
     const existing = await this.findOne(companyId, id, user);
 
     const data: Record<string, unknown> = { ...dto };
+    if (dto.conditionPhotos !== undefined) data.conditionPhotos = dto.conditionPhotos;
+    if (dto.checklistItems !== undefined) data.checklistItems = dto.checklistItems;
 
     if (user.role === 'DRIVER') {
       const allowedStatuses: TripStatus[] = [TripStatus.IN_PROGRESS, TripStatus.COMPLETED];

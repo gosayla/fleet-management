@@ -10,10 +10,12 @@ const nextConfig = {
         destination: `${backendUrl}/api/v1/:path*`,
       },
       {
+        // Serve uploaded document files — route through api/v1 controller
         source: '/documents/:path*',
-        destination: `${backendUrl}/documents/:path*`,
+        destination: `${backendUrl}/api/v1/documents/:path*`,
       },
       {
+        // Serve uploaded photos — served directly by static-assets middleware
         source: '/photos/:path*',
         destination: `${backendUrl}/photos/:path*`,
       },

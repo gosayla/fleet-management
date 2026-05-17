@@ -342,6 +342,13 @@ model Trip {
   contractId         String?    // FK to TripContract for DAILY trips
   leg                TripLeg?   // OUTBOUND | RETURN for DAILY two-way trips
   tripDate           DateTime?  // specific calendar date for this DAILY instance
+  // Handover / departure fields
+  fuelLevel          Float?
+  conditionRating    String?
+  conditionPhotos    String[]
+  driverSignatureUrl String?
+  managerSignatureUrl String?
+  checklistItems     String[]
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
@@ -518,6 +525,12 @@ model VehicleRental {
   rentalEnd        DateTime
   odometerOut      Float?
   odometerIn       Float?
+  fuelLevel        Float?
+  conditionRating  String?
+  conditionPhotos  String[]
+  signatureUrl     String?
+  managerSignatureUrl String?
+  checklistItems   String[]
   dailyRateSar     Float?
   contractFileUrl  String?
   status           RentalStatus @default(ACTIVE)
@@ -551,6 +564,8 @@ model StaffVehicleAssignment {
   conditionRating  String?
   conditionPhotos  String[]
   signatureUrl     String?
+  managerSignatureUrl String?
+  checklistItems   String[]
   notes            String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

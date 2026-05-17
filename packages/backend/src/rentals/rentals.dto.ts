@@ -1,10 +1,12 @@
 import {
+  IsArray,
   IsDateString,
   IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
@@ -49,6 +51,40 @@ export class CreateRentalDto {
   @Min(0)
   @IsOptional()
   odometerOut?: number;
+
+  @ApiPropertyOptional({ example: 75, description: 'Fuel level 0-100%' })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  fuelLevel?: number;
+
+  @ApiPropertyOptional({ enum: ['GOOD', 'FAIR', 'POOR'] })
+  @IsString()
+  @IsOptional()
+  conditionRating?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  conditionPhotos?: string[];
+
+  @ApiPropertyOptional({ description: 'Client signature URL' })
+  @IsString()
+  @IsOptional()
+  signatureUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Manager signature URL' })
+  @IsString()
+  @IsOptional()
+  managerSignatureUrl?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  checklistItems?: string[];
 
   @ApiPropertyOptional({ example: 350, description: 'Daily rate in SAR' })
   @IsNumber()

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/api';
+import { api, resolveDocumentFileUrl } from '@/lib/api';
 import Link from 'next/link';
 import { useLocale } from '@/providers/locale-provider';
-import { ArrowLeft, ArrowRight, Key, Upload, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Key, Upload, CheckCircle, Camera, X } from 'lucide-react';
 import { DatePicker } from '@/components/ui/date-picker';
 
 interface Vehicle { id: string; plateNumber: string; make: string; model: string; sequenceNumber?: string | null }
@@ -14,7 +14,80 @@ interface RentalDetail {
   id: string; clientName: string; clientPhone?: string; clientNationalId?: string; contractNumber?: string;
   rentalStart: string; rentalEnd: string; odometerOut?: number; odometerIn?: number; dailyRateSar?: number;
   contractFileUrl?: string; status: string; notes?: string;
+  fuelLevel?: number | null; conditionRating?: string | null; conditionPhotos?: string[];
+  signatureUrl?: string | null; managerSignatureUrl?: string | null; checklistItems?: string[];
   vehicle: { id: string; plateNumber: string; make: string; model: string };
+}
+
+const CHECKLIST_ITEMS: { id: string; en: string; ar: string }[] = [
+  { id: 'vehicle_keys',       en: 'Vehicle Keys',        ar: 'مفاتيح المركبة' },
+  { id: 'spare_tire',         en: 'Spare Tire',           ar: 'الإطار الاحتياطي' },
+  { id: 'jack',               en: 'Jack',                 ar: 'الرافعة' },
+  { id: 'toolkit',            en: 'Toolkit',              ar: 'حقيبة الأدوات' },
+  { id: 'warning_triangle',   en: 'Warning Triangle',     ar: 'مثلث التحذير' },
+  { id: 'fire_extinguisher',  en: 'Fire Extinguisher',    ar: 'طفاية الحريق' },
+  { id: 'first_aid_kit',      en: 'First Aid Kit',        ar: 'حقيبة الإسعافات' },
+  { id: 'front_camera',       en: 'Front Camera',         ar: 'كاميرا أمامية' },
+  { id: 'rear_camera',        en: 'Rear Camera',          ar: 'كاميرا خلفية' },
+  { id: 'dashboard_screen',   en: 'Dashboard Screen',     ar: 'شاشة لوحة القيادة' },
+  { id: 'registration_card',  en: 'Registration Card',    ar: 'وثيقة التسجيل' },
+  { id: 'insurance_card',     en: 'Insurance Card',       ar: 'وثيقة التأمين' },
+  { id: 'fuel_card',          en: 'Fuel Card',            ar: 'بطاقة الوقود' },
+  { id: 'floor_mats',         en: 'Floor Mats',           ar: 'سجادة المركبة' },
+];
+
+function SignatureCanvas({ onSave, isRTL }: { onSave: (url: string) => void; isRTL: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawing = useRef(false);
+  const [isEmpty, setIsEmpty] = useState(true);
+  const [saving, setSaving] = useState(false);
+  function getPos(e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) {
+    const rect = canvas.getBoundingClientRect();
+    if ('touches' in e) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top };
+  }
+  function startDraw(e: React.MouseEvent | React.TouchEvent) {
+    const canvas = canvasRef.current; if (!canvas) return; e.preventDefault();
+    drawing.current = true;
+    const ctx = canvas.getContext('2d')!;
+    const { x, y } = getPos(e, canvas); ctx.beginPath(); ctx.moveTo(x, y);
+  }
+  function draw(e: React.MouseEvent | React.TouchEvent) {
+    if (!drawing.current) return; e.preventDefault();
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    const { x, y } = getPos(e, canvas); ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#1d4ed8';
+    ctx.lineTo(x, y); ctx.stroke(); setIsEmpty(false);
+  }
+  function stopDraw() { drawing.current = false; }
+  function clear() { const canvas = canvasRef.current; if (!canvas) return; canvas.getContext('2d')!.clearRect(0, 0, canvas.width, canvas.height); setIsEmpty(true); }
+  async function save() {
+    const canvas = canvasRef.current; if (!canvas || isEmpty) return;
+    setSaving(true);
+    try {
+      const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), 'image/png'));
+      const fd = new FormData(); fd.append('file', blob, 'signature.png');
+      const { data } = await api.post('/documents/files', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      onSave(data.fileUrl);
+    } finally { setSaving(false); }
+  }
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-gray-600">{isRTL ? 'التوقيع' : 'Signature'}</span>
+        <button type="button" onClick={clear} className="text-xs text-gray-400 hover:text-gray-600">{isRTL ? 'مسح' : 'Clear'}</button>
+      </div>
+      <canvas ref={canvasRef} width={400} height={120} className="w-full border border-gray-200 rounded-lg bg-white touch-none cursor-crosshair"
+        onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw}
+        onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={stopDraw} />
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-400">{isRTL ? 'ارسم توقيعك أعلاه ثم اضغط حفظ' : 'Draw signature above then press Save'}</p>
+        <button type="button" onClick={save} disabled={isEmpty || saving} className="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded-lg disabled:opacity-40 hover:bg-blue-700">
+          {saving ? '...' : isRTL ? 'حفظ التوقيع' : 'Save Signature'}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function RentalEditPage() {
@@ -43,6 +116,16 @@ export default function RentalEditPage() {
   const [uploadedFileName, setUploadedFileName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const vehicleComboRef = useRef<HTMLDivElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [fuelLevel, setFuelLevel] = useState(75);
+  const [conditionRating, setConditionRating] = useState<'GOOD' | 'FAIR' | 'POOR'>('GOOD');
+  const [conditionPhotos, setConditionPhotos] = useState<string[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [checklistItems, setChecklistItems] = useState<string[]>([]);
+  const [signatureUrl, setSignatureUrl] = useState('');
+  const [signatureSaved, setSignatureSaved] = useState(false);
+  const [managerSignatureUrl, setManagerSignatureUrl] = useState('');
+  const [managerSignatureSaved, setManagerSignatureSaved] = useState(false);
 
   useEffect(() => {
     if (rental && !initialized) {
@@ -54,6 +137,12 @@ export default function RentalEditPage() {
         setContractFileUrl(rental.contractFileUrl);
         setUploadedFileName(rental.contractFileUrl.split('/').pop() ?? '');
       }
+      if (rental.fuelLevel != null) setFuelLevel(rental.fuelLevel);
+      if (rental.conditionRating) setConditionRating(rental.conditionRating as 'GOOD' | 'FAIR' | 'POOR');
+      if (rental.conditionPhotos?.length) setConditionPhotos(rental.conditionPhotos);
+      if (rental.checklistItems?.length) setChecklistItems(rental.checklistItems);
+      if (rental.signatureUrl) { setSignatureUrl(rental.signatureUrl); setSignatureSaved(true); }
+      if (rental.managerSignatureUrl) { setManagerSignatureUrl(rental.managerSignatureUrl); setManagerSignatureSaved(true); }
       setInitialized(true);
     }
   }, [rental, initialized]);
@@ -84,6 +173,19 @@ export default function RentalEditPage() {
       router.push(`/${locale}/dashboard/rentals/${id}`);
     },
   });
+
+  const uploadPhotos = useCallback(async (files: FileList) => {
+    setUploadingPhoto(true);
+    try {
+      const urls: string[] = [];
+      for (const file of Array.from(files)) {
+        const fd = new FormData(); fd.append('file', file);
+        const { data } = await api.post('/documents/files', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        urls.push(data.fileUrl);
+      }
+      setConditionPhotos((p) => [...p, ...urls]);
+    } finally { setUploadingPhoto(false); }
+  }, []);
 
   async function uploadContractFile(file: File) {
     setUploading(true);
@@ -122,6 +224,12 @@ export default function RentalEditPage() {
       dailyRateSar,
       contractFileUrl: contractFileUrl || undefined,
       notes: get('notes') || undefined,
+      fuelLevel,
+      conditionRating,
+      conditionPhotos,
+      checklistItems,
+      signatureUrl: signatureUrl || undefined,
+      managerSignatureUrl: managerSignatureUrl || undefined,
     });
   }
 
@@ -227,6 +335,123 @@ export default function RentalEditPage() {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
           <label className="block text-sm font-medium text-gray-700 mb-1">{tr.notes}</label>
           <textarea name="notes" rows={3} defaultValue={rental.notes ?? ''} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+        </div>
+
+        {/* Vehicle State at Handover */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
+          <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{isRTL ? 'حالة المركبة عند التسليم' : 'Vehicle State at Handover'}</p>
+          {/* Fuel */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{isRTL ? `مستوى الوقود — ${fuelLevel}%` : `Fuel Level — ${fuelLevel}%`}</label>
+            <input type="range" min={0} max={100} step={5} value={fuelLevel} onChange={(e) => setFuelLevel(Number(e.target.value))}
+              className="w-full accent-blue-600" />
+            <div className="flex justify-between text-xs text-gray-400 mt-1"><span>0%</span><span>50%</span><span>100%</span></div>
+          </div>
+          {/* Condition */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{isRTL ? 'حالة المركبة' : 'Vehicle Condition'}</label>
+            <div className="flex gap-2">
+              {(['GOOD', 'FAIR', 'POOR'] as const).map((r) => (
+                <button key={r} type="button" onClick={() => setConditionRating(r)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    conditionRating === r
+                      ? r === 'GOOD' ? 'bg-green-600 text-white border-green-600' : r === 'FAIR' ? 'bg-amber-500 text-white border-amber-500' : 'bg-red-600 text-white border-red-600'
+                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                  }`}>
+                  {r === 'GOOD' ? (isRTL ? 'جيدة' : 'Good') : r === 'FAIR' ? (isRTL ? 'مقبولة' : 'Fair') : (isRTL ? 'ضعيفة' : 'Poor')}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Condition Photos */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{isRTL ? 'صور حالة المركبة' : 'Condition Photos'}</p>
+            <button type="button" onClick={() => photoInputRef.current?.click()} disabled={uploadingPhoto}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg disabled:opacity-50">
+              {uploadingPhoto ? <span className="h-3 w-3 rounded-full border-2 border-gray-400 border-t-transparent animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+              {isRTL ? 'إضافة صورة' : 'Add Photo'}
+            </button>
+            <input ref={photoInputRef} type="file" accept="image/*" multiple className="hidden"
+              onChange={(e) => { if (e.target.files?.length) uploadPhotos(e.target.files); e.target.value = ''; }} />
+          </div>
+          {conditionPhotos.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {conditionPhotos.map((url, i) => (
+                <div key={i} className="relative group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={resolveDocumentFileUrl(url)} alt={`photo-${i}`} className="w-20 h-16 object-cover rounded-lg border border-gray-200" />
+                  <button type="button" onClick={() => setConditionPhotos((p) => p.filter((_, j) => j !== i))}
+                    className="absolute top-0.5 end-0.5 bg-black/50 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Handover Checklist */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{isRTL ? 'قائمة فحص التسليم' : 'Handover Checklist'}</p>
+            <span className="text-xs text-gray-400">{checklistItems.length}/{CHECKLIST_ITEMS.length}</span>
+          </div>
+          <div className="flex gap-2 mb-2">
+            <button type="button" onClick={() => setChecklistItems(CHECKLIST_ITEMS.map(i => i.id))}
+              className="px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg">
+              {isRTL ? 'تحديد الكل' : 'All'}
+            </button>
+            <button type="button" onClick={() => setChecklistItems([])}
+              className="px-2.5 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">
+              {isRTL ? 'إلغاء التحديد' : 'None'}
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {CHECKLIST_ITEMS.map((item) => {
+              const checked = checklistItems.includes(item.id);
+              return (
+                <button key={item.id} type="button"
+                  onClick={() => setChecklistItems((prev) => checked ? prev.filter((x) => x !== item.id) : [...prev, item.id])}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm text-start transition-colors ${
+                    checked ? 'bg-green-50 border-green-300 text-green-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}>
+                  <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                    checked ? 'bg-green-600 border-green-600 text-white' : 'border-gray-300'
+                  }`}>{checked && '✓'}</span>
+                  {isRTL ? item.ar : item.en}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Client Signature */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{isRTL ? 'توقيع العميل' : "Client's Signature"}</p>
+          {signatureSaved ? (
+            <div className="flex items-center gap-2 text-green-700">
+              <span>✓</span><span className="text-sm">{isRTL ? 'تم حفظ التوقيع' : 'Signature saved'}</span>
+              <button type="button" onClick={() => { setSignatureSaved(false); setSignatureUrl(''); }} className="ms-auto text-xs text-blue-600 underline">{isRTL ? 'تغيير' : 'Change'}</button>
+            </div>
+          ) : (
+            <SignatureCanvas isRTL={isRTL} onSave={(url) => { setSignatureUrl(url); setSignatureSaved(true); }} />
+          )}
+        </div>
+
+        {/* Manager Signature */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{isRTL ? 'توقيع المدير' : "Manager's Signature"}</p>
+          {managerSignatureSaved ? (
+            <div className="flex items-center gap-2 text-green-700">
+              <span>✓</span><span className="text-sm">{isRTL ? 'تم حفظ توقيع المدير' : 'Manager signature saved'}</span>
+              <button type="button" onClick={() => { setManagerSignatureSaved(false); setManagerSignatureUrl(''); }} className="ms-auto text-xs text-blue-600 underline">{isRTL ? 'تغيير' : 'Change'}</button>
+            </div>
+          ) : (
+            <SignatureCanvas isRTL={isRTL} onSave={(url) => { setManagerSignatureUrl(url); setManagerSignatureSaved(true); }} />
+          )}
         </div>
 
         {updateMutation.isError && (

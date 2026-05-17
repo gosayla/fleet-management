@@ -145,7 +145,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 print:block print:h-auto print:bg-white">
       {/* ── Mobile overlay backdrop ── */}
       {sidebarOpen && (
         <div
@@ -155,14 +155,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ── Desktop sidebar (always visible ≥ lg) ── */}
-      <aside className={`hidden lg:flex w-60 bg-white ${isRTL ? 'border-l' : 'border-r'} border-gray-200 flex-col flex-shrink-0`}>
+      <aside className={`hidden lg:flex print:!hidden w-60 bg-white ${isRTL ? 'border-l' : 'border-r'} border-gray-200 flex-col flex-shrink-0`}>
         {SidebarContent}
       </aside>
 
       {/* ── Mobile drawer (slides in from the correct side) ── */}
       <aside
         className={`
-          fixed inset-y-0 z-30 w-72 bg-white flex flex-col flex-shrink-0 shadow-xl
+          fixed inset-y-0 z-30 w-72 bg-white flex flex-col flex-shrink-0 shadow-xl print:!hidden
           transition-transform duration-300 ease-in-out
           lg:hidden
           ${isRTL ? 'right-0 border-l border-gray-200' : 'left-0 border-r border-gray-200'}
@@ -184,9 +184,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── Main content ── */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 print:overflow-visible print:block">
         {/* Top header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-6 flex-shrink-0">
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-6 flex-shrink-0 print:hidden">
           {/* Hamburger — mobile only */}
           <button
             onClick={() => setSidebarOpen(true)}
@@ -214,7 +214,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </Link>
         </header>
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto print:overflow-visible">
           <div className="p-4 md:p-6">{children}</div>
         </main>
       </div>

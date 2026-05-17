@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   FlatList,
+  Image,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { ensureMediaPermission } from '../lib/permissions';
@@ -24,8 +25,28 @@ import { AppIcon } from '../components/ui/AppIcon';
 import { Locale, t, isRTL as isRTLFn } from '../lib/i18n';
 import { DateWheelModal } from '../components/ui/DateWheelModal';
 import { Alert } from '../lib/alert';
+import { SignaturePad } from '../components/ui/SignaturePad';
 
 const SB_H = Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 44;
+
+// ── Handover checklist ───────────────────────────────────────────────────────
+
+const HANDOVER_CHECKLIST = [
+  { id: 'vehicle_keys',      en: 'Vehicle Keys',     ar: 'مفاتيح المركبة' },
+  { id: 'spare_tire',        en: 'Spare Tire',        ar: 'الإطار الاحتياطي' },
+  { id: 'jack',              en: 'Jack',              ar: 'الرافعة' },
+  { id: 'toolkit',           en: 'Toolkit',           ar: 'حقيبة الأدوات' },
+  { id: 'warning_triangle',  en: 'Warning Triangle',  ar: 'مثلث التحذير' },
+  { id: 'fire_extinguisher', en: 'Fire Extinguisher', ar: 'طفاية الحريق' },
+  { id: 'first_aid_kit',     en: 'First Aid Kit',     ar: 'حقيبة الإسعافات' },
+  { id: 'front_camera',      en: 'Front Camera',      ar: 'كاميرا أمامية' },
+  { id: 'rear_camera',       en: 'Rear Camera',       ar: 'كاميرا خلفية' },
+  { id: 'dashboard_screen',  en: 'Dashboard Screen',  ar: 'شاشة لوحة القيادة' },
+  { id: 'registration_card', en: 'Registration Card', ar: 'وثيقة التسجيل' },
+  { id: 'insurance_card',    en: 'Insurance Card',    ar: 'وثيقة التأمين' },
+  { id: 'fuel_card',         en: 'Fuel Card',         ar: 'بطاقة الوقود' },
+  { id: 'floor_mats',        en: 'Floor Mats',        ar: 'سجادة المركبة' },
+] as const;
 
 interface VehicleOption {
   id: string;
@@ -94,6 +115,15 @@ export function RentalFormScreen({
   const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false);
   const [vehicleQuery, setVehicleQuery] = useState('');
 
+  // Handover state
+  const [fuelLevel, setFuelLevel] = useState<number | null>(null);
+  const [conditionRating, setConditionRating] = useState<'GOOD' | 'FAIR' | 'POOR' | null>(null);
+  const [conditionPhotos, setConditionPhotos] = useState<{ localUri: string; serverUrl: string }[]>([]);
+  const [checklistItems, setChecklistItems] = useState<string[]>([]);
+  const [clientSigUrl, setClientSigUrl] = useState('');
+  const [managerSigUrl, setManagerSigUrl] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
+
   const filteredVehicles = vehicles.filter(
     (v) =>
       !vehicleQuery.trim() ||
@@ -104,6 +134,30 @@ export function RentalFormScreen({
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handleAddConditionPhoto() {
+    const granted = await ensureMediaPermission();
+    if (!granted) return;
+    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, async (result) => {
+      const asset = result.assets?.[0];
+      if (!asset?.uri) return;
+      setPhotoUploading(true);
+      try {
+        const fd = new FormData();
+        fd.append('file', {
+          uri: asset.uri,
+          name: asset.fileName ?? 'photo.jpg',
+          type: asset.type ?? 'image/jpeg',
+        } as any);
+        const res = await api.upload<{ fileUrl: string }>('/documents/files', fd);
+        setConditionPhotos((prev) => [...prev, { localUri: asset.uri!, serverUrl: res.fileUrl }]);
+      } catch {
+        // silently ignore
+      } finally {
+        setPhotoUploading(false);
+      }
+    });
   }
 
   useEffect(() => {
@@ -169,6 +223,13 @@ export function RentalFormScreen({
         contractFileUrl: form.contractFileUrl.trim(),
       }),
       ...(form.notes.trim() && { notes: form.notes.trim() }),
+      // Handover fields
+      ...(fuelLevel !== null && { fuelLevel }),
+      ...(conditionRating && { conditionRating }),
+      ...(conditionPhotos.length > 0 && { conditionPhotos: conditionPhotos.map((p) => p.serverUrl) }),
+      ...(checklistItems.length > 0 && { checklistItems }),
+      ...(clientSigUrl && { signatureUrl: clientSigUrl }),
+      ...(managerSigUrl && { managerSignatureUrl: managerSigUrl }),
     };
 
     setSubmitting(true);
@@ -497,6 +558,173 @@ export function RentalFormScreen({
           />
         </View>
 
+        {/* ── Handover Section ──────────────────────────────────────────────── */}
+        <SectionTitle title={(i18n as any).handoverSection ?? 'Vehicle State at Handover'} />
+        <View style={styles.card}>
+          {/* Fuel Level */}
+          <FormField label={(i18n as any).fuelLevelLabel ?? 'Fuel Level'}>
+            <View style={[styles.fuelRow, !isRTL && { flexDirection: 'row-reverse' }]}>
+              {([0, 25, 50, 75, 100] as const).map((v) => (
+                <TouchableOpacity
+                  key={v}
+                  style={[styles.fuelBtn, fuelLevel === v && styles.fuelBtnActive]}
+                  onPress={() => setFuelLevel(v)}
+                >
+                  <Text style={[styles.fuelBtnText, fuelLevel === v && styles.fuelBtnTextActive]}>
+                    {v === 0 ? 'E' : v === 100 ? 'F' : `${v}%`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </FormField>
+          <FieldDivider />
+          {/* Condition Rating */}
+          <FormField label={(i18n as any).conditionRatingLabel ?? 'Vehicle Condition'}>
+            <View style={[styles.ratingRow, !isRTL && { flexDirection: 'row-reverse' }]}>
+              {(['GOOD', 'FAIR', 'POOR'] as const).map((r) => {
+                const cfg =
+                  r === 'GOOD'
+                    ? { text: (i18n as any).conditionGood ?? 'Good', active: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' }
+                    : r === 'FAIR'
+                    ? { text: (i18n as any).conditionFair ?? 'Fair', active: '#d97706', bg: '#fffbeb', border: '#fde68a' }
+                    : { text: (i18n as any).conditionPoor ?? 'Poor', active: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
+                const isActive = conditionRating === r;
+                return (
+                  <TouchableOpacity
+                    key={r}
+                    style={[
+                      styles.ratingBtn,
+                      isActive && { backgroundColor: cfg.bg, borderColor: cfg.border },
+                    ]}
+                    onPress={() => setConditionRating(r)}
+                  >
+                    <Text
+                      style={[
+                        styles.ratingBtnText,
+                        isActive && { color: cfg.active, fontWeight: '700' as const },
+                      ]}
+                    >
+                      {cfg.text}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </FormField>
+        </View>
+
+        {/* Condition Photos */}
+        <SectionTitle title={(i18n as any).conditionPhotosSection ?? 'Condition Photos'} />
+        <View style={styles.card}>
+          <View style={styles.photosWrap}>
+            {conditionPhotos.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+                {conditionPhotos.map((p, idx) => (
+                  <View key={idx} style={styles.photoThumbWrap}>
+                    <Image source={{ uri: p.localUri }} style={styles.photoThumb} />
+                    <TouchableOpacity
+                      style={styles.removePhotoBtn}
+                      onPress={() => setConditionPhotos((prev) => prev.filter((_, i) => i !== idx))}
+                    >
+                      <AppIcon name="close" size={10} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            <TouchableOpacity
+              style={[styles.addPhotoBtn, !isRTL && { flexDirection: 'row-reverse' }]}
+              onPress={handleAddConditionPhoto}
+              disabled={photoUploading}
+            >
+              {photoUploading ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <AppIcon name="camera-plus-outline" size={20} color={Colors.primary} />
+              )}
+              <Text style={styles.addPhotoBtnText}>
+                {(i18n as any).addConditionPhoto ?? 'Add Photo'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Handover Checklist */}
+        <SectionTitle title={(i18n as any).handoverChecklist ?? 'Handover Checklist'} />
+        <View style={styles.card}>
+          <View style={styles.checklistWrap}>
+            <View style={[styles.checklistHeader, !isRTL && { flexDirection: 'row-reverse' }]}>
+              <TouchableOpacity onPress={() => setChecklistItems(HANDOVER_CHECKLIST.map((c) => c.id))}>
+                <Text style={styles.checklistHeaderBtn}>
+                  {(i18n as any).selectAllItems ?? 'Select All'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setChecklistItems([])}>
+                <Text style={[styles.checklistHeaderBtn, { color: Colors.textMuted }]}>
+                  {(i18n as any).clearAllItems ?? 'Clear All'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.checklistGrid}>
+              {HANDOVER_CHECKLIST.map((item) => {
+                const checked = checklistItems.includes(item.id);
+                const label = locale === 'ar' || locale === 'ur' ? item.ar : item.en;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.checkItem,
+                      checked && styles.checkItemActive,
+                      !isRTL && { flexDirection: 'row-reverse' },
+                    ]}
+                    onPress={() =>
+                      setChecklistItems((prev) =>
+                        checked ? prev.filter((id) => id !== item.id) : [...prev, item.id]
+                      )
+                    }
+                  >
+                    <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+                      {checked && <AppIcon name="check" size={11} color="#fff" />}
+                    </View>
+                    <Text
+                      style={[styles.checkItemText, checked && { color: Colors.primary }]}
+                      numberOfLines={1}
+                    >
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        {/* Client Signature */}
+        <SectionTitle title={(i18n as any).clientSignatureLabel ?? 'Client Signature'} />
+        <View style={styles.card}>
+          <View style={styles.sigWrap}>
+            <SignaturePad
+              label={(i18n as any).clientSignatureLabel ?? 'Client Signature'}
+              locale={locale}
+              rtl={isRTL}
+              onSave={(url) => setClientSigUrl(url)}
+            />
+          </View>
+        </View>
+
+        {/* Manager Signature */}
+        <SectionTitle title={(i18n as any).managerSignatureLabel ?? 'Manager Signature'} />
+        <View style={styles.card}>
+          <View style={styles.sigWrap}>
+            <SignaturePad
+              label={(i18n as any).managerSignatureLabel ?? 'Manager Signature'}
+              locale={locale}
+              rtl={isRTL}
+              onSave={(url) => setManagerSigUrl(url)}
+            />
+          </View>
+        </View>
+
         <View style={{ height: 40 }} />
       </ScrollView>
 
@@ -769,4 +997,93 @@ const styles = StyleSheet.create({
   modalItemText: { fontSize: 15, color: Colors.textPrimary },
   modalItemTextActive: { color: Colors.primary, fontWeight: '700' as const },
   modalEmpty: { padding: 24, textAlign: 'center', color: Colors.textMuted },
+
+  // ── Handover ─────────────────────────────────────────────────────────────
+  fuelRow: { flexDirection: 'row', gap: 6 },
+  fuelBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    alignItems: 'center',
+    backgroundColor: Colors.bg,
+  },
+  fuelBtnActive: { backgroundColor: Colors.primaryLight, borderColor: Colors.primary },
+  fuelBtnText: { fontSize: 12, color: Colors.textMuted, fontWeight: '600' as const },
+  fuelBtnTextActive: { color: Colors.primary },
+
+  ratingRow: { flexDirection: 'row', gap: 8 },
+  ratingBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    alignItems: 'center',
+    backgroundColor: Colors.bg,
+  },
+  ratingBtnText: { fontSize: 13, color: Colors.textMuted, fontWeight: '600' as const },
+
+  photosWrap: { padding: 12 },
+  photoThumbWrap: { marginRight: 8, position: 'relative' as const },
+  photoThumb: { width: 68, height: 68, borderRadius: 8, backgroundColor: Colors.borderLight },
+  removePhotoBtn: {
+    position: 'absolute' as const,
+    top: -6,
+    right: -6,
+    backgroundColor: '#dc2626',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderStyle: 'dashed' as any,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  addPhotoBtnText: { fontSize: 14, color: Colors.primary, fontWeight: '600' as const },
+
+  checklistWrap: { padding: 10 },
+  checklistHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 14,
+    marginBottom: 10,
+  },
+  checklistHeaderBtn: { fontSize: 12, color: Colors.primary, fontWeight: '600' as const },
+  checklistGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  checkItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.bg,
+  },
+  checkItemActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  checkbox: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  checkItemText: { fontSize: 12, color: Colors.textMuted },
+
+  sigWrap: { padding: 12 },
 });

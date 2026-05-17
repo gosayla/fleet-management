@@ -23,6 +23,8 @@ type StaffAssignment = {
   conditionRating?: string | null;
   conditionPhotos?: string[];
   signatureUrl?: string | null;
+  managerSignatureUrl?: string | null;
+  checklistItems?: string[];
   notes?: string | null;
 };
 
@@ -44,10 +46,29 @@ const emptyForm = {
   conditionRating: 'GOOD' as 'GOOD' | 'FAIR' | 'POOR',
   conditionPhotos: [] as string[],
   signatureUrl: '',
+  managerSignatureUrl: '',
+  checklistItems: [] as string[],
   notes: '',
 };
 
-// â”€â”€ Signature Canvas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const CHECKLIST_ITEMS: { id: string; en: string; ar: string }[] = [
+  { id: 'vehicle_keys',       en: 'Vehicle Keys',        ar: 'مفاتيح المركبة' },
+  { id: 'spare_tire',         en: 'Spare Tire',           ar: 'الإطار الاحتياطي' },
+  { id: 'jack',               en: 'Jack',                 ar: 'الرافعة' },
+  { id: 'toolkit',            en: 'Toolkit',              ar: 'حقيبة الأدوات' },
+  { id: 'warning_triangle',   en: 'Warning Triangle',     ar: 'مثلث التحذير' },
+  { id: 'fire_extinguisher',  en: 'Fire Extinguisher',    ar: 'طفاية الحريق' },
+  { id: 'first_aid_kit',      en: 'First Aid Kit',        ar: 'حقيبة الإسعافات' },
+  { id: 'front_camera',       en: 'Front Camera',         ar: 'كاميرا أمامية' },
+  { id: 'rear_camera',        en: 'Rear Camera',          ar: 'كاميرا خلفية' },
+  { id: 'dashboard_screen',   en: 'Dashboard Screen',     ar: 'شاشة لوحة القيادة' },
+  { id: 'registration_card',  en: 'Registration Card',    ar: 'وثيقة التسجيل' },
+  { id: 'insurance_card',     en: 'Insurance Card',       ar: 'وثيقة التأمين' },
+  { id: 'fuel_card',          en: 'Fuel Card',            ar: 'بطاقة الوقود' },
+  { id: 'floor_mats',         en: 'Floor Mats',           ar: 'سجادة المركبة' },
+];
+
+// ── Signature Canvas ──────────────────────────────────────────────────────────
 function SignatureCanvas({
   onSave,
   isRTL,
@@ -125,10 +146,10 @@ function SignatureCanvas({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-600">{isRTL ? 'ط§ظ„طھظˆظ‚ظٹط¹' : 'Signature'}</span>
+        <span className="text-xs font-medium text-gray-600">{isRTL ? 'التوقيع' : 'Signature'}</span>
         {!isEmpty && (
           <button type="button" onClick={clear} className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1">
-            <X className="w-3 h-3" /> {isRTL ? 'ظ…ط³ط­' : 'Clear'}
+            <X className="w-3 h-3" /> {isRTL ? 'مسح' : 'Clear'}
           </button>
         )}
       </div>
@@ -145,20 +166,20 @@ function SignatureCanvas({
         onTouchMove={draw}
         onTouchEnd={stopDraw}
       />
-      <p className="text-xs text-gray-400">{isRTL ? 'ط§ط±ط³ظ… طھظˆظ‚ظٹط¹ظƒ ط£ط¹ظ„ط§ظ‡ ط«ظ… ط§ط¶ط؛ط· ط­ظپط¸' : 'Draw signature above then press Save'}</p>
+      <p className="text-xs text-gray-400">{isRTL ? 'ارسم توقيعك أعلاه ثم اضغط حفظ' : 'Draw signature above then press Save'}</p>
       <button
         type="button"
         disabled={isEmpty || saving}
         onClick={save}
         className="px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-medium hover:bg-purple-700 disabled:opacity-40 transition-colors"
       >
-        {saving ? '...' : isRTL ? 'ط­ظپط¸ ط§ظ„طھظˆظ‚ظٹط¹' : 'Save Signature'}
+        {saving ? '...' : isRTL ? 'حفظ التوقيع' : 'Save Signature'}
       </button>
     </div>
   );
 }
 
-// â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function StaffAssignmentsPage() {
   const { id: vehicleId } = useParams<{ id: string }>();
   const { locale, isRTL, t } = useLocale();
@@ -168,10 +189,12 @@ export default function StaffAssignmentsPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [signatureSaved, setSignatureSaved] = useState(false);
+  const [managerSignatureSaved, setManagerSignatureSaved] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [returnTarget, setReturnTarget] = useState<StaffAssignment | null>(null);
   const [returnOdometer, setReturnOdometer] = useState('');
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
 
   const { data: vehicle } = useQuery<Vehicle>({
     queryKey: ['vehicle-brief', vehicleId],
@@ -198,6 +221,7 @@ export default function StaffAssignmentsPage() {
       setShowForm(false);
       setForm(emptyForm);
       setSignatureSaved(false);
+      setManagerSignatureSaved(false);
     },
   });
 
@@ -258,6 +282,7 @@ export default function StaffAssignmentsPage() {
       fuelLevel: Number(form.fuelLevel),
       conditionRating: form.conditionRating,
       conditionPhotos: form.conditionPhotos,
+      checklistItems: form.checklistItems,
       signatureUrl: form.signatureUrl || undefined,
       notes: form.notes || undefined,
     });
@@ -274,10 +299,10 @@ export default function StaffAssignmentsPage() {
   };
   const conditionLabels = (rating: string) =>
     rating === 'GOOD'
-      ? isRTL ? 'ط¬ظٹط¯ط©' : 'Good'
+      ? isRTL ? 'جيدة' : 'Good'
       : rating === 'FAIR'
-      ? isRTL ? 'ظ…ظ‚ط¨ظˆظ„ط©' : 'Fair'
-      : isRTL ? 'ط¶ط¹ظٹظپط©' : 'Poor';
+      ? isRTL ? 'مقبولة' : 'Fair'
+      : isRTL ? 'ضعيفة' : 'Poor';
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -287,17 +312,17 @@ export default function StaffAssignmentsPage() {
           className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
         >
           <ArrowBack className="w-4 h-4" />
-          {isRTL ? 'ط§ظ„ط¹ظˆط¯ط© ظ„ظ„ظ…ط±ظƒط¨ط©' : 'Back to Vehicle'}
+          {isRTL ? 'العودة للمركبة' : 'Back to Vehicle'}
         </Link>
         <div className="flex items-center gap-2">
           <Briefcase className="w-5 h-5 text-purple-600" />
           <h1 className="text-xl font-bold text-gray-900">
-            {isRTL ? 'طھط®طµظٹطµ ط§ظ„ظ…ط±ظƒط¨ط© ظ„ظ„ظ…ظˆط¸ظپظٹظ†' : 'Staff Vehicle Assignments'}
+            {isRTL ? 'تخصيص المركبة للموظفين' : 'Staff Vehicle Assignments'}
           </h1>
         </div>
         {vehicle && (
           <p className="text-sm text-gray-500">
-            {vehicle.plateNumber} â€” {vehicle.year ?? ''} {vehicle.make} {vehicle.model}
+            {vehicle.plateNumber} — {vehicle.year ?? ''} {vehicle.make} {vehicle.model}
           </p>
         )}
       </div>
@@ -308,14 +333,14 @@ export default function StaffAssignmentsPage() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <p className="text-xs text-purple-500 font-medium mb-0.5">
-                {isRTL ? 'ظ…ط®طµطµط© ط­ط§ظ„ظٹط§ظ‹ ظ„ظ€' : 'Currently assigned to'}
+                {isRTL ? 'مخصصة حالياً لـ' : 'Currently assigned to'}
               </p>
               <p className="font-semibold text-purple-900">{active[0].assigneeName}</p>
               {active[0].assigneeTitle && (
                 <p className="text-sm text-purple-700">{active[0].assigneeTitle}</p>
               )}
               <p className="text-xs text-purple-500 mt-1">
-                {isRTL ? 'ظ…ظ†ط°' : 'Since'} {formatDate(active[0].assignedAt, locale as 'ar' | 'en')}
+                {isRTL ? 'منذ' : 'Since'} {formatDate(active[0].assignedAt, locale as 'ar' | 'en')}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -324,16 +349,111 @@ export default function StaffAssignmentsPage() {
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-purple-300 text-purple-700 text-sm font-medium hover:bg-purple-50 transition-colors"
               >
                 <FileText className="w-4 h-4" />
-                {isRTL ? 'ظˆط«ظٹظ‚ط© ط§ظ„طھط³ظ„ظٹظ…' : 'Handover Doc'}
+                {isRTL ? 'وثيقة التسليم' : 'Handover Doc'}
               </Link>
               <button
                 onClick={() => setReturnTarget(active[0])}
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-purple-300 text-purple-700 text-sm font-medium hover:bg-purple-50 transition-colors"
               >
                 <RotateCcw className="w-4 h-4" />
-                {isRTL ? 'طھط³ط¬ظٹظ„ ط§ظ„ط¥ط±ط¬ط§ط¹' : 'Return Vehicle'}
+                {isRTL ? 'تسجيل الإرجاع' : 'Return Vehicle'}
               </button>
             </div>
+          </div>
+          {/* Condition photos */}
+          {active[0].conditionPhotos && active[0].conditionPhotos.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-purple-200">
+              <p className="text-xs text-purple-500 font-medium mb-2">
+                {isRTL ? 'صور حالة المركبة عند التسليم' : 'Condition Photos at Handover'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {active[0].conditionPhotos.map((url, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setLightbox({ photos: active[0].conditionPhotos!, index: i })}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={resolveDocumentFileUrl(url)}
+                      alt={`photo-${i + 1}`}
+                      className="w-20 h-16 object-cover rounded-lg border border-purple-200 hover:opacity-80 transition-opacity cursor-pointer"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Lightbox modal */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          onClick={() => setLightbox(null)}
+        >
+          <div
+            className="relative max-w-3xl w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close */}
+            <button
+              onClick={() => setLightbox(null)}
+              className="absolute -top-10 end-0 text-white hover:text-gray-300 transition-colors"
+            >
+              <X className="w-7 h-7" />
+            </button>
+
+            {/* Main image */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={resolveDocumentFileUrl(lightbox.photos[lightbox.index])}
+              alt={`photo-${lightbox.index + 1}`}
+              className="w-full max-h-[75vh] object-contain rounded-xl"
+            />
+
+            {/* Counter */}
+            <p className="text-center text-white/70 text-sm mt-2">
+              {lightbox.index + 1} / {lightbox.photos.length}
+            </p>
+
+            {/* Prev / Next */}
+            {lightbox.photos.length > 1 && (
+              <>
+                <button
+                  onClick={() => setLightbox((lb) => lb && { ...lb, index: (lb.index - 1 + lb.photos.length) % lb.photos.length })}
+                  className="absolute top-1/2 -translate-y-1/2 start-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                >
+                  {isRTL ? <ArrowRight className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
+                </button>
+                <button
+                  onClick={() => setLightbox((lb) => lb && { ...lb, index: (lb.index + 1) % lb.photos.length })}
+                  className="absolute top-1/2 -translate-y-1/2 end-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                >
+                  {isRTL ? <ArrowLeft className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
+                </button>
+              </>
+            )}
+
+            {/* Thumbnail strip */}
+            {lightbox.photos.length > 1 && (
+              <div className="flex justify-center gap-2 mt-3 flex-wrap">
+                {lightbox.photos.map((url, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setLightbox((lb) => lb && { ...lb, index: i })}
+                    className={`w-14 h-10 rounded overflow-hidden border-2 transition-colors ${
+                      i === lightbox.index ? 'border-purple-400' : 'border-transparent opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={resolveDocumentFileUrl(url)} alt={`thumb-${i + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -345,19 +465,19 @@ export default function StaffAssignmentsPage() {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors"
         >
           <Plus className="w-4 h-4" />
-          {isRTL ? 'طھط®طµظٹطµ ظ„ظ„ظ…ظˆط¸ظپ' : 'Assign to Staff'}
+          {isRTL ? 'تخصيص للموظف' : 'Assign to Staff'}
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl p-5 space-y-5">
           <h2 className="font-semibold text-gray-800">
-            {isRTL ? 'طھط®طµظٹطµ ظ…ط±ظƒط¨ط© ظ„ظ…ظˆط¸ظپ' : 'Assign Vehicle to Staff'}
+            {isRTL ? 'تخصيص مركبة لموظف' : 'Assign Vehicle to Staff'}
           </h2>
 
           {/* Basic info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'ط§ط³ظ… ط§ظ„ظ…ظˆط¸ظپ *' : 'Employee Name *'}
+                {isRTL ? 'اسم الموظف *' : 'Employee Name *'}
               </label>
               <input
                 required
@@ -368,7 +488,7 @@ export default function StaffAssignmentsPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'ط§ظ„ظ…ط³ظ…ظ‰ ط§ظ„ظˆط¸ظٹظپظٹ' : 'Job Title'}
+                {isRTL ? 'المسمى الوظيفي' : 'Job Title'}
               </label>
               <input
                 value={form.assigneeTitle}
@@ -378,7 +498,7 @@ export default function StaffAssignmentsPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ' : 'Phone'}
+                {isRTL ? 'رقم الهاتف' : 'Phone'}
               </label>
               <input
                 value={form.assigneePhone}
@@ -388,7 +508,7 @@ export default function StaffAssignmentsPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'ط±ظ‚ظ… ط§ظ„ظ‡ظˆظٹط©' : 'National ID'}
+                {isRTL ? 'رقم الهوية' : 'National ID'}
               </label>
               <input
                 value={form.assigneeNationalId}
@@ -401,12 +521,12 @@ export default function StaffAssignmentsPage() {
           {/* Vehicle state */}
           <div className="border-t border-gray-100 pt-4 space-y-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              {isRTL ? 'ط­ط§ظ„ط© ط§ظ„ظ…ط±ظƒط¨ط© ط¹ظ†ط¯ ط§ظ„طھط³ظ„ظٹظ…' : 'Vehicle State at Handover'}
+              {isRTL ? 'حالة المركبة عند التسليم' : 'Vehicle State at Handover'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  {isRTL ? 'ط¹ط¯ط§ط¯ ط§ظ„ظƒظٹظ„ظˆظ…طھط±ط§طھ (ط®ط±ظˆط¬)' : 'Odometer Out (km)'}
+                  {isRTL ? 'عداد الكيلومترات (خروج)' : 'Odometer Out (km)'}
                 </label>
                 <input
                   type="number"
@@ -418,7 +538,7 @@ export default function StaffAssignmentsPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  {isRTL ? `ظ…ط³طھظˆظ‰ ط§ظ„ظˆظ‚ظˆط¯: ${form.fuelLevel}%` : `Fuel Level: ${form.fuelLevel}%`}
+                  {isRTL ? `مستوى الوقود: ${form.fuelLevel}%` : `Fuel Level: ${form.fuelLevel}%`}
                 </label>
                 <input
                   type="range"
@@ -438,7 +558,7 @@ export default function StaffAssignmentsPage() {
             {/* Condition rating */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-2">
-                {isRTL ? 'ط­ط§ظ„ط© ط§ظ„ظ…ط±ظƒط¨ط©' : 'Vehicle Condition'}
+                {isRTL ? 'حالة المركبة' : 'Vehicle Condition'}
               </label>
               <div className="flex gap-2">
                 {(['GOOD', 'FAIR', 'POOR'] as const).map((r) => (
@@ -458,10 +578,70 @@ export default function StaffAssignmentsPage() {
               </div>
             </div>
 
+            {/* Checklist */}
+            <div className="border-t border-gray-100 pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  {isRTL ? 'قائمة فحص التسليم' : 'Handover Checklist'}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, checklistItems: CHECKLIST_ITEMS.map((i) => i.id) }))}
+                    className="text-[10px] text-purple-600 hover:underline"
+                  >
+                    {isRTL ? 'تحديد الكل' : 'All'}
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, checklistItems: [] }))}
+                    className="text-[10px] text-gray-400 hover:underline"
+                  >
+                    {isRTL ? 'إلغاء الكل' : 'None'}
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {CHECKLIST_ITEMS.map((item) => {
+                  const checked = form.checklistItems.includes(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          checklistItems: checked
+                            ? f.checklistItems.filter((x) => x !== item.id)
+                            : [...f.checklistItems, item.id],
+                        }))
+                      }
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors text-start ${
+                        checked
+                          ? 'bg-green-50 border-green-300 text-green-700'
+                          : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${
+                        checked ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300'
+                      }`}>
+                        {checked && <svg viewBox="0 0 10 10" className="w-2.5 h-2.5"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      </span>
+                      {isRTL ? item.ar : item.en}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-gray-400">
+                {form.checklistItems.length}/{CHECKLIST_ITEMS.length} {isRTL ? 'عنصر محدد' : 'items checked'}
+              </p>
+            </div>
+
             {/* Notes */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'ظ…ظ„ط§ط­ط¸ط§طھ' : 'Notes'}
+                {isRTL ? 'ملاحظات' : 'Notes'}
               </label>
               <textarea
                 rows={2}
@@ -476,7 +656,7 @@ export default function StaffAssignmentsPage() {
           <div className="border-t border-gray-100 pt-4 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                {isRTL ? 'طµظˆط± ط­ط§ظ„ط© ط§ظ„ظ…ط±ظƒط¨ط©' : 'Condition Photos'}
+                {isRTL ? 'صور حالة المركبة' : 'Condition Photos'}
               </p>
               <button
                 type="button"
@@ -489,7 +669,7 @@ export default function StaffAssignmentsPage() {
                 ) : (
                   <Camera className="w-3.5 h-3.5" />
                 )}
-                {isRTL ? 'ط¥ط¶ط§ظپط© طµظˆط±ط©' : 'Add Photo'}
+                {isRTL ? 'إضافة صورة' : 'Add Photo'}
               </button>
               <input
                 ref={photoInputRef}
@@ -522,21 +702,21 @@ export default function StaffAssignmentsPage() {
             )}
           </div>
 
-          {/* Signature */}
+          {/* Recipient's Signature */}
           <div className="border-t border-gray-100 pt-4 space-y-3">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              {isRTL ? 'طھظˆظ‚ظٹط¹ ط§ظ„ظ…ط³طھظ„ظ…' : "Recipient's Signature"}
+              {isRTL ? 'توقيع المستلم' : "Recipient's Signature"}
             </p>
             {signatureSaved ? (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
-                <span>âœ“</span>
-                <span>{isRTL ? 'طھظ… ط­ظپط¸ ط§ظ„طھظˆظ‚ظٹط¹' : 'Signature saved'}</span>
+                <span>✓</span>
+                <span>{isRTL ? 'تم حفظ التوقيع' : 'Signature saved'}</span>
                 <button
                   type="button"
                   onClick={() => { setSignatureSaved(false); setForm((f) => ({ ...f, signatureUrl: '' })); }}
                   className="ms-auto text-xs text-green-600 underline"
                 >
-                  {isRTL ? 'ط¥ط¹ط§ط¯ط©' : 'Redo'}
+                  {isRTL ? 'إعادة' : 'Redo'}
                 </button>
               </div>
             ) : (
@@ -550,17 +730,45 @@ export default function StaffAssignmentsPage() {
             )}
           </div>
 
+          {/* Manager's Signature */}
+          <div className="border-t border-gray-100 pt-4 space-y-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              {isRTL ? 'توقيع المدير' : "Manager's Signature"}
+            </p>
+            {managerSignatureSaved ? (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
+                <span>✓</span>
+                <span>{isRTL ? 'تم حفظ توقيع المدير' : 'Manager signature saved'}</span>
+                <button
+                  type="button"
+                  onClick={() => { setManagerSignatureSaved(false); setForm((f) => ({ ...f, managerSignatureUrl: '' })); }}
+                  className="ms-auto text-xs text-green-600 underline"
+                >
+                  {isRTL ? 'إعادة' : 'Redo'}
+                </button>
+              </div>
+            ) : (
+              <SignatureCanvas
+                isRTL={isRTL}
+                onSave={(url) => {
+                  setForm((f) => ({ ...f, managerSignatureUrl: url }));
+                  setManagerSignatureSaved(true);
+                }}
+              />
+            )}
+          </div>
+
           <div className="flex items-center gap-2 pt-1">
             <button
               type="submit"
               disabled={createMutation.isPending}
               className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors"
             >
-              {createMutation.isPending ? (isRTL ? 'ط¬ط§ط±ظچ ط§ظ„ط­ظپط¸...' : 'Saving...') : (isRTL ? 'ط­ظپط¸' : 'Save')}
+              {createMutation.isPending ? (isRTL ? 'جارٍ الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}
             </button>
             <button
               type="button"
-              onClick={() => { setShowForm(false); setForm(emptyForm); setSignatureSaved(false); }}
+              onClick={() => { setShowForm(false); setForm(emptyForm); setSignatureSaved(false); setManagerSignatureSaved(false); }}
               className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
             >
               {tc.cancel}
@@ -574,14 +782,14 @@ export default function StaffAssignmentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
             <h2 className="font-semibold text-gray-800">
-              {isRTL ? 'طھط³ط¬ظٹظ„ ط¥ط±ط¬ط§ط¹ ط§ظ„ظ…ط±ظƒط¨ط©' : 'Record Vehicle Return'}
+              {isRTL ? 'تسجيل إرجاع المركبة' : 'Record Vehicle Return'}
             </h2>
             <p className="text-sm text-gray-600">
-              {isRTL ? `ط¥ط±ط¬ط§ط¹ ظ…ظ† ${returnTarget.assigneeName}` : `Returning from ${returnTarget.assigneeName}`}
+              {isRTL ? `إرجاع من ${returnTarget.assigneeName}` : `Returning from ${returnTarget.assigneeName}`}
             </p>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                {isRTL ? 'ط¹ط¯ط§ط¯ ط§ظ„ظƒظٹظ„ظˆظ…طھط±ط§طھ (ط¯ط®ظˆظ„)' : 'Odometer In (km)'}
+                {isRTL ? 'عداد الكيلومترات (دخول)' : 'Odometer In (km)'}
               </label>
               <input
                 type="number"
@@ -600,7 +808,7 @@ export default function StaffAssignmentsPage() {
                 disabled={returnMutation.isPending}
                 className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
               >
-                {returnMutation.isPending ? '...' : (isRTL ? 'طھط£ظƒظٹط¯ ط§ظ„ط¥ط±ط¬ط§ط¹' : 'Confirm Return')}
+                {returnMutation.isPending ? '...' : (isRTL ? 'تأكيد الإرجاع' : 'Confirm Return')}
               </button>
               <button
                 onClick={() => { setReturnTarget(null); setReturnOdometer(''); }}
@@ -617,7 +825,7 @@ export default function StaffAssignmentsPage() {
       {history.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-gray-700">
-            {isRTL ? 'ط³ط¬ظ„ ط§ظ„طھط®طµظٹطµط§طھ' : 'Assignment History'}
+            {isRTL ? 'سجل التخصيصات' : 'Assignment History'}
           </h2>
           <div className="bg-white border border-gray-100 rounded-xl divide-y divide-gray-50">
             {history.map((a) => (
@@ -635,17 +843,17 @@ export default function StaffAssignmentsPage() {
                     <p className="text-xs text-gray-500">{a.assigneeTitle}</p>
                   )}
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {formatDate(a.assignedAt, locale as 'ar' | 'en')} â†’ {a.returnedAt ? formatDate(a.returnedAt, locale as 'ar' | 'en') : 'â€”'}
+                    {formatDate(a.assignedAt, locale as 'ar' | 'en')} → {a.returnedAt ? formatDate(a.returnedAt, locale as 'ar' | 'en') : '—'}
                   </p>
                   <div className="flex flex-wrap gap-3 text-xs text-gray-400 mt-0.5">
                     {a.odometerOut != null && (
-                      <span>{isRTL ? 'ط®ط±ظˆط¬' : 'Out'}: {formatNumber(a.odometerOut, locale as 'ar' | 'en')} km</span>
+                      <span>{isRTL ? 'خروج' : 'Out'}: {formatNumber(a.odometerOut, locale as 'ar' | 'en')} km</span>
                     )}
                     {a.odometerIn != null && (
-                      <span>{isRTL ? 'ط¯ط®ظˆظ„' : 'In'}: {formatNumber(a.odometerIn, locale as 'ar' | 'en')} km</span>
+                      <span>{isRTL ? 'دخول' : 'In'}: {formatNumber(a.odometerIn, locale as 'ar' | 'en')} km</span>
                     )}
                     {a.fuelLevel != null && (
-                      <span>{isRTL ? 'ظˆظ‚ظˆط¯' : 'Fuel'}: {a.fuelLevel}%</span>
+                      <span>{isRTL ? 'وقود' : 'Fuel'}: {a.fuelLevel}%</span>
                     )}
                   </div>
                 </div>
@@ -653,7 +861,7 @@ export default function StaffAssignmentsPage() {
                   <Link
                     href={`/${locale}/dashboard/vehicles/${vehicleId}/staff/${a.id}/report`}
                     className="p-1.5 rounded text-gray-300 hover:text-purple-600 hover:bg-purple-50 transition-colors"
-                    title={isRTL ? 'ظˆط«ظٹظ‚ط© ط§ظ„طھط³ظ„ظٹظ…' : 'Handover Document'}
+                    title={isRTL ? 'وثيقة التسليم' : 'Handover Document'}
                   >
                     <FileText className="w-4 h-4" />
                   </Link>
@@ -679,4 +887,3 @@ export default function StaffAssignmentsPage() {
     </div>
   );
 }
-

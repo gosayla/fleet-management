@@ -1,10 +1,13 @@
 import {
+  IsArray,
   IsDate,
   IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  Max,
+  Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -103,6 +106,40 @@ export class CreateTripDto {
   @IsDate()
   @IsOptional()
   contractEnd?: Date;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 100 })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  fuelLevel?: number;
+
+  @ApiPropertyOptional({ enum: ['GOOD', 'FAIR', 'POOR'] })
+  @IsString()
+  @IsOptional()
+  conditionRating?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  conditionPhotos?: string[];
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  driverSignatureUrl?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  managerSignatureUrl?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  checklistItems?: string[];
 }
 
 export class UpdateTripDto extends PartialType(CreateTripDto) {

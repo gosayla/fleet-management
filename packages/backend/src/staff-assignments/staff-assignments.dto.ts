@@ -71,6 +71,17 @@ export class CreateStaffAssignmentDto {
   @IsOptional()
   signatureUrl?: string;
 
+  @ApiPropertyOptional({ description: 'URL of manager signature image' })
+  @IsString()
+  @IsOptional()
+  managerSignatureUrl?: string;
+
+  @ApiPropertyOptional({ type: [String], description: 'Checked item IDs from handover checklist' })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  checklistItems?: string[];
+
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
