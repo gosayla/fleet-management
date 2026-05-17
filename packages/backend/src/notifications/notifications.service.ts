@@ -259,6 +259,27 @@ export class NotificationsService implements OnModuleInit {
     }
   }
 
+  private documentExpiredMessage(
+    language: PreferredLanguage,
+    documentType: string,
+    plateNumbers: string[],
+  ): NotificationMessage {
+    const documentLabel = this.docTypeLabel(documentType, language);
+    const plate = plateNumbers.length > 0 ? ` (${plateNumbers.join(', ')})` : '';
+    switch (language) {
+      case 'en':
+        return { title: 'Document Expired', body: `${documentLabel}${plate} has expired` };
+      case 'hi':
+        return { title: 'दस्तावेज़ समाप्त हो गया', body: `${documentLabel}${plate} की समय-सीमा समाप्त हो गई है` };
+      case 'bn':
+        return { title: 'ডকুমেন্টের মেয়াদ শেষ হয়েছে', body: `${documentLabel}${plate} মেয়াদোত্তীর্ণ হয়েছে` };
+      case 'ur':
+        return { title: 'دستاویز ختم ہو گئی', body: `${documentLabel}${plate} کی میعاد ختم ہو گئی ہے` };
+      default:
+        return { title: 'انتهت صلاحية المستند', body: `انتهت صلاحية ${documentLabel}${plate}` };
+    }
+  }
+
   private maintenanceDueMessage(
     language: PreferredLanguage,
     plateNumber: string,
@@ -413,36 +434,68 @@ export class NotificationsService implements OnModuleInit {
 
   @Cron(DAILY_NOTIFICATIONS_CRON, { timeZone: RIYADH_TIMEZONE })
   async checkExpiringDocuments() {
+    const MILESTONES = [30, 7, 3];
     const now = new Date();
-    const threshold = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const expiringDocs = await this.prisma.fleetDocument.findMany({
-      where: { expiryDate: { lte: threshold, gte: now } },
+    // Normalise to midnight local date for stable day-level arithmetic
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Fetch docs expiring within the next 31 days or that expired within the last 2 days
+    const upperBound = new Date(today.getTime() + 31 * 24 * 60 * 60 * 1000);
+    const lowerBound = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
+
+    const docs = await this.prisma.fleetDocument.findMany({
+      where: { expiryDate: { gte: lowerBound, lte: upperBound } },
       include: {
         drivers: { select: { id: true } },
         vehicles: { select: { plateNumber: true } },
       },
     });
 
-    for (const doc of expiringDocs) {
-      const daysLeft = Math.ceil(
-        (doc.expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    let notified = 0;
+
+    for (const doc of docs) {
+      const expiryDay = new Date(
+        doc.expiryDate.getFullYear(),
+        doc.expiryDate.getMonth(),
+        doc.expiryDate.getDate(),
       );
-      const plateNumbers = doc.vehicles.map(v => v.plateNumber);
+      const daysLeft = Math.round(
+        (expiryDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
+      const isExpired = daysLeft <= 0;
+      const isMilestone = MILESTONES.includes(daysLeft);
+
+      if (!isExpired && !isMilestone) continue;
+
+      const plateNumbers = doc.vehicles.map((v) => v.plateNumber);
       const opsUsers = await this.getCompanyOpsUsers(doc.companyId);
-      const driverUsers = doc.type === 'DRIVER_LICENSE'
-        ? await this.getDriverUsers(doc.drivers.map((driver) => driver.id))
-        : [];
+      const driverUsers =
+        doc.type === 'DRIVER_LICENSE'
+          ? await this.getDriverUsers(doc.drivers.map((d) => d.id))
+          : [];
+
+      // Expired docs: dedupe for 7 days so we don't spam after expiry
+      const dedupeHours = isExpired ? 7 * 24 : 23;
 
       await this.notifyUsers(
         [...opsUsers, ...driverUsers],
         'DOCUMENT_EXPIRING',
         doc.id,
-        (language) => this.documentExpiringMessage(language, doc.type, daysLeft, plateNumbers),
+        (language) =>
+          isExpired
+            ? this.documentExpiredMessage(language, doc.type, plateNumbers)
+            : this.documentExpiringMessage(language, doc.type, daysLeft, plateNumbers),
+        dedupeHours,
       );
+
+      notified++;
     }
 
-    this.logger.log(`Checked ${expiringDocs.length} expiring documents`);
+    this.logger.log(
+      `Checked ${docs.length} documents — sent ${notified} milestone notification(s)`,
+    );
   }
 
   @Cron(DAILY_NOTIFICATIONS_CRON, { timeZone: RIYADH_TIMEZONE })
