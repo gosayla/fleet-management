@@ -123,6 +123,7 @@ export function AdminFuelScreen({ locale, onBack, onAddPress }: Props) {
           try {
             await api.delete(`/fuel/${id}`);
             setAll((current) => current.filter((entry) => entry.id !== id));
+            setTotal((current) => Math.max(0, current - 1));
           } catch {
             Alert.alert(i18n.error, i18n.failedToLoadFuel);
           }
