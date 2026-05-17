@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import Link from 'next/link';
 import { useLocale } from '@/providers/locale-provider';
-import { ArrowLeft, ArrowRight, Key } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Key, Upload, CheckCircle } from 'lucide-react';
 import { DatePicker } from '@/components/ui/date-picker';
 
 interface Vehicle { id: string; plateNumber: string; make: string; model: string; sequenceNumber?: string | null }
@@ -38,6 +38,10 @@ export default function RentalEditPage() {
   const [rentalStart, setRentalStart] = useState<string | undefined>(undefined);
   const [rentalEnd, setRentalEnd] = useState<string | undefined>(undefined);
   const [initialized, setInitialized] = useState(false);
+  const [contractFileUrl, setContractFileUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const vehicleComboRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,6 +50,10 @@ export default function RentalEditPage() {
       setVehicleQuery(`${rental.vehicle.plateNumber} — ${rental.vehicle.make} ${rental.vehicle.model}`);
       setRentalStart(rental.rentalStart.split('T')[0]);
       setRentalEnd(rental.rentalEnd.split('T')[0]);
+      if (rental.contractFileUrl) {
+        setContractFileUrl(rental.contractFileUrl);
+        setUploadedFileName(rental.contractFileUrl.split('/').pop() ?? '');
+      }
       setInitialized(true);
     }
   }, [rental, initialized]);
@@ -77,6 +85,24 @@ export default function RentalEditPage() {
     },
   });
 
+  async function uploadContractFile(file: File) {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api.post<{ fileUrl: string }>('/documents/files', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setContractFileUrl(res.data.fileUrl);
+      setUploadedFileName(file.name);
+    } catch {
+      setUploadedFileName('');
+      setContractFileUrl('');
+    } finally {
+      setUploading(false);
+    }
+  }
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!selectedVehicleId || !rentalStart || !rentalEnd) return;
@@ -94,7 +120,7 @@ export default function RentalEditPage() {
       rentalEnd,
       odometerOut,
       dailyRateSar,
-      contractFileUrl: get('contractFileUrl') || undefined,
+      contractFileUrl: contractFileUrl || undefined,
       notes: get('notes') || undefined,
     });
   }
@@ -162,13 +188,39 @@ export default function RentalEditPage() {
             {[
               { label: tr.odometerOut, name: 'odometerOut', defaultValue: rental.odometerOut?.toString() ?? '', type: 'number' },
               { label: tr.dailyRate, name: 'dailyRateSar', defaultValue: rental.dailyRateSar?.toString() ?? '', type: 'number' },
-              { label: tr.contractFile, name: 'contractFileUrl', defaultValue: rental.contractFileUrl ?? '', type: 'url' },
             ].map(f => (
               <div key={f.name}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{f.label}</label>
                 <input type={f.type} name={f.name} defaultValue={f.defaultValue} min={f.type === 'number' ? '0' : undefined} step={f.type === 'number' ? 'any' : undefined} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             ))}
+            {/* Contract file upload */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{tr.contractFile}</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadContractFile(f); }}
+              />
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                {uploading
+                  ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                  : contractFileUrl
+                    ? <CheckCircle className="w-4 h-4 text-green-600" />
+                    : <Upload className="w-4 h-4" />}
+                <span>{uploading ? (locale === 'ar' ? 'جارٍ الرفع…' : 'Uploading…') : contractFileUrl ? (locale === 'ar' ? 'تغيير الملف' : 'Change file') : (locale === 'ar' ? 'اختر ملفاً' : 'Choose file')}</span>
+              </button>
+              {uploadedFileName && !uploading && (
+                <p className="mt-1 text-xs text-gray-500 truncate max-w-xs">{uploadedFileName}</p>
+              )}
+            </div>
           </div>
         </div>
 
