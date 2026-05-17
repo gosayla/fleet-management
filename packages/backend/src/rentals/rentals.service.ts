@@ -21,9 +21,11 @@ export class RentalsService {
     page?: string,
     pageSize?: string,
     search?: string,
+    vehicleId?: string,
   ): Promise<any[] | PaginatedResult<any>> {
     const where = {
       companyId,
+      ...(vehicleId?.trim() ? { vehicleId: vehicleId.trim() } : {}),
       ...(search?.trim()
         ? {
             OR: [

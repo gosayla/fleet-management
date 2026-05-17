@@ -30,8 +30,9 @@ export class RentalsController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('search') search?: string,
+    @Query('vehicleId') vehicleId?: string,
   ) {
-    return this.rentalsService.findAll(user.companyId, page, pageSize, search);
+    return this.rentalsService.findAll(user.companyId, page, pageSize, search, vehicleId);
   }
 
   @Get(':id')

@@ -9,9 +9,22 @@ import { subscribeToVehicleLocation } from '@/lib/socket';
 import { useLocale } from '@/providers/locale-provider';
 import { formatDate, formatEnumLabel, formatCurrencySar, formatNumber } from '@/lib/i18n';
 import { DocumentType, Vehicle } from '@fleet/shared';
-import { ArrowLeft, ArrowRight, Briefcase, Camera, Droplet, ExternalLink, FileText, Fuel, Gauge, Pencil, Plus, ShieldAlert, Star, Trash2, Truck, UserCheck, Wrench, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Briefcase, Camera, Droplet, ExternalLink, FileText, Fuel, Gauge, Key, Pencil, Plus, ShieldAlert, Star, Trash2, Truck, UserCheck, Wrench, X } from 'lucide-react';
 
 type DriverBrief = { id: string; fullName: string; phone: string; status: string; photoUrl?: string | null };
+
+type ActiveRental = {
+  id: string;
+  clientName: string;
+  clientPhone?: string;
+  clientNationalId?: string;
+  contractNumber?: string;
+  rentalStart: string;
+  rentalEnd: string;
+  dailyRateSar?: number;
+  status: string;
+  contractFileUrl?: string;
+};
 
 type VehicleDetails = Vehicle & {
   lastLocationLat?: number | null;
@@ -125,6 +138,16 @@ export default function VehicleDashboardPage() {
     queryFn: () => api.get(`/documents`, { params: { vehicleId, limit: 50 } }).then((r) => r.data),
     enabled: !!vehicleId,
   });
+
+  const { data: activeRentals } = useQuery<ActiveRental[]>({
+    queryKey: ['vehicle-rentals-active', vehicleId],
+    queryFn: () => api.get('/rentals', { params: { vehicleId, pageSize: '1' } }).then((r) => {
+      const items: ActiveRental[] = Array.isArray(r.data) ? r.data : (r.data?.data ?? []);
+      return items.filter((rental) => rental.status === 'ACTIVE' || rental.status === 'OVERDUE');
+    }),
+    enabled: !!vehicleId,
+  });
+  const activeRental = activeRentals?.[0] ?? null;
 
   const queryClient = useQueryClient();
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -275,11 +298,13 @@ export default function VehicleDashboardPage() {
     },
     {
       label: tv.driver,
-      value: (vehicle.drivers ?? []).length > 0
-        ? (vehicle.drivers ?? []).map((d) => d.fullName).join(', ')
-        : tv.unassigned,
-      icon: Truck,
-      className: 'bg-indigo-50 text-indigo-700',
+      value: activeRental
+        ? activeRental.clientName
+        : (vehicle.drivers ?? []).length > 0
+          ? (vehicle.drivers ?? []).map((d) => d.fullName).join(', ')
+          : tv.unassigned,
+      icon: activeRental ? Key : Truck,
+      className: activeRental ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700',
     },
   ];
 
@@ -531,8 +556,71 @@ export default function VehicleDashboardPage() {
         </ListCard>
       </div>
 
-      {/* Assigned Drivers section – hidden for STAFF vehicles */}
-      {!isStaffVehicle && (
+      {/* Active Rental card */}
+      {activeRental && (
+      <div className="bg-amber-50 rounded-xl border border-amber-200 shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Key className="w-4 h-4 text-amber-600" />
+            <h2 className="text-sm font-semibold text-amber-800">{isRTL ? 'عقد الإيجار النشط' : 'Active Rental Contract'}</h2>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+              activeRental.status === 'OVERDUE' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+            }`}>{activeRental.status === 'OVERDUE' ? (isRTL ? 'متأخر' : 'Overdue') : (isRTL ? 'نشط' : 'Active')}</span>
+          </div>
+          <Link
+            href={`/${locale}/dashboard/rentals/${activeRental.id}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            {isRTL ? 'عرض العقد' : 'View Contract'}
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div>
+            <p className="text-xs text-amber-600 mb-0.5">{isRTL ? 'اسم العميل' : 'Client'}</p>
+            <p className="font-semibold text-gray-900">{activeRental.clientName}</p>
+          </div>
+          {activeRental.clientPhone && (
+            <div>
+              <p className="text-xs text-amber-600 mb-0.5">{isRTL ? 'الهاتف' : 'Phone'}</p>
+              <p className="font-medium text-gray-700">{activeRental.clientPhone}</p>
+            </div>
+          )}
+          {activeRental.contractNumber && (
+            <div>
+              <p className="text-xs text-amber-600 mb-0.5">{isRTL ? 'رقم العقد' : 'Contract No.'}</p>
+              <p className="font-medium text-gray-700">{activeRental.contractNumber}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-xs text-amber-600 mb-0.5">{isRTL ? 'تاريخ البداية' : 'Start'}</p>
+            <p className="font-medium text-gray-700">{formatDate(activeRental.rentalStart, locale)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-amber-600 mb-0.5">{isRTL ? 'تاريخ الإعادة المتوقع' : 'Expected Return'}</p>
+            <p className="font-medium text-gray-700">{formatDate(activeRental.rentalEnd, locale)}</p>
+          </div>
+          {activeRental.dailyRateSar != null && (
+            <div>
+              <p className="text-xs text-amber-600 mb-0.5">{isRTL ? 'السعر اليومي' : 'Daily Rate'}</p>
+              <p className="font-medium text-gray-700">{formatCurrencySar(activeRental.dailyRateSar, locale)}</p>
+            </div>
+          )}
+          {activeRental.contractFileUrl && (
+            <div>
+              <p className="text-xs text-amber-600 mb-0.5">{isRTL ? 'ملف العقد' : 'Contract File'}</p>
+              <a href={resolveDocumentFileUrl(activeRental.contractFileUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
+                <ExternalLink className="w-3 h-3" />
+                {isRTL ? 'فتح الملف' : 'Open file'}
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+      )}
+
+      {/* Assigned Drivers section – hidden for STAFF vehicles and when there's an active rental */}
+      {!isStaffVehicle && !activeRental && (
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
