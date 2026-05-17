@@ -100,6 +100,19 @@ interface StaffAssignment {
   notes?: string | null;
 }
 
+interface ActiveRental {
+  id: string;
+  clientName: string;
+  clientPhone?: string;
+  clientNationalId?: string;
+  contractNumber?: string;
+  rentalStart: string;
+  rentalEnd: string;
+  dailyRateSar?: number;
+  status: string;
+  contractFileUrl?: string;
+}
+
 interface VehiclePhoto {
   id: string;
   url: string;
@@ -178,6 +191,7 @@ export function VehicleDetailScreen({
   const [activePhoto, setActivePhoto] = useState<VehiclePhoto | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [activeRental, setActiveRental] = useState<ActiveRental | null>(null);
 
   function refreshPhotos() {
     api
@@ -190,10 +204,18 @@ export function VehicleDetailScreen({
     Promise.all([
       api.get<VehicleDetail>(`/vehicles/${vehicleId}`),
       api.get<VehiclePhoto[]>(`/vehicles/${vehicleId}/photos`),
+      api.get<any>(`/rentals?vehicleId=${vehicleId}&pageSize=5`).catch(() => null),
     ])
-      .then(([v, p]) => {
+      .then(([v, p, rentalsRes]) => {
         setVehicle(v);
         setPhotos(Array.isArray(p) ? p : []);
+        const items: ActiveRental[] = Array.isArray(rentalsRes)
+          ? rentalsRes
+          : (rentalsRes?.data ?? []);
+        const found = items.find(
+          (r) => r.status === 'ACTIVE' || r.status === 'OVERDUE'
+        ) ?? null;
+        setActiveRental(found);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -324,14 +346,15 @@ export function VehicleDetailScreen({
   const statusLabel = STATUS_LABELS[vehicle.status]?.[locale] ?? vehicle.status;
   const drivers = vehicle.drivers ?? [];
   const activeStaffAssignment = vehicle.staffAssignments?.[0] ?? null;
-  const driverName =
-    vehicle.usageType === 'STAFF'
-      ? activeStaffAssignment?.assigneeName ?? i18n.unassigned
-      : drivers.length > 0
-      ? drivers.length === 1
-        ? drivers[0].fullName
-        : `${drivers[0].fullName} +${drivers.length - 1}`
-      : i18n.unassigned;
+  const driverName = activeRental
+    ? activeRental.clientName
+    : vehicle.usageType === 'STAFF'
+    ? activeStaffAssignment?.assigneeName ?? i18n.unassigned
+    : drivers.length > 0
+    ? drivers.length === 1
+      ? drivers[0].fullName
+      : `${drivers[0].fullName} +${drivers.length - 1}`
+    : i18n.unassigned;
   const profilePhoto = photos.find((p) => p.isProfile) ?? photos[0] ?? null;
 
   const vehicleCheck = vehicle.inspectionExpiryDate
@@ -851,8 +874,83 @@ export function VehicleDetailScreen({
           </>
         )}
 
+        {/* ── Active Rental Card ── */}
+        {activeRental && (
+          <>
+            <View style={[styles.sectionHeaderRow, rowDirectionStyle]}>
+              <Text style={[styles.sectionTitle, styles.sectionTitleMarginSm]}>
+                {i18n.rentals}
+              </Text>
+              <View style={[
+                styles.mapLinkBtn,
+                { backgroundColor: activeRental.status === 'OVERDUE' ? '#fef2f2' : '#f0fdf4',
+                  borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+              ]}>
+                <AppIcon
+                  name={activeRental.status === 'OVERDUE' ? 'alert-circle-outline' : 'check-circle-outline'}
+                  size={13}
+                  color={activeRental.status === 'OVERDUE' ? '#dc2626' : '#16a34a'}
+                />
+                <Text style={[styles.mapLinkText, {
+                  color: activeRental.status === 'OVERDUE' ? '#dc2626' : '#16a34a',
+                }]}>
+                  {activeRental.status === 'OVERDUE' ? i18n.rentalStatusOverdue : i18n.rentalStatusActive}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.docsCard}>
+              <DocRow
+                label={i18n.rentalClientName}
+                value={activeRental.clientName}
+                rtl={rtl}
+              />
+              {!!activeRental.clientPhone && (
+                <DocRow
+                  label={i18n.rentalClientPhone}
+                  value={activeRental.clientPhone}
+                  rtl={rtl}
+                />
+              )}
+              {!!activeRental.contractNumber && (
+                <DocRow
+                  label={i18n.rentalContractNumber}
+                  value={activeRental.contractNumber}
+                  rtl={rtl}
+                />
+              )}
+              <DocRow
+                label={i18n.rentalStart}
+                value={formatDateSmart(activeRental.rentalStart, locale)}
+                rtl={rtl}
+              />
+              <DocRow
+                label={i18n.rentalEnd}
+                value={formatDateSmart(activeRental.rentalEnd, locale)}
+                rtl={rtl}
+              />
+              {activeRental.dailyRateSar != null && (
+                <DocRow
+                  label={i18n.rentalDailyRate}
+                  value={`${activeRental.dailyRateSar} SAR`}
+                  last={!activeRental.contractFileUrl}
+                  rtl={rtl}
+                />
+              )}
+              {!!activeRental.contractFileUrl && (
+                <DocRow
+                  label={i18n.rentalContractFile}
+                  value={i18n.viewRental}
+                  last
+                  rtl={rtl}
+                  onCopy={() => Linking.openURL(activeRental.contractFileUrl!).catch(() => {})}
+                />
+              )}
+            </View>
+          </>
+        )}
+
         {/* ── Assigned Drivers ── */}
-        {drivers.length > 0 && (
+        {drivers.length > 0 && !activeRental && (
           <>
             <Text style={[styles.sectionTitle, styles.sectionTitleMarginSm]}>
               {i18n.assignedDriversLabel}
