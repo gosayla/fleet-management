@@ -249,6 +249,40 @@ export class DocumentsService {
     });
   }
 
+  private async computeHasReplacement(
+    doc: { id: string; type: string; vehicles: { id: string }[]; drivers: { id: string }[] },
+    now: Date,
+  ): Promise<boolean> {
+    const vehicleIds = doc.vehicles.map((v) => v.id);
+    const driverIds = doc.drivers.map((d) => d.id);
+
+    if (vehicleIds.length > 0) {
+      const count = await this.prisma.fleetDocument.count({
+        where: {
+          id: { not: doc.id },
+          type: doc.type as any,
+          expiryDate: { gt: now },
+          vehicles: { some: { id: { in: vehicleIds } } },
+        },
+      });
+      if (count > 0) return true;
+    }
+
+    if (driverIds.length > 0) {
+      const count = await this.prisma.fleetDocument.count({
+        where: {
+          id: { not: doc.id },
+          type: doc.type as any,
+          expiryDate: { gt: now },
+          drivers: { some: { id: { in: driverIds } } },
+        },
+      });
+      if (count > 0) return true;
+    }
+
+    return false;
+  }
+
   async remove(companyId: string, id: string) {
     const existing = await this.prisma.fleetDocument.findFirst({
       where: { id, companyId },
@@ -320,8 +354,16 @@ export class DocumentsService {
       this.prisma.fleetDocument.count({ where: { AND: [baseWhere, { expiryDate: { gt: soon } }] } }),
     ]);
 
+    const enriched = await Promise.all(
+      data.map(async (doc) => {
+        const isNonValid = doc.expiryDate <= soon;
+        const hasReplacement = isNonValid ? await this.computeHasReplacement(doc, now) : false;
+        return { ...doc, hasReplacement };
+      }),
+    );
+
     return {
-      data,
+      data: enriched,
       total,
       page,
       limit,

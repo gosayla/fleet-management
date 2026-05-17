@@ -45,6 +45,7 @@ interface FleetDocument {
   issuingAuthority?: string;
   referenceNumber?: string;
   notes?: string;
+  hasReplacement?: boolean;
   vehicles: LinkedVehicle[];
   drivers: LinkedDriver[];
 }
@@ -269,10 +270,19 @@ export function AdminDocumentsScreen({
             >
               {typeStr}
             </Text>
-            <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-              <Text style={[styles.badgeText, { color: badge.color }]}>
-                {badge.label}
-              </Text>
+            <View style={{ alignItems: 'flex-end', gap: 4 }}>
+              <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+                <Text style={[styles.badgeText, { color: badge.color }]}>
+                  {badge.label}
+                </Text>
+              </View>
+              {!!item.hasReplacement && (
+                <View style={[styles.badge, { backgroundColor: Colors.success ?? '#2E7D32' }]}>
+                  <Text style={[styles.badgeText, { color: '#fff' }]}>
+                    {i18n.docRenewed}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 

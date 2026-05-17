@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   Clock3,
   CheckCircle2,
+  RefreshCw,
   ExternalLink,
   Plus,
   Pencil,
@@ -30,6 +31,7 @@ type DocumentRow = {
   expiryDate: string;
   issuingAuthority?: string | null;
   referenceNumber?: string | null;
+  hasReplacement?: boolean;
   vehicles?: { id: string; plateNumber: string; make: string; model: string; year: number }[];
   drivers?: { id: string; fullName: string }[];
 };
@@ -61,23 +63,40 @@ function getDocumentStatus(expiryDate: string): DocumentStatus {
   return 'valid';
 }
 
-function StatusBadge({ status, label }: { status: DocumentStatus; label: string }) {
+function StatusBadge({ status, label, renewed }: { status: DocumentStatus; label: string; renewed?: string }) {
   if (status === 'expired') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-        <AlertTriangle className="h-3 w-3" />
-        {label}
-      </span>
+      <div className="flex flex-col gap-1">
+        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+          <AlertTriangle className="h-3 w-3" />
+          {label}
+        </span>
+        {renewed && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+            <RefreshCw className="h-3 w-3" />
+            {renewed}
+          </span>
+        )}
+      </div>
     );
   }
 
   if (status === 'expiring') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-        <Clock3 className="h-3 w-3" />
-        {label}
-      </span>
+      <div className="flex flex-col gap-1">
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+          <Clock3 className="h-3 w-3" />
+          {label}
+        </span>
+        {renewed && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+            <RefreshCw className="h-3 w-3" />
+            {renewed}
+          </span>
+        )}
+      </div>
     );
+  }
   }
 
   return (
@@ -278,7 +297,11 @@ export default function DocumentsPage() {
                       <td className="px-4 py-3 text-gray-600">{formatDate(row.issueDate, locale)}</td>
                       <td className="px-4 py-3 text-gray-600">{formatDate(row.expiryDate, locale)}</td>
                       <td className="px-4 py-3">
-                        <StatusBadge status={docStatus} label={statusLabel[docStatus]} />
+                        <StatusBadge
+                          status={docStatus}
+                          label={statusLabel[docStatus]}
+                          renewed={row.hasReplacement ? td.renewed : undefined}
+                        />
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
