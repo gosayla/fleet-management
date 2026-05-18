@@ -50,7 +50,8 @@ const CHECKLIST_ITEMS: { id: string; en: string; ar: string }[] = [
 
 export default function RentalReportPage() {
   const { id: rentalId } = useParams<{ id: string }>();
-  const { locale, isRTL } = useLocale();
+  const { locale, isRTL, t } = useLocale();
+  const tr = t.rentalReport;
 
   const { data: rental, isLoading } = useQuery<Rental>({
     queryKey: ['rental', rentalId],
@@ -69,7 +70,7 @@ export default function RentalReportPage() {
   });
 
   const conditionLabel = (r?: string | null) =>
-    r === 'GOOD' ? (isRTL ? 'جيدة' : 'Good') : r === 'FAIR' ? (isRTL ? 'مقبولة' : 'Fair') : r === 'POOR' ? (isRTL ? 'ضعيفة' : 'Poor') : '—';
+    r === 'GOOD' ? tr.conditionGood : r === 'FAIR' ? tr.conditionFair : r === 'POOR' ? tr.conditionPoor : '—';
 
   const conditionColor = (r?: string | null) =>
     r === 'GOOD' ? '#166534' : r === 'FAIR' ? '#92400e' : r === 'POOR' ? '#991b1b' : '#374151';
@@ -94,13 +95,13 @@ export default function RentalReportPage() {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-lg"
         >
           <Printer className="w-4 h-4" />
-          {isRTL ? 'طباعة / تنزيل PDF' : 'Print / Save PDF'}
+          {tr.printBtn}
         </button>
         <button
           onClick={() => window.history.back()}
           className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 shadow-lg"
         >
-          {isRTL ? 'رجوع' : 'Back'}
+          {tr.back}
         </button>
       </div>
 
@@ -115,23 +116,23 @@ export default function RentalReportPage() {
           <div>
             {company?.name && <p className="text-lg font-bold text-gray-900">{company.name}</p>}
             <h1 className="text-xl font-black text-blue-700 mt-0.5">
-              {isRTL ? 'وثيقة تسليم إيجار مركبة' : 'Vehicle Rental Handover'}
+              {tr.title}
             </h1>
             {rental.contractNumber && (
               <p className="text-xs text-gray-400 mt-1">
-                {isRTL ? 'رقم العقد:' : 'Contract:'} {rental.contractNumber}
+                {tr.contract}: {rental.contractNumber}
               </p>
             )}
             <p className="text-xs text-gray-400">
-              {isRTL ? 'رقم السجل:' : 'Record ID:'} {rental.id.slice(0, 8).toUpperCase()}
+              {tr.recordId}: {rental.id.slice(0, 8).toUpperCase()}
             </p>
           </div>
           <div className="text-end text-xs text-gray-500 space-y-0.5">
-            <p>{isRTL ? 'تاريخ الإصدار:' : 'Issued:'} {new Date().toLocaleDateString(isRTL ? 'ar-SA' : 'en-GB')}</p>
+            <p>{tr.issued}: {new Date().toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-GB')}</p>
             <p className={`font-semibold ${rental.status === 'ACTIVE' ? 'text-green-600' : rental.status === 'RETURNED' ? 'text-gray-500' : 'text-red-600'}`}>
-              {rental.status === 'ACTIVE' ? (isRTL ? 'نشط' : 'Active')
-                : rental.status === 'RETURNED' ? (isRTL ? 'مُرجَع' : 'Returned')
-                : rental.status === 'OVERDUE' ? (isRTL ? 'متأخر' : 'Overdue')
+              {rental.status === 'ACTIVE' ? tr.statusActive
+                : rental.status === 'RETURNED' ? tr.statusReturned
+                : rental.status === 'OVERDUE' ? tr.statusOverdue
                 : rental.status}
             </p>
           </div>
@@ -139,30 +140,30 @@ export default function RentalReportPage() {
 
         {/* Vehicle + Client two columns */}
         <div className="grid grid-cols-2 gap-4 mb-3">
-          <Section title={isRTL ? 'بيانات المركبة' : 'Vehicle Details'}>
-            <Row label={isRTL ? 'رقم اللوحة' : 'Plate Number'} value={v?.plateNumber ?? '—'} mono />
-            <Row label={isRTL ? 'الموديل' : 'Make / Model'} value={v ? `${v.year ?? ''} ${v.make} ${v.model}`.trim() : '—'} />
-            {v?.color && <Row label={isRTL ? 'اللون' : 'Color'} value={v.color} />}
+          <Section title={tr.vehicleDetails}>
+            <Row label={tr.plateNumber} value={v?.plateNumber ?? '—'} mono />
+            <Row label={tr.makeModel} value={v ? `${v.year ?? ''} ${v.make} ${v.model}`.trim() : '—'} />
+            {v?.color && <Row label={tr.color} value={v.color} />}
           </Section>
 
-          <Section title={isRTL ? 'بيانات العميل' : 'Client Details'}>
-            <Row label={isRTL ? 'الاسم' : 'Name'} value={rental.clientName} />
-            {rental.clientPhone && <Row label={isRTL ? 'الهاتف' : 'Phone'} value={rental.clientPhone} />}
-            {rental.clientNationalId && <Row label={isRTL ? 'رقم الهوية' : 'National ID'} value={rental.clientNationalId} mono />}
-            {rental.dailyRateSar != null && <Row label={isRTL ? 'السعر اليومي' : 'Daily Rate'} value={`${formatNumber(rental.dailyRateSar, locale as 'ar' | 'en')} SAR`} />}
+          <Section title={tr.clientDetails}>
+            <Row label={tr.name} value={rental.clientName} />
+            {rental.clientPhone && <Row label={tr.phone} value={rental.clientPhone} />}
+            {rental.clientNationalId && <Row label={tr.nationalId} value={rental.clientNationalId} mono />}
+            {rental.dailyRateSar != null && <Row label={tr.dailyRate} value={`${formatNumber(rental.dailyRateSar, locale as 'ar' | 'en')} SAR`} />}
           </Section>
         </div>
 
         {/* Rental period + vehicle state */}
-        <Section title={isRTL ? 'تفاصيل الإيجار وحالة المركبة' : 'Rental Period & Vehicle State'} className="mb-3">
+        <Section title={tr.rentalPeriod} className="mb-3">
           <div className="grid grid-cols-2 gap-x-6">
-            <Row label={isRTL ? 'بداية الإيجار' : 'Rental Start'} value={formatDate(rental.rentalStart, locale as 'ar' | 'en')} />
-            <Row label={isRTL ? 'نهاية الإيجار' : 'Rental End'} value={formatDate(rental.rentalEnd, locale as 'ar' | 'en')} />
-            {rental.odometerOut != null && <Row label={isRTL ? 'العداد (خروج)' : 'Odometer Out'} value={`${formatNumber(rental.odometerOut, locale as 'ar' | 'en')} km`} />}
-            {rental.odometerIn != null && <Row label={isRTL ? 'العداد (دخول)' : 'Odometer In'} value={`${formatNumber(rental.odometerIn, locale as 'ar' | 'en')} km`} />}
+            <Row label={tr.rentalStart} value={formatDate(rental.rentalStart, locale as 'ar' | 'en')} />
+            <Row label={tr.rentalEnd} value={formatDate(rental.rentalEnd, locale as 'ar' | 'en')} />
+            {rental.odometerOut != null && <Row label={tr.odometerOut} value={`${formatNumber(rental.odometerOut, locale as 'ar' | 'en')} km`} />}
+            {rental.odometerIn != null && <Row label={tr.odometerIn} value={`${formatNumber(rental.odometerIn, locale as 'ar' | 'en')} km`} />}
             {rental.fuelLevel != null && (
               <div className="flex items-center gap-2 py-1">
-                <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{isRTL ? 'مستوى الوقود' : 'Fuel Level'}:</span>
+                <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{tr.fuelLevel}:</span>
                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
                   <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
@@ -176,7 +177,7 @@ export default function RentalReportPage() {
             )}
             {rental.conditionRating && (
               <div className="flex items-baseline gap-2 py-1">
-                <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{isRTL ? 'حالة المركبة' : 'Condition'}:</span>
+                <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{tr.condition}:</span>
                 <span className="text-sm font-bold" style={{ color: conditionColor(rental.conditionRating) }}>
                   {conditionLabel(rental.conditionRating)}
                 </span>
@@ -185,7 +186,7 @@ export default function RentalReportPage() {
           </div>
           {rental.notes && (
             <div className="flex items-baseline gap-2 mt-2 pt-2 border-t border-gray-100">
-              <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{isRTL ? 'ملاحظات' : 'Notes'}:</span>
+              <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{tr.notes}:</span>
               <span className="text-xs text-gray-700">{rental.notes}</span>
             </div>
           )}
@@ -193,7 +194,7 @@ export default function RentalReportPage() {
 
         {/* Condition Photos */}
         {rental.conditionPhotos && rental.conditionPhotos.length > 0 && (
-          <Section title={isRTL ? 'صور حالة المركبة' : 'Condition Photos'} className="mb-3">
+          <Section title={tr.conditionPhotos} className="mb-3">
             <div className="flex flex-wrap gap-2 mt-1">
               {rental.conditionPhotos.map((url, i) => (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -204,16 +205,16 @@ export default function RentalReportPage() {
         )}
 
         {/* Checklist */}
-        <Section title={isRTL ? 'قائمة فحص التسليم' : 'Handover Checklist'} className="mb-3">
+        <Section title={tr.checklist} className="mb-3">
           <div className="flex flex-wrap gap-1.5 mt-1">
             {CHECKLIST_ITEMS.filter((item) => (rental.checklistItems ?? []).includes(item.id)).map((item) => (
               <span key={item.id} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-green-200 bg-green-50 text-green-700 text-xs font-medium">
                 <span className="text-green-500 font-bold">✓</span>
-                {isRTL ? item.ar : item.en}
+                {item[locale]}
               </span>
             ))}
             {(rental.checklistItems ?? []).length === 0 && (
-              <p className="text-xs text-gray-400 italic">{isRTL ? 'لا توجد بنود محددة' : 'No items checked'}</p>
+              <p className="text-xs text-gray-400 italic">{tr.noChecklist}</p>
             )}
           </div>
         </Section>
@@ -222,13 +223,13 @@ export default function RentalReportPage() {
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div className="border border-gray-200 rounded-lg p-3">
             <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">
-              {isRTL ? 'توقيع العميل' : "Client's Signature"}
+              {tr.clientSignature}
             </p>
             {rental.signatureUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={resolveDocumentFileUrl(rental.signatureUrl)} alt="Client Signature" className="h-12 object-contain" />
+              <img src={resolveDocumentFileUrl(rental.signatureUrl)} alt="Client Signature" className="h-24 object-contain" />
             ) : (
-              <div className="h-12 border-b border-gray-300" />
+              <div className="h-24 border-b border-gray-300" />
             )}
             <p className="text-xs text-gray-600 mt-1.5 font-medium">{rental.clientName}</p>
             <p className="text-[11px] text-gray-400">{formatDate(rental.rentalStart, locale as 'ar' | 'en')}</p>
@@ -236,23 +237,21 @@ export default function RentalReportPage() {
 
           <div className="border border-gray-200 rounded-lg p-3">
             <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">
-              {isRTL ? 'توقيع المسؤول' : "Manager's Signature"}
+              {tr.managerSignature}
             </p>
             {rental.managerSignatureUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={resolveDocumentFileUrl(rental.managerSignatureUrl)} alt="Manager Signature" className="h-12 object-contain" />
+              <img src={resolveDocumentFileUrl(rental.managerSignatureUrl)} alt="Manager Signature" className="h-24 object-contain" />
             ) : (
-              <div className="h-12 border-b border-gray-300" />
+              <div className="h-24 border-b border-gray-300" />
             )}
-            <p className="text-[11px] text-gray-400 mt-1.5">{isRTL ? 'الاسم والتوقيع والختم' : 'Name, Signature & Stamp'}</p>
+            <p className="text-[11px] text-gray-400 mt-1.5">{tr.nameSignatureStamp}</p>
           </div>
         </div>
 
         {/* Footer */}
         <div className="mt-3 pt-2 border-t border-gray-200 text-center text-[10px] text-gray-400">
-          {isRTL
-            ? `هذه الوثيقة صادرة آلياً من نظام إدارة الأسطول — ${new Date().toLocaleDateString('ar-SA')}`
-            : `This document was auto-generated by the Fleet Management System — ${new Date().toLocaleDateString('en-GB')}`}
+          {`${tr.footerText} — ${new Date().toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-GB')}`}
         </div>
       </div>
 

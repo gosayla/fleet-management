@@ -51,7 +51,7 @@ function getPos(e){
   return{x:(s.clientX-r.left)*(c.width/r.width),y:(s.clientY-r.top)*(c.height/r.height)};
 }
 function onStart(e){e.preventDefault();drawing=true;var p=getPos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);}
-function onMove(e){if(!drawing)return;e.preventDefault();var p=getPos(e);ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111827';ctx.lineTo(p.x,p.y);ctx.stroke();empty=false;}
+function onMove(e){if(!drawing)return;e.preventDefault();var p=getPos(e);ctx.lineWidth=5;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111827';ctx.lineTo(p.x,p.y);ctx.stroke();empty=false;}
 function onEnd(){drawing=false;}
 c.addEventListener('touchstart',onStart,{passive:false});
 c.addEventListener('touchmove',onMove,{passive:false});

@@ -49,6 +49,7 @@ const REPORT_CHECKLIST_ITEMS: { id: string; en: string; ar: string }[] = [
 export default function AssignmentReportPage() {
   const { id: vehicleId, assignmentId } = useParams<{ id: string; assignmentId: string }>();
   const { locale, isRTL, t } = useLocale();
+  const tr = t.staffReport;
 
   const { data: assignment, isLoading } = useQuery<Assignment>({
     queryKey: ['staff-assignment', assignmentId],
@@ -67,7 +68,7 @@ export default function AssignmentReportPage() {
   });
 
   const conditionLabel = (r?: string | null) =>
-    r === 'GOOD' ? (isRTL ? 'جيدة' : 'Good') : r === 'FAIR' ? (isRTL ? 'مقبولة' : 'Fair') : r === 'POOR' ? (isRTL ? 'ضعيفة' : 'Poor') : '—';
+    r === 'GOOD' ? tr.conditionGood : r === 'FAIR' ? tr.conditionFair : r === 'POOR' ? tr.conditionPoor : '—';
 
   const conditionColor = (r?: string | null) =>
     r === 'GOOD' ? '#166534' : r === 'FAIR' ? '#92400e' : r === 'POOR' ? '#991b1b' : '#374151';
@@ -92,13 +93,13 @@ export default function AssignmentReportPage() {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 shadow-lg"
         >
           <Printer className="w-4 h-4" />
-          {isRTL ? 'طباعة / تنزيل PDF' : 'Print / Save PDF'}
+          {tr.printBtn}
         </button>
         <button
           onClick={() => window.history.back()}
           className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 shadow-lg"
         >
-          {isRTL ? 'رجوع' : 'Back'}
+          {tr.back}
         </button>
       </div>
 
@@ -115,18 +116,16 @@ export default function AssignmentReportPage() {
               <p className="text-lg font-bold text-gray-900">{company.name}</p>
             )}
             <h1 className="text-xl font-black text-purple-700 mt-0.5">
-              {isRTL ? 'وثيقة تسليم مركبة' : 'Vehicle Handover Document'}
+              {tr.title}
             </h1>
             <p className="text-xs text-gray-400 mt-1">
-              {isRTL ? 'رقم السجل:' : 'Record ID:'} {assignment.id.slice(0, 8).toUpperCase()}
+              {tr.recordId}: {assignment.id.slice(0, 8).toUpperCase()}
             </p>
           </div>
           <div className="text-end text-xs text-gray-500 space-y-0.5">
-            <p>{isRTL ? 'تاريخ الإصدار:' : 'Issued:'} {new Date().toLocaleDateString(isRTL ? 'ar-SA' : 'en-GB')}</p>
+            <p>{tr.issued}: {new Date().toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-GB')}</p>
             <p className="text-purple-600 font-semibold">
-              {assignment.returnedAt
-                ? (isRTL ? 'مُرجَعة' : 'Returned')
-                : (isRTL ? 'نشطة' : 'Active')}
+              {assignment.returnedAt ? tr.statusReturned : tr.statusActive}
             </p>
           </div>
         </div>
@@ -134,31 +133,31 @@ export default function AssignmentReportPage() {
         {/* Vehicle + Assignee info in two columns */}
         <div className="grid grid-cols-2 gap-4 mb-3">
           {/* Vehicle */}
-          <Section title={isRTL ? 'بيانات المركبة' : 'Vehicle Details'}>
-            <Row label={isRTL ? 'رقم اللوحة' : 'Plate Number'} value={v?.plateNumber ?? '—'} mono />
-            <Row label={isRTL ? 'الموديل' : 'Make / Model'} value={v ? `${v.year ?? ''} ${v.make} ${v.model}`.trim() : '—'} />
-            {v?.color && <Row label={isRTL ? 'اللون' : 'Color'} value={v.color} />}
+          <Section title={tr.vehicleDetails}>
+            <Row label={tr.plateNumber} value={v?.plateNumber ?? '—'} mono />
+            <Row label={tr.makeModel} value={v ? `${v.year ?? ''} ${v.make} ${v.model}`.trim() : '—'} />
+            {v?.color && <Row label={tr.color} value={v.color} />}
           </Section>
 
           {/* Assignee */}
-          <Section title={isRTL ? 'بيانات المستلم' : 'Assignee Details'}>
-            <Row label={isRTL ? 'الاسم' : 'Name'} value={assignment.assigneeName} />
-            {assignment.assigneeTitle && <Row label={isRTL ? 'المسمى الوظيفي' : 'Job Title'} value={assignment.assigneeTitle} />}
-            {assignment.assigneePhone && <Row label={isRTL ? 'الهاتف' : 'Phone'} value={assignment.assigneePhone} />}
-            {assignment.assigneeNationalId && <Row label={isRTL ? 'رقم الهوية' : 'National ID'} value={assignment.assigneeNationalId} mono />}
+          <Section title={tr.assigneeDetails}>
+            <Row label={tr.name} value={assignment.assigneeName} />
+            {assignment.assigneeTitle && <Row label={tr.jobTitle} value={assignment.assigneeTitle} />}
+            {assignment.assigneePhone && <Row label={tr.phone} value={assignment.assigneePhone} />}
+            {assignment.assigneeNationalId && <Row label={tr.nationalId} value={assignment.assigneeNationalId} mono />}
           </Section>
         </div>
 
         {/* Handover state */}
-        <Section title={isRTL ? 'حالة المركبة عند التسليم' : 'Vehicle State at Handover'} className="mb-3">
+        <Section title={tr.vehicleState} className="mb-3">
           <div className="grid grid-cols-2 gap-x-6">
-            <Row label={isRTL ? 'تاريخ التسليم' : 'Handover Date'} value={formatDate(assignment.assignedAt, locale as 'ar' | 'en')} />
-            {assignment.returnedAt && <Row label={isRTL ? 'تاريخ الإرجاع' : 'Return Date'} value={formatDate(assignment.returnedAt, locale as 'ar' | 'en')} />}
-            {assignment.odometerOut != null && <Row label={isRTL ? 'العداد (خروج)' : 'Odometer Out'} value={`${formatNumber(assignment.odometerOut, locale as 'ar' | 'en')} km`} />}
-            {assignment.odometerIn != null && <Row label={isRTL ? 'العداد (دخول)' : 'Odometer In'} value={`${formatNumber(assignment.odometerIn, locale as 'ar' | 'en')} km`} />}
+            <Row label={tr.handoverDate} value={formatDate(assignment.assignedAt, locale as 'ar' | 'en')} />
+            {assignment.returnedAt && <Row label={tr.returnDate} value={formatDate(assignment.returnedAt, locale as 'ar' | 'en')} />}
+            {assignment.odometerOut != null && <Row label={tr.odometerOut} value={`${formatNumber(assignment.odometerOut, locale as 'ar' | 'en')} km`} />}
+            {assignment.odometerIn != null && <Row label={tr.odometerIn} value={`${formatNumber(assignment.odometerIn, locale as 'ar' | 'en')} km`} />}
             {assignment.fuelLevel != null && (
               <div className="flex items-center gap-2 py-1">
-                <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{isRTL ? 'مستوى الوقود' : 'Fuel Level'}:</span>
+                <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{tr.fuelLevel}:</span>
                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
                   <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
@@ -172,7 +171,7 @@ export default function AssignmentReportPage() {
             )}
             {assignment.conditionRating && (
               <div className="flex items-baseline gap-2 py-1">
-                <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{isRTL ? 'حالة المركبة' : 'Condition'}:</span>
+                <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{tr.condition}:</span>
                 <span className="text-sm font-bold" style={{ color: conditionColor(assignment.conditionRating) }}>
                   {conditionLabel(assignment.conditionRating)}
                 </span>
@@ -181,7 +180,7 @@ export default function AssignmentReportPage() {
           </div>
           {assignment.notes && (
             <div className="flex items-baseline gap-2 mt-2 pt-2 border-t border-gray-100">
-              <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{isRTL ? 'ملاحظات' : 'Notes'}:</span>
+              <span className="text-xs font-semibold text-gray-400 uppercase whitespace-nowrap shrink-0">{tr.notes}:</span>
               <span className="text-xs text-gray-700">{assignment.notes}</span>
             </div>
           )}
@@ -189,7 +188,7 @@ export default function AssignmentReportPage() {
 
         {/* Condition Photos */}
         {assignment.conditionPhotos && assignment.conditionPhotos.length > 0 && (
-          <Section title={isRTL ? 'صور حالة المركبة' : 'Condition Photos'} className="mb-3">
+          <Section title={tr.conditionPhotos} className="mb-3">
             <div className="flex flex-wrap gap-2 mt-1">
               {assignment.conditionPhotos.map((url, i) => (
                 <img
@@ -204,7 +203,7 @@ export default function AssignmentReportPage() {
         )}
 
         {/* Checklist */}
-        <Section title={isRTL ? 'قائمة فحص التسليم' : 'Handover Checklist'} className="mb-3">
+        <Section title={tr.checklist} className="mb-3">
           <div className="flex flex-wrap gap-1.5 mt-1">
             {REPORT_CHECKLIST_ITEMS.filter((item) =>
               (assignment.checklistItems ?? []).includes(item.id)
@@ -214,11 +213,11 @@ export default function AssignmentReportPage() {
                 className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-green-200 bg-green-50 text-green-700 text-xs font-medium"
               >
                 <span className="text-green-500 font-bold">✓</span>
-                {isRTL ? item.ar : item.en}
+                {item[locale]}
               </span>
             ))}
             {(assignment.checklistItems ?? []).length === 0 && (
-              <p className="text-xs text-gray-400 italic">{isRTL ? 'لا توجد بنود محددة' : 'No items checked'}</p>
+              <p className="text-xs text-gray-400 italic">{tr.noChecklist}</p>
             )}
           </div>
         </Section>
@@ -227,16 +226,16 @@ export default function AssignmentReportPage() {
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div className="border border-gray-200 rounded-lg p-3">
             <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">
-              {isRTL ? 'توقيع المستلم' : "Recipient's Signature"}
+              {tr.recipientSignature}
             </p>
             {assignment.signatureUrl ? (
               <img
                 src={resolveDocumentFileUrl(assignment.signatureUrl)}
                 alt="Signature"
-                className="h-12 object-contain"
+                className="h-24 object-contain"
               />
             ) : (
-              <div className="h-12 border-b border-gray-300" />
+              <div className="h-24 border-b border-gray-300" />
             )}
             <p className="text-xs text-gray-600 mt-1.5 font-medium">{assignment.assigneeName}</p>
             <p className="text-[11px] text-gray-400">{formatDate(assignment.assignedAt, locale as 'ar' | 'en')}</p>
@@ -244,26 +243,24 @@ export default function AssignmentReportPage() {
 
           <div className="border border-gray-200 rounded-lg p-3">
             <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">
-              {isRTL ? 'توقيع المسؤول' : "Manager's Signature"}
+              {tr.managerSignature}
             </p>
             {assignment.managerSignatureUrl ? (
               <img
                 src={resolveDocumentFileUrl(assignment.managerSignatureUrl)}
                 alt="Manager Signature"
-                className="h-12 object-contain"
+                className="h-24 object-contain"
               />
             ) : (
-              <div className="h-12 border-b border-gray-300" />
+              <div className="h-24 border-b border-gray-300" />
             )}
-            <p className="text-[11px] text-gray-400 mt-1.5">{isRTL ? 'الاسم والتوقيع والختم' : 'Name, Signature & Stamp'}</p>
+            <p className="text-[11px] text-gray-400 mt-1.5">{tr.nameSignatureStamp}</p>
           </div>
         </div>
 
         {/* Footer */}
         <div className="mt-3 pt-2 border-t border-gray-200 text-center text-[10px] text-gray-400">
-          {isRTL
-            ? `هذه الوثيقة صادرة آلياً من نظام إدارة الأسطول — ${new Date().toLocaleDateString('ar-SA')}`
-            : `This document was auto-generated by the Fleet Management System — ${new Date().toLocaleDateString('en-GB')}`}
+          {`${tr.footerText} — ${new Date().toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-GB')}`}
         </div>
       </div>
 

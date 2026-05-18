@@ -14,8 +14,13 @@ import {
   Image,
   Modal,
   Dimensions,
+  Share,
+  Linking,
 } from 'react-native';
 import { api, resolveApiAssetUrls } from '../lib/api';
+import { API_URL } from '../lib/env';
+
+const WEB_BASE = API_URL.replace(/\/api\/v1\/?$/, '');
 import { Colors, Spacing } from '../lib/theme';
 import { AppIcon } from '../components/ui/AppIcon';
 import { Locale, t, isRTL as isRTLFn } from '../lib/i18n';
@@ -60,6 +65,7 @@ interface Assignment {
   managerSignatureUrl?: string | null;
   notes?: string | null;
   vehicle?: {
+    id?: string;
     plateNumber: string;
     make: string;
     model: string;
@@ -116,10 +122,31 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
     return resolveApiAssetUrls(path)[0];
   }
 
+  const webLocale = locale === 'ar' ? 'ar' : 'en';
+
+  function getWebReportUrl(): string | null {
+    if (isRental) {
+      return `${WEB_BASE}/${webLocale}/dashboard/rentals/${assignmentId}/report`;
+    }
+    const vid = assignment?.vehicle?.id;
+    if (!vid) return null;
+    return `${WEB_BASE}/${webLocale}/dashboard/vehicles/${vid}/staff/${assignmentId}/report`;
+  }
+
+  async function handleShare() {
+    const url = getWebReportUrl();
+    if (!url) return;
+    try {
+      await Share.share({ message: url, url });
+    } catch {
+      await Linking.openURL(url);
+    }
+  }
+
   function conditionLabel(r?: string | null) {
-    if (r === 'GOOD') return rtl ? 'جيدة' : 'Good';
-    if (r === 'FAIR') return rtl ? 'مقبولة' : 'Fair';
-    if (r === 'POOR') return rtl ? 'ضعيفة' : 'Poor';
+    if (r === 'GOOD') return i18n.conditionGood;
+    if (r === 'FAIR') return i18n.conditionFair;
+    if (r === 'POOR') return i18n.conditionPoor;
     return '—';
   }
 
@@ -146,11 +173,16 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
           <AppIcon name={rtl ? 'arrow-right' : 'arrow-left'} size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {isRental
-            ? (rtl ? 'وثيقة تسليم إيجار' : 'Rental Handover')
-            : (rtl ? 'وثيقة تسليم مركبة' : 'Vehicle Handover')}
+          {isRental ? i18n.rentalHandoverTitle : i18n.vehicleHandoverTitle}
         </Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity
+          style={styles.shareBtn}
+          onPress={handleShare}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          disabled={!assignment}
+        >
+          <AppIcon name="share-outline" size={22} color={assignment ? '#fff' : 'rgba(255,255,255,0.3)'} />
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -181,26 +213,24 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
                 styles.statusBadgeText,
                 { color: assignment.returnedAt ? Colors.textMuted : ACCENT },
               ]}>
-                {assignment.returnedAt
-                  ? (rtl ? 'مُرجَعة' : 'Returned')
-                  : (rtl ? 'نشطة' : 'Active')}
+                {assignment.returnedAt ? i18n.reportStatusReturned : i18n.reportStatusActive}
               </Text>
             </View>
           </View>
 
           {/* Vehicle & Assignee cards */}
-          <View style={[styles.twoCol, { flexDirection: rowDir }]}>
-            <Section title={rtl ? 'بيانات المركبة' : 'Vehicle'} accent={ACCENT} style={{ flex: 1, marginEnd: 6 }}>
+          <View style={[styles.twoCol, {flexDirection: rtl ? 'row' : 'row-reverse'}]}>
+            <Section title={i18n.vehicleSection} accent={ACCENT} style={{ flex: 1, marginEnd: 6 }}>
               {assignment.vehicle ? (
                 <>
-                  <InfoRow label={rtl ? 'رقم اللوحة' : 'Plate'} value={assignment.vehicle.plateNumber} mono rtl={rtl} />
+                  <InfoRow label={i18n.plateNumber} value={assignment.vehicle.plateNumber} mono rtl={rtl} />
                   <InfoRow
-                    label={rtl ? 'الموديل' : 'Model'}
+                    label={i18n.modelField}
                     value={[assignment.vehicle.year, assignment.vehicle.make, assignment.vehicle.model].filter(Boolean).join(' ')}
                     rtl={rtl}
                   />
                   {!!assignment.vehicle.color && (
-                    <InfoRow label={rtl ? 'اللون' : 'Color'} value={assignment.vehicle.color} rtl={rtl} />
+                    <InfoRow label={i18n.colorField} value={assignment.vehicle.color} rtl={rtl} />
                   )}
                 </>
               ) : (
@@ -208,32 +238,32 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
               )}
             </Section>
 
-            <Section title={rtl ? 'بيانات المستلم' : (isRental ? 'Client' : 'Assignee')} accent={ACCENT} style={{ flex: 1, marginStart: 6 }}>
-              <InfoRow label={rtl ? 'الاسم' : 'Name'} value={assignment.assigneeName} rtl={rtl} />
+            <Section title={isRental ? i18n.clientDetailsLabel : i18n.assigneeDetailsLabel} accent={ACCENT} style={{ flex: 1, marginStart: 6 }}>
+              <InfoRow label={i18n.nameLabel} value={assignment.assigneeName} rtl={rtl} />
               {!!assignment.assigneeTitle && (
-                <InfoRow label={rtl ? (isRental ? 'رقم العقد' : 'المسمى') : (isRental ? 'Contract #' : 'Title')} value={assignment.assigneeTitle} rtl={rtl} />
+                <InfoRow label={isRental ? i18n.contractLabel : i18n.staffAssigneeTitle} value={assignment.assigneeTitle} rtl={rtl} />
               )}
               {!!assignment.assigneePhone && (
-                <InfoRow label={rtl ? 'الهاتف' : 'Phone'} value={assignment.assigneePhone} rtl={rtl} />
+                <InfoRow label={i18n.phone} value={assignment.assigneePhone} rtl={rtl} />
               )}
               {!!assignment.assigneeNationalId && (
-                <InfoRow label={rtl ? 'الهوية' : 'ID'} value={assignment.assigneeNationalId} mono rtl={rtl} />
+                <InfoRow label={i18n.nationalIdLabel} value={assignment.assigneeNationalId} mono rtl={rtl} />
               )}
             </Section>
           </View>
 
           {/* Handover state */}
-          <Section title={rtl ? 'حالة المركبة عند التسليم' : 'Vehicle State at Handover'} accent={ACCENT}>
+          <Section title={i18n.handoverSection} accent={ACCENT}>
             <View style={[styles.infoGrid, { flexDirection: rowDir }]}>
               <View style={styles.infoGridCol}>
                 <InfoRow
-                  label={rtl ? 'تاريخ التسليم' : 'Handover Date'}
+                  label={i18n.handoverDateLabel}
                   value={formatDateSmart(assignment.assignedAt, locale)}
                   rtl={rtl}
                 />
                 {assignment.odometerOut != null && (
                   <InfoRow
-                    label={rtl ? 'العداد (خروج)' : 'Odometer Out'}
+                    label={i18n.staffOdometerOut}
                     value={`${assignment.odometerOut.toLocaleString()} km`}
                     rtl={rtl}
                   />
@@ -242,14 +272,14 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
               <View style={styles.infoGridCol}>
                 {assignment.returnedAt && (
                   <InfoRow
-                    label={rtl ? 'تاريخ الإرجاع' : 'Return Date'}
+                    label={i18n.returnDateLabel}
                     value={formatDateSmart(assignment.returnedAt, locale)}
                     rtl={rtl}
                   />
                 )}
                 {assignment.odometerIn != null && (
                   <InfoRow
-                    label={rtl ? 'العداد (دخول)' : 'Odometer In'}
+                    label={i18n.staffOdometerIn}
                     value={`${assignment.odometerIn.toLocaleString()} km`}
                     rtl={rtl}
                   />
@@ -260,8 +290,8 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
             {/* Fuel level */}
             {assignment.fuelLevel != null && (
               <View style={styles.fuelWrap}>
-                <Text style={[styles.infoLabel, { textAlign: rtl ? 'right' : 'left' }]}>
-                  {rtl ? 'مستوى الوقود' : 'Fuel Level'}
+                <Text style={[styles.infoLabel, { textAlign: !rtl ? 'right' : 'left' }]}>
+                  {i18n.fuelLevelLabel}
                 </Text>
                 <View style={[styles.fuelRow, { flexDirection: rowDir }]}>
                   <Text style={styles.fuelEdge}>E</Text>
@@ -288,8 +318,8 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
             {/* Condition rating */}
             {assignment.conditionRating && (
               <View style={styles.conditionWrap}>
-                <Text style={[styles.infoLabel, { textAlign: rtl ? 'right' : 'left' }]}>
-                  {rtl ? 'حالة المركبة' : 'Condition'}
+                <Text style={[styles.infoLabel, { textAlign: !rtl ? 'right' : 'left' }]}>
+                  {i18n.conditionRatingLabel}
                 </Text>
                 <View style={[
                   styles.conditionBadge,
@@ -305,10 +335,10 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
             {/* Notes */}
             {!!assignment.notes && (
               <View style={styles.notesWrap}>
-                <Text style={[styles.infoLabel, { textAlign: rtl ? 'right' : 'left' }]}>
-                  {i18n.notes ?? (rtl ? 'ملاحظات' : 'Notes')}
+                <Text style={[styles.infoLabel, { textAlign: !rtl ? 'right' : 'left' }]}>
+                  {i18n.notes}
                 </Text>
-                <Text style={[styles.notesText, { textAlign: rtl ? 'right' : 'left' }]}>
+                <Text style={[styles.notesText, { textAlign: !rtl ? 'right' : 'left' }]}>
                   {assignment.notes}
                 </Text>
               </View>
@@ -317,7 +347,7 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
 
           {/* Condition Photos */}
           {assignment.conditionPhotos && assignment.conditionPhotos.length > 0 && (
-            <Section title={rtl ? 'صور حالة المركبة' : 'Condition Photos'} accent={ACCENT}>
+            <Section title={i18n.conditionPhotosSection} accent={ACCENT}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosScroll}>
                 {assignment.conditionPhotos.map((url, i) => (
                   <TouchableOpacity
@@ -338,20 +368,20 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
           )}
 
           {/* Checklist */}
-          <Section title={rtl ? 'قائمة فحص التسليم' : 'Handover Checklist'} accent={ACCENT}>
+          <Section title={i18n.handoverChecklist} accent={ACCENT}>
             {(assignment.checklistItems ?? []).length === 0 ? (
-              <Text style={[styles.naText, { textAlign: rtl ? 'right' : 'left' }]}>
-                {rtl ? 'لا توجد بنود محددة' : 'No items checked'}
+              <Text style={[styles.naText, { textAlign: !rtl ? 'right' : 'left' }]}>
+                {i18n.noChecklistItems}
               </Text>
             ) : (
-              <View style={[styles.checklistWrap, rtl && { flexDirection: 'row-reverse' }]}>
+              <View style={[styles.checklistWrap, rtl && { flexDirection: rtl ? 'row' : 'row-reverse' }]}>
                 {CHECKLIST_ITEMS.filter((item) =>
                   (assignment.checklistItems ?? []).includes(item.id)
                 ).map((item) => (
                   <View key={item.id} style={styles.checkBadge}>
                     <AppIcon name="check-circle" size={12} color="#16a34a" />
                     <Text style={styles.checkBadgeText}>
-                      {rtl ? item.ar : item.en}
+                      {locale === 'ar' || locale === 'ur' ? item.ar : item.en}
                     </Text>
                   </View>
                 ))}
@@ -362,7 +392,7 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
           {/* Signatures */}
           <View style={[styles.twoCol, { flexDirection: rowDir }]}>
             <SignatureCard
-              label={rtl ? (isRental ? 'توقيع العميل' : 'توقيع المستلم') : (isRental ? "Client's Signature" : "Recipient's Signature")}
+              label={isRental ? i18n.clientSignatureLabel : i18n.recipientSignatureLabel}
               name={assignment.assigneeName}
               date={formatDateSmart(assignment.assignedAt, locale)}
               sigUrl={assignment.signatureUrl ? resolveUrl(assignment.signatureUrl) : null}
@@ -370,8 +400,8 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
               style={{ flex: 1, marginEnd: 6 }}
             />
             <SignatureCard
-              label={rtl ? 'توقيع المسؤول' : "Manager's Signature"}
-              name={rtl ? 'الاسم والتوقيع والختم' : 'Name, Signature & Stamp'}
+              label={i18n.managerSignatureLabel}
+              name={i18n.nameSignatureStamp}
               date={null}
               sigUrl={assignment.managerSignatureUrl ? resolveUrl(assignment.managerSignatureUrl) : null}
               onPress={(url) => setLightboxUrl(url)}
@@ -381,9 +411,7 @@ export function HandoverReportScreen({ assignmentId, type = 'staff', locale, onB
 
           {/* Footer */}
           <Text style={styles.footer}>
-            {rtl
-              ? `وثيقة صادرة آلياً من نظام إدارة الأسطول`
-              : `Auto-generated by Fleet Management System`}
+            {i18n.reportFooter}
           </Text>
         </ScrollView>
       )}
@@ -441,8 +469,8 @@ function InfoRow({
 }) {
   return (
     <View style={styles.infoRowWrap}>
-      <Text style={[styles.infoLabel, { textAlign: rtl ? 'right' : 'left' }]}>{label}</Text>
-      <Text style={[styles.infoValue, mono && styles.infoValueMono, { textAlign: rtl ? 'right' : 'left' }]}>
+      <Text style={[styles.infoLabel, { textAlign: !rtl ? 'right' : 'left' }]}>{label}</Text>
+      <Text style={[styles.infoValue, mono && styles.infoValueMono, { textAlign: !rtl ? 'right' : 'left' }]}>
         {value}
       </Text>
     </View>
@@ -496,6 +524,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   backBtn: { width: 40, alignItems: 'center' },
+  shareBtn: { width: 40, alignItems: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '700', color: '#fff' },
 
   scroll: { flex: 1 },

@@ -337,7 +337,7 @@ export function StaffAssignmentFormScreen({
                 <FormField label={(i18n as any).staffAssignedAt ?? 'Assigned At'}>
                   <DateInputRow
                     value={assignForm.assignedAt}
-                    placeholder={i18n.licenseExpiryVehicle ?? 'Select date'}
+                    placeholder={i18n.staffAssignedAt ?? 'Select date'}
                     onChange={(v) => setA('assignedAt', v)}
                     onOpenPicker={() => setShowAssignedAtPicker(true)}
                     rtl={rtl}
@@ -553,7 +553,7 @@ export function StaffAssignmentFormScreen({
                 <FormField label={i18n.returnTime}>
                   <DateInputRow
                     value={returnForm.returnedAt}
-                    placeholder={i18n.licenseExpiryVehicle ?? 'Select date'}
+                    placeholder={i18n.returnTime ?? 'Select date'}
                     onChange={(v) => setR('returnedAt', v)}
                     onOpenPicker={() => setShowReturnedAtPicker(true)}
                     rtl={rtl}
