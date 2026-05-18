@@ -8,17 +8,22 @@ import {
   Param,
   Query,
   ForbiddenException,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TripsService } from './trips.service';
 import { CreateTripDto, TripLocationDto, UpdateTripDto } from './trips.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { AuthTokenPayload, TripStatus } from '@fleet/shared';
+import { AuthTokenPayload, TripStatus, UserRole } from '@fleet/shared';
+import { Roles } from '../auth/roles.decorator';
 
 type TripScope = 'all' | 'standalone' | 'contract';
 
 @ApiTags('trips')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.VIEWER, UserRole.DRIVER)
 @Controller('trips')
 export class TripsController {
   constructor(private readonly tripsService: TripsService) {}
@@ -49,6 +54,7 @@ export class TripsController {
   }
 
   @Post()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   create(@CurrentUser() user: AuthTokenPayload, @Body() dto: CreateTripDto) {
     if (user.role === 'DRIVER') {
       throw new ForbiddenException('ليس لديك صلاحية إنشاء رحلة');
@@ -57,6 +63,7 @@ export class TripsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.DRIVER)
   update(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,
@@ -66,6 +73,7 @@ export class TripsController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   cancel(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
     if (user.role === 'DRIVER') {
       throw new ForbiddenException('ليس لديك صلاحية إلغاء الرحلة');
@@ -76,6 +84,7 @@ export class TripsController {
   // ─── GPS Location Tracking ─────────────────────────────────────────────────
 
   @Post(':id/locations')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.DRIVER)
   addLocation(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,
@@ -85,6 +94,7 @@ export class TripsController {
   }
 
   @Post(':id/locations/batch')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.DRIVER)
   addLocationsBatch(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,

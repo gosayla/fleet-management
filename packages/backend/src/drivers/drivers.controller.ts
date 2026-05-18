@@ -46,11 +46,13 @@ export class DriversController {
   }
 
   @Post()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   create(@CurrentUser() user: AuthTokenPayload, @Body() dto: CreateDriverDto) {
     return this.driversService.create(user.companyId, dto);
   }
 
   @Patch(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   update(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,
@@ -60,11 +62,13 @@ export class DriversController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   remove(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
     return this.driversService.remove(user.companyId, id);
   }
 
   @Post(':id/photo')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
   uploadPhoto(

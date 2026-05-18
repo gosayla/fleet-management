@@ -42,6 +42,7 @@ export class VehiclesController {
   }
 
   @Post()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.MAINTENANCE_TECH)
   create(
     @CurrentUser() user: AuthTokenPayload,
     @Body() dto: CreateVehicleDto,
@@ -50,6 +51,7 @@ export class VehiclesController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.MAINTENANCE_TECH)
   update(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,
@@ -59,12 +61,14 @@ export class VehiclesController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.MAINTENANCE_TECH)
   remove(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
     return this.vehiclesService.remove(user.companyId, id);
   }
 
   /** POST /vehicles/import/preview — parse XLSX and return rows without saving */
   @Post('import/preview')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.MAINTENANCE_TECH)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   previewImport(
@@ -76,6 +80,7 @@ export class VehiclesController {
 
   /** POST /vehicles/import — parse XLSX and upsert vehicles into DB */
   @Post('import')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.MAINTENANCE_TECH)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   importVehicles(
@@ -95,6 +100,7 @@ export class VehiclesController {
   }
 
   @Post(':id/photos')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.MAINTENANCE_TECH)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
   addPhoto(
@@ -108,6 +114,7 @@ export class VehiclesController {
   }
 
   @Patch(':id/photos/:photoId/profile')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.MAINTENANCE_TECH)
   setProfilePhoto(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,
@@ -117,6 +124,7 @@ export class VehiclesController {
   }
 
   @Delete(':id/photos/:photoId')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.MAINTENANCE_TECH)
   deletePhoto(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,
@@ -128,6 +136,7 @@ export class VehiclesController {
   // ─── Driver assignment ────────────────────────────────────────────────────
 
   @Post(':id/drivers/:driverId')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   assignDriver(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,
@@ -137,6 +146,7 @@ export class VehiclesController {
   }
 
   @Delete(':id/drivers/:driverId')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   removeDriver(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,

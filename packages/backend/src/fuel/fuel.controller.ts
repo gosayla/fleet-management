@@ -35,11 +35,11 @@ export class FuelController {
     return this.fuelService.findByVehicle(user.companyId, vehicleId);
   }
 
-  @Post() create(@CurrentUser() user: AuthTokenPayload, @Body() dto: CreateFuelLogDto) {
+  @Post() @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER) create(@CurrentUser() user: AuthTokenPayload, @Body() dto: CreateFuelLogDto) {
     return this.fuelService.create(user.companyId, dto);
   }
 
-  @Delete(':id') @HttpCode(204) remove(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
+  @Delete(':id') @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER) @HttpCode(204) remove(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
     return this.fuelService.remove(user.companyId, id);
   }
 }

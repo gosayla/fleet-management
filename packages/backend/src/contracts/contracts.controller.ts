@@ -12,13 +12,15 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { AuthTokenPayload } from '@fleet/shared';
+import { AuthTokenPayload, UserRole } from '@fleet/shared';
 import { ContractsService } from './contracts.service';
 import { AddVacationDto, CreateContractDto, UpdateContractDto } from './contracts.dto';
+import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('contracts')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.VIEWER)
 @Controller('contracts')
 export class ContractsController {
   constructor(private readonly contractsService: ContractsService) {}
@@ -52,6 +54,7 @@ export class ContractsController {
   }
 
   @Post()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   @ApiOperation({ summary: 'Create a new daily contract and generate trip instances' })
   create(
     @CurrentUser() user: AuthTokenPayload,
@@ -61,6 +64,7 @@ export class ContractsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   @ApiOperation({ summary: 'Update contract details' })
   update(
     @CurrentUser() user: AuthTokenPayload,
@@ -71,6 +75,7 @@ export class ContractsController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   @ApiOperation({ summary: 'Delete a contract and its pending trips' })
   remove(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
     return this.contractsService.remove(user.companyId, id);
@@ -79,6 +84,7 @@ export class ContractsController {
   // ─── Trip generation ────────────────────────────────────────────────────────
 
   @Post(':id/generate-trips')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   @ApiOperation({ summary: 'Re-generate all pending daily trips for a contract' })
   generateTrips(
     @CurrentUser() user: AuthTokenPayload,
@@ -87,9 +93,10 @@ export class ContractsController {
     return this.contractsService.generateTrips(user.companyId, id);
   }
 
-  // ─── Vacations / excluded dates ──────────────────────────────────────────────
+  // ─── Vacations / excluded dates ────────────────────────────────────────────────────────
 
   @Post(':id/vacations')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   @ApiOperation({ summary: 'Add an excluded date (vacation/holiday) to a contract' })
   addVacation(
     @CurrentUser() user: AuthTokenPayload,
@@ -100,6 +107,7 @@ export class ContractsController {
   }
 
   @Delete(':id/vacations/:vacationId')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   @ApiOperation({ summary: 'Remove an excluded date and restore the trip for that day' })
   removeVacation(
     @CurrentUser() user: AuthTokenPayload,

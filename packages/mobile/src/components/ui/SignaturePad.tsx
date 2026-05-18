@@ -63,7 +63,15 @@ function rnCmd(cmd){
   if(cmd==='CLEAR'){ctx.clearRect(0,0,c.width,c.height);empty=true;window.ReactNativeWebView.postMessage(JSON.stringify({type:'cleared'}));}
   else if(cmd==='SAVE'){
     if(empty){window.ReactNativeWebView.postMessage(JSON.stringify({type:'empty'}));}
-    else{window.ReactNativeWebView.postMessage(JSON.stringify({type:'data',base64:c.toDataURL('image/png')}));}
+    else{
+      var id=ctx.getImageData(0,0,c.width,c.height),d=id.data;
+      var x1=c.width,y1=c.height,x2=0,y2=0;
+      for(var i=0;i<d.length;i+=4){if(d[i+3]>10){var px=(i/4)%c.width,py=Math.floor((i/4)/c.width);if(px<x1)x1=px;if(px>x2)x2=px;if(py<y1)y1=py;if(py>y2)y2=py;}}
+      var pad=30,cx=Math.max(0,x1-pad),cy=Math.max(0,y1-pad),cw=Math.min(c.width,x2+pad)-cx,ch=Math.min(c.height,y2+pad)-cy;
+      var tmp=document.createElement('canvas');tmp.width=cw;tmp.height=ch;
+      tmp.getContext('2d').drawImage(c,cx,cy,cw,ch,0,0,cw,ch);
+      window.ReactNativeWebView.postMessage(JSON.stringify({type:'data',base64:tmp.toDataURL('image/png')}));
+    }
   }
 }
 document.addEventListener('message',function(e){rnCmd(e.data);});

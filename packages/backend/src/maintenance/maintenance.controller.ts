@@ -28,15 +28,16 @@ export class MaintenanceController {
     return this.maintenanceService.findOne(user.companyId, id);
   }
 
-  @Post() create(@CurrentUser() user: AuthTokenPayload, @Body() dto: CreateMaintenanceDto) {
+  @Post() @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.MAINTENANCE_TECH) create(@CurrentUser() user: AuthTokenPayload, @Body() dto: CreateMaintenanceDto) {
     return this.maintenanceService.create(user.companyId, dto);
   }
 
-  @Patch(':id') update(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string, @Body() dto: UpdateMaintenanceDto) {
+  @Patch(':id') @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.MAINTENANCE_TECH) update(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string, @Body() dto: UpdateMaintenanceDto) {
     return this.maintenanceService.update(user.companyId, id, dto);
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.MAINTENANCE_TECH)
   remove(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
     return this.maintenanceService.remove(user.companyId, id);
   }

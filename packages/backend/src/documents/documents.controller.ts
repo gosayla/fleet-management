@@ -34,6 +34,7 @@ export class DocumentsController {
 
   /** Upload a file and receive a fileUrl to use when creating/updating a document. */
   @Post('files')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.DRIVER)
   @ApiConsumes('multipart/form-data')
   @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
   @UseInterceptors(FileInterceptor('file'))
@@ -45,6 +46,7 @@ export class DocumentsController {
   }
 
   @Post()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.DRIVER)
   create(
     @CurrentUser() user: AuthTokenPayload,
     @Body() dto: CreateDocumentDto,
@@ -74,6 +76,7 @@ export class DocumentsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER, UserRole.DRIVER)
   update(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,
@@ -83,6 +86,7 @@ export class DocumentsController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   remove(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,

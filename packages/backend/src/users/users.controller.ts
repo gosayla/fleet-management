@@ -30,11 +30,13 @@ export class UsersController {
   }
 
   @Post()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   create(@CurrentUser() user: AuthTokenPayload, @Body() dto: CreateUserDto) {
     return this.usersService.create(user.companyId, dto, user.role);
   }
 
   @Patch(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   update(
     @CurrentUser() user: AuthTokenPayload,
     @Param('id') id: string,
@@ -44,6 +46,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.FLEET_MANAGER, UserRole.DISPATCHER)
   remove(@CurrentUser() user: AuthTokenPayload, @Param('id') id: string) {
     return this.usersService.remove(user.companyId, id, user.sub, user.role);
   }
