@@ -18,6 +18,7 @@ const USER_SELECT = {
   phone: true,
   role: true,
   language: true,
+  lastSeenAt: true,
   createdAt: true,
 } as const;
 

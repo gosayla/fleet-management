@@ -19,6 +19,7 @@ interface CompanyUser {
   fullName: string;
   phone: string;
   role: UserRole;
+  lastSeenAt: string | null;
   createdAt: string;
 }
 
@@ -148,6 +149,14 @@ export default function UsersPage() {
     MAINTENANCE_TECH: 'bg-orange-100 text-orange-700',
   };
 
+  function getOnlineStatus(lastSeenAt: string | null): { dot: string; label: string } {
+    if (!lastSeenAt) return { dot: 'bg-gray-300', label: 'Offline' };
+    const diffMin = (Date.now() - new Date(lastSeenAt).getTime()) / 60_000;
+    if (diffMin < 5)  return { dot: 'bg-green-500', label: 'Online' };
+    if (diffMin < 30) return { dot: 'bg-yellow-400', label: 'Away' };
+    return { dot: 'bg-gray-300', label: 'Offline' };
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -184,7 +193,12 @@ export default function UsersPage() {
             <tbody className="divide-y divide-gray-100">
               {users.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{user.fullName}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    <div className="flex items-center gap-2">
+                      {(() => { const s = getOnlineStatus(user.lastSeenAt); return <span title={s.label} className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${s.dot}`} />; })()}
+                      {user.fullName}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-gray-600">{user.email}</td>
                   <td className="px-4 py-3 text-gray-600">{user.phone}</td>
                   <td className="px-4 py-3">

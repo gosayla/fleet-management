@@ -183,9 +183,10 @@ model User {
   phone     String   @unique
   role      UserRole @default(FLEET_MANAGER)
   language  String   @default("ar")
-  fcmToken  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  fcmToken    String?
+  lastSeenAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   company       Company        @relation(fields: [companyId], references: [id])
   notifications Notification[]

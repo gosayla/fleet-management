@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
@@ -21,6 +22,7 @@ import { ContractsModule } from './contracts/contracts.module';
 import { RentalsModule } from './rentals/rentals.module';
 import { AuditModule } from './audit/audit.module';
 import { StaffAssignmentsModule } from './staff-assignments/staff-assignments.module';
+import { LastSeenInterceptor } from './auth/last-seen.interceptor';
 
 @Module({
   imports: [
@@ -46,6 +48,9 @@ import { StaffAssignmentsModule } from './staff-assignments/staff-assignments.mo
     RentalsModule,
     AuditModule,
     StaffAssignmentsModule,
+  ],
+  providers: [
+    { provide: APP_INTERCEPTOR, useClass: LastSeenInterceptor },
   ],
 })
 export class AppModule {}
