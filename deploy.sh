@@ -42,6 +42,11 @@ fi
 echo "--> Running database migrations..."
 docker exec fleet_backend npx prisma migrate deploy
 
+# ── 5. Clean up dangling images and build cache ───────────────────────────────
+echo "--> Pruning unused Docker images and build cache..."
+docker image prune -f
+docker builder prune -f --keep-storage 1gb
+
 echo ""
 echo "==> Deployment complete!"
 docker compose --env-file .env ps
