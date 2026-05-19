@@ -1,4 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { existsSync, unlinkSync } from 'fs';
+import { join } from 'path';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDocumentDto, DocumentsQueryDto, UpdateDocumentDto } from './documents.dto';
@@ -288,6 +290,7 @@ export class DocumentsService {
       where: { id, companyId },
       select: {
         id: true,
+        fileUrl: true,
         vehicles: { select: { id: true } },
         drivers: { select: { id: true } },
       },
@@ -296,6 +299,19 @@ export class DocumentsService {
     const deleted = await this.prisma.fleetDocument.delete({ where: { id } });
     for (const v of existing.vehicles) await this.refreshVehicleDocumentState(companyId, v.id);
     for (const d of existing.drivers) await this.refreshDriverDocumentState(companyId, d.id);
+
+    // Delete the physical file from disk
+    if (existing.fileUrl) {
+      const match = existing.fileUrl.match(/\/documents\/files\/(.+)$/);
+      if (match) {
+        const uploadsRoot = process.env.UPLOADS_DIR ?? join(process.cwd(), 'uploads');
+        const filePath = join(uploadsRoot, 'documents', match[1]);
+        if (existsSync(filePath)) {
+          unlinkSync(filePath);
+        }
+      }
+    }
+
     return deleted;
   }
 
@@ -362,8 +378,14 @@ export class DocumentsService {
       }),
     );
 
+    // Push renewed (hasReplacement) documents to the end of the current page
+    const sorted = [...enriched].sort((a, b) => {
+      if (a.hasReplacement === b.hasReplacement) return 0;
+      return a.hasReplacement ? 1 : -1;
+    });
+
     return {
-      data: enriched,
+      data: sorted,
       total,
       page,
       limit,
