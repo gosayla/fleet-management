@@ -10,6 +10,7 @@ import { useLocale } from '@/providers/locale-provider';
 import { formatDate, formatEnumLabel, formatCurrencySar, formatNumber } from '@/lib/i18n';
 import { DocumentType, Vehicle } from '@fleet/shared';
 import { ArrowLeft, ArrowRight, Briefcase, Camera, Droplet, ExternalLink, FileText, Fuel, Gauge, Key, Pencil, Plus, ShieldAlert, Star, Trash2, Truck, UserCheck, Wrench, X } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 type DriverBrief = { id: string; fullName: string; phone: string; status: string; photoUrl?: string | null };
 
@@ -154,6 +155,8 @@ export default function VehicleDashboardPage() {
   const [driverSearch, setDriverSearch] = useState('');
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [liveLocation, setLiveLocation] = useState<{lat: number; lng: number; timestamp?: string} | null>(null);
+  const [confirmUnassignDriverId, setConfirmUnassignDriverId] = useState<string | null>(null);
+  const [confirmDeletePhotoId, setConfirmDeletePhotoId] = useState<string | null>(null);
 
   const { data: allDrivers } = useQuery<DriverBrief[]>({
     queryKey: ['drivers-list'],
@@ -652,7 +655,7 @@ export default function VehicleDashboardPage() {
                   {driver.fullName}
                 </Link>
                 <button
-                  onClick={() => { if (window.confirm(isRTL ? 'إلغاء تعيين السائق؟' : 'Unassign driver?')) removeDriverMutation.mutate(driver.id); }}
+                  onClick={() => setConfirmUnassignDriverId(driver.id)}
                   className="text-gray-400 hover:text-red-600 ml-1"
                   title={isRTL ? 'إلغاء التعيين' : 'Unassign'}
                 >
@@ -798,7 +801,7 @@ export default function VehicleDashboardPage() {
                     </button>
                   )}
                   <button
-                    onClick={() => { if (window.confirm(isRTL ? 'حذف الصورة؟' : 'Delete photo?')) deletePhotoMutation.mutate(photo.id); }}
+                    onClick={() => setConfirmDeletePhotoId(photo.id)}
                     className="pointer-events-auto rounded bg-white/90 p-1 text-red-600 hover:bg-white"
                     title={isRTL ? 'حذف' : 'Delete'}
                   >
@@ -911,6 +914,20 @@ export default function VehicleDashboardPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmUnassignDriverId}
+        message={isRTL ? 'إلغاء تعيين السائق؟' : 'Unassign driver?'}
+        loading={removeDriverMutation.isPending}
+        onConfirm={() => { if (confirmUnassignDriverId) { removeDriverMutation.mutate(confirmUnassignDriverId); setConfirmUnassignDriverId(null); } }}
+        onCancel={() => setConfirmUnassignDriverId(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmDeletePhotoId}
+        message={isRTL ? 'حذف الصورة؟' : 'Delete photo?'}
+        loading={deletePhotoMutation.isPending}
+        onConfirm={() => { if (confirmDeletePhotoId) { deletePhotoMutation.mutate(confirmDeletePhotoId); setConfirmDeletePhotoId(null); } }}
+        onCancel={() => setConfirmDeletePhotoId(null)}
+      />
     </div>
   );
 }

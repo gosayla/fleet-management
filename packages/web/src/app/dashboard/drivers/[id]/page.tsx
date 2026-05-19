@@ -10,6 +10,7 @@ import { formatDate, formatEnumLabel } from '@/lib/i18n';
 import { Driver, DriverStatus } from '@fleet/shared';
 import { ArrowLeft, ArrowRight, Camera, Car, Pencil, Plus, User, X } from 'lucide-react';
 import { TripLegBadge } from '@/components/ui/trip-leg-badge';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 type VehicleBrief = { id: string; plateNumber: string; make: string; model: string; status: string };
 
@@ -54,6 +55,7 @@ export default function DriverDetailPage() {
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
   const [showAssignVehicleModal, setShowAssignVehicleModal] = useState(false);
   const [vehicleSearch, setVehicleSearch] = useState('');
+  const [confirmUnassignVehicleId, setConfirmUnassignVehicleId] = useState<string | null>(null);
 
   const { data: allVehicles } = useQuery<VehicleBrief[]>({
     queryKey: ['vehicles-list'],
@@ -230,7 +232,7 @@ export default function DriverDetailPage() {
                   {v.plateNumber} — {v.make} {v.model}
                 </Link>
                 <button
-                  onClick={() => { if (window.confirm(isRTL ? 'إلغاء تعيين المركبة؟' : 'Unassign vehicle?')) removeVehicleMutation.mutate(v.id); }}
+                  onClick={() => setConfirmUnassignVehicleId(v.id)}
                   className="text-gray-400 hover:text-red-600 ml-1"
                   title={isRTL ? 'إلغاء التعيين' : 'Unassign'}
                 >
@@ -317,6 +319,13 @@ export default function DriverDetailPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmUnassignVehicleId}
+        message={isRTL ? 'إلغاء تعيين المركبة؟' : 'Unassign vehicle?'}
+        loading={removeVehicleMutation.isPending}
+        onConfirm={() => { if (confirmUnassignVehicleId) { removeVehicleMutation.mutate(confirmUnassignVehicleId); setConfirmUnassignVehicleId(null); } }}
+        onCancel={() => setConfirmUnassignVehicleId(null)}
+      />
     </div>
   );
 }

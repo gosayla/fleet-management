@@ -20,6 +20,7 @@ import { useLocale } from '@/providers/locale-provider';
 import { api, resolveDocumentFileUrl } from '@/lib/api';
 import { formatDate, formatEnumLabel, formatNumber } from '@/lib/i18n';
 import { Pagination } from '@/components/ui/pagination';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 type DocumentStatus = 'expired' | 'expiring' | 'valid';
 
@@ -118,6 +119,7 @@ export default function DocumentsPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | DocumentType>('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery<DocumentsResponse>({
     queryKey: ['documents', search, status, typeFilter, page, pageSize],
@@ -312,9 +314,7 @@ export default function DocumentsPage() {
                             {tc.edit}
                           </button>
                           <button
-                            onClick={() => {
-                              if (window.confirm(td.deleteConfirm)) deleteMutation.mutate(row.id);
-                            }}
+                            onClick={() => setConfirmId(row.id)}
                             className="inline-flex items-center gap-1 text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -352,6 +352,13 @@ export default function DocumentsPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={!!confirmId}
+        message={td.deleteConfirm}
+        loading={deleteMutation.isPending}
+        onConfirm={() => { if (confirmId) { deleteMutation.mutate(confirmId); setConfirmId(null); } }}
+        onCancel={() => setConfirmId(null)}
+      />
     </div>
   );
 }
