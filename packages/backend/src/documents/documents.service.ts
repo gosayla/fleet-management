@@ -378,14 +378,8 @@ export class DocumentsService {
       }),
     );
 
-    // Push renewed (hasReplacement) documents to the end of the current page
-    const sorted = [...enriched].sort((a, b) => {
-      if (a.hasReplacement === b.hasReplacement) return 0;
-      return a.hasReplacement ? 1 : -1;
-    });
-
     return {
-      data: sorted,
+      data: enriched,
       total,
       page,
       limit,
